@@ -127,7 +127,7 @@ export const TEMPLATE_ABOUT = {
       } },
     },
     queries: {
-      'Low stock': 'Products with fewer than 10 units in stock, by name, with the reorder level, the supplier and the supplier\'s phone. Discontinued products are left out. Run it before you place an order.',
+      'Low stock': 'Products at or below their own Reorder Level, by name, with the units in stock, the reorder level, the supplier and the supplier\'s phone. Discontinued products are left out. Run it before you place an order.',
     },
     reports: {
       'Products by supplier': 'Every product under the supplier you buy it from, by name, with its SKU, category, price and units in stock, and the units in stock added up for each supplier and for the whole. Use it as a stock sheet or to check what you buy from whom.',
@@ -168,7 +168,7 @@ export const TEMPLATE_ABOUT = {
     notes: [
       'Units in Stock is a number you keep up to date yourself: adding a stock movement does not change it. Change both together, and count the stock now and then to check them.',
       'Supplier on a product, and Product on a stock movement, are lists of names on the form: you choose from what is already in the other table. Add the supplier before its products, and the product before its movements. In the table\'s rows the same field shows the record\'s number instead.',
-      'The Low stock query uses a fixed 10, not each product\'s Reorder Level, which it shows beside it for you to compare. Change the 10 in its design to suit your stock.',
+      'The Low stock query compares each product with its own Reorder Level, so set a reorder level on every product you keep: one left at nought never shows until it runs out.',
       'A supplier with products cannot be deleted while those products point at it, and a product with movements cannot be deleted while they point at it. Tick Discontinued on a product you no longer keep instead.',
       'Keep a copy of the file with File, Save As before a big change such as a year-end stock count.',
     ],
@@ -186,7 +186,7 @@ export const TEMPLATE_ABOUT = {
       'Hold stock in more than one place: add a Locations table, a Location field on Stock Movements that points at it, and a query of movements by location.',
       'Say what kind of movement it is: add a Kind field to Stock Movements (Received, Sold, Damaged, Counted) instead of writing it in Note.',
       'Record purchase orders: add an Orders table that points at Suppliers and an Order Lines table that points at Orders and Products.',
-      'Use each product\'s own reorder level: change the Low stock criteria from a fixed 10 to the numbers that suit each group of products, or make one query per Category.',
+      'Keep a little more of what sells fast: raise its Reorder Level, and Low stock warns you sooner for that product alone.',
     ],
   },
 
@@ -220,7 +220,7 @@ export const TEMPLATE_ABOUT = {
       } },
     },
     queries: {
-      'Renewals due': 'Active members who have a renewal date, the soonest first, with their name, e-mail and membership type. Members who have left (Active unticked) and members with no date are left out. Those at the top whose date has passed are overdue.',
+      'Renewals due': 'Active members who have a renewal date, the soonest first, with their name, e-mail and membership type. Only renewals due in the next 30 days, or already past, with the days left (below nought when overdue). Members who have left (Active unticked) and members with no date are left out. Those at the top whose date has passed are overdue.',
     },
     reports: {
       'Payments by member': 'Each member\'s payments by the day they were paid, with what each was for and its amount, and the total for each member and for everyone. Use it for the treasurer\'s report or to answer a member who asks what they have paid.',
@@ -265,7 +265,7 @@ export const TEMPLATE_ABOUT = {
       { q: 'Can I record a family on one membership?', a: 'Enter one member for the person who pays, with Membership Type Family, and put the other names in a field you add, or enter each person and record the payment against one of them.' },
       { q: 'What if a member pays in instalments?', a: 'Record each instalment as its own payment with the same words in For. The report adds them up under the member.' },
       { q: 'How do I give everyone the same renewal date?', a: 'Type the club\'s renewal day in Renewal Due for each member, such as 1 April. The query lists them all together on that day.' },
-      { q: 'Why is a member missing from Renewals due?', a: 'Either Active is unticked or Renewal Due is empty. The query leaves out both.' },
+      { q: 'Why is a member missing from Renewals due?', a: 'Their renewal is more than 30 days away, or Active is unticked, or Renewal Due is empty. Change the 30 in the query\'s Days Left criteria to look further ahead.' },
       { q: 'How do I see one member\'s payments quickly?', a: 'Open the Members form at that member: their payments are listed below their details.' },
     ],
     empty: 'Enter your Members first, with the type each holds, the day they joined and when their renewal is due. Then add their Payments, choosing each member from the list. If you are moving from a paper list, start with the current members and add past payments only if you need them.',
@@ -322,7 +322,7 @@ export const TEMPLATE_ABOUT = {
       } },
     },
     queries: {
-      'Open opportunities': 'Deals that are neither Won nor Lost, the soonest expected close first, with the company, the title, the stage, the value and who owns it. Use it each week to see what needs a push.',
+      'Open opportunities': 'Deals whose Stage says neither won nor lost (however it is typed: Won, won, Closed won), the soonest expected close first, with the company, the title, the stage, the value and who owns it. Use it each week to see what needs a push.',
     },
     reports: {
       'Pipeline by company': 'Every opportunity under its company, by expected close, with its title, stage and value, and the value added up for each company and for the whole. It includes won and lost deals as well as open ones, so it shows all the business you have had with each company.',
@@ -357,7 +357,7 @@ export const TEMPLATE_ABOUT = {
     ],
     notes: [
       'Company on a person and on an opportunity, and Person on an activity, are lists of names on the form, taken from the other table. Add the company before its people and deals, and the person before their calls. In the table\'s rows these fields show the record\'s number instead.',
-      'Stage is typed text. The Open opportunities query leaves out exactly Won and Lost, so a deal typed as won or Closed won stays on it. Keep to the same words each time.',
+      'Stage is typed text. Open opportunities leaves out any stage with won or lost in it, in capitals or not, so Closed won drops out too; a stage such as Lost interest would drop out as well. Keep to the same few words each time.',
       'Activities are kept against a person, not a company or a deal. To see every call with a company, open the People form at each of its people: their activities are listed below.',
       'A company that has people or opportunities cannot be deleted while they point at it, and nor can a person with activities.',
       'Keep a copy of the file with File, Save As before you share it with a colleague, so you each know which is the latest.',

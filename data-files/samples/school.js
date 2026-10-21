@@ -822,12 +822,14 @@ export function fill(base, { r, cal }) {
     if (!subjects.length) subjects.push(r.pick(['Maths', 'English']));
     const cohort = a - year - 5;
     const s = {
-      id: null, family: f, adult: false, cohort, first: r.pick(FIRST), last: r.chance(0.9) ? f.last : r.pick(LAST),
+      // Brothers and sisters never share a first name.
+      id: null, family: f, adult: false, cohort, first: r.pick(FIRST.filter((n) => !(f.names ??= []).includes(n))), last: r.chance(0.9) ? f.last : r.pick(LAST),
       dob: cal.day(off(cohort, 8, 1) + r.int(0, 364)), subjects: r.some(subjects, subjects.length), coded: 0,
       attend: r.weighted([[0.97, 70], [0.93, 22], [0.8, 8]]), ability: {}, joinedBy,
       medical: r.chance(0.12) ? r.pick(MEDICAL) : null, consent: r.chance(0.82), last_on: -9999,
     };
     f.kids++;
+    f.names.push(s.first);
     students.push(s);
     return s;
   };

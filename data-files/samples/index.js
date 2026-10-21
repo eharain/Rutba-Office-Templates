@@ -28,9 +28,10 @@ import * as charity from './charity.js';
 import * as rentals from './rentals.js';
 import * as agent from './agent.js';
 import * as guesthouse from './guesthouse.js';
+import * as visitors from './visitors.js';
 import * as payroll from './payroll.js';
 
-const SAMPLES = { shop, food, cafe, takeaway, florist, pharmacy, trading, workshop, builder, cars, salon, barber, repairs, cleaning, agency, gym, clinic, school, charity, rentals, agent, guesthouse, payroll };
+const SAMPLES = { shop, food, cafe, takeaway, florist, pharmacy, trading, workshop, builder, cars, salon, barber, repairs, cleaning, agency, gym, clinic, school, charity, rentals, agent, guesthouse, visitors, payroll };
 
 /** The samples, in the order a window offers them. */
 export const SAMPLE_IDS = Object.keys(SAMPLES);

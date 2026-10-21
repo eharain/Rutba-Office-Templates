@@ -48,8 +48,10 @@ const T = {
     ],
     queries: {
       'Low stock': { tables: ['Products', 'Suppliers'], columns: [
-        { table: 'Products', field: 'Name', as: 'Product', sort: 'asc' }, { table: 'Products', field: 'Units in Stock', criteria: ['< 10'] },
+        { table: 'Products', field: 'Name', as: 'Product', sort: 'asc' }, { table: 'Products', field: 'Units in Stock' },
         { table: 'Products', field: 'Reorder Level' }, { table: 'Suppliers', field: 'Name', as: 'Supplier' }, { table: 'Suppliers', field: 'Phone' },
+        // Each product against its own reorder level, not one number for all.
+        { expr: '[Units in Stock] - [Reorder Level]', as: 'Spare', criteria: ['<= 0'], show: false },
         { table: 'Products', field: 'Discontinued', criteria: ['No'], show: false },
       ] },
     },
@@ -71,7 +73,9 @@ const T = {
     ],
     queries: {
       'Renewals due': { tables: ['Members'], columns: [
-        { table: 'Members', field: 'Renewal Due', sort: 'asc', criteria: ['Is Not Null'] }, { table: 'Members', field: 'First Name' },
+        { table: 'Members', field: 'Renewal Due', sort: 'asc', criteria: ['Is Not Null'] },
+        // Due in the next 30 days, or already past: the ones to remind.
+        { expr: 'DateDiff("d", Date(), [Renewal Due])', as: 'Days Left', criteria: ['<= 30'] }, { table: 'Members', field: 'First Name' },
         { table: 'Members', field: 'Last Name' }, { table: 'Members', field: 'E-mail' }, { table: 'Members', field: 'Membership Type' },
         { table: 'Members', field: 'Active', criteria: ['Yes'], show: false },
       ] },
@@ -102,8 +106,10 @@ const T = {
     queries: {
       'Open opportunities': { tables: ['Opportunities', 'Companies'], columns: [
         { table: 'Opportunities', field: 'Expected Close', sort: 'asc' }, { table: 'Companies', field: 'Name', as: 'Company' },
-        { table: 'Opportunities', field: 'Title' }, { table: 'Opportunities', field: 'Stage', criteria: ['Not In ("Won", "Lost")'] },
+        { table: 'Opportunities', field: 'Title' }, { table: 'Opportunities', field: 'Stage', criteria: ['Not Like "*won*"'] },
         { table: 'Opportunities', field: 'Value' }, { table: 'Opportunities', field: 'Owner' },
+        // Won or lost however it is typed (won, Closed won, LOST): Like takes no notice of capitals.
+        { expr: '[Stage]', as: 'Still Open', criteria: ['Not Like "*lost*"'], show: false },
       ] },
     },
     reports: [{ name: 'Pipeline by company', table: 'Opportunities', columns: ['Title', 'Stage', 'Expected Close', 'Value'], group: 'Company', sort: 'Expected Close', totals: [{ field: 'Value', fn: 'sum' }] }],
