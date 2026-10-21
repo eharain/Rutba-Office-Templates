@@ -9,7 +9,7 @@
 //   node tools/make-samples.mjs --check builds each one and says what checkSample finds
 //
 // Each database says what it is in its own `about` (packages/database/src/samples,
-// and templates-about.js for the simple templates): what the business is, each
+// and data-files/simple-about.js for the simple templates): what the business is, each
 // table, field, query, report and print template in plain words, a tutorial,
 // things to know and questions people ask. The catalogue and docs/SAMPLES.md
 // are made from that and from the design read back out of the file itself,
@@ -24,8 +24,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TYPES = { autonumber: 'AutoNumber', text: 'Short text', longtext: 'Long text', integer: 'Whole number', number: 'Number', currency: 'Currency', date: 'Date', datetime: 'Date and time', yesno: 'Yes/No' };
 const FN = { sum: 'total', avg: 'average', count: 'count', min: 'lowest', max: 'highest' };
 
-/** The simple templates' documentation, when it is there. */
-const TEMPLATE_ABOUT = await import('../packages/database/src/templates-about.js').then((m) => m.TEMPLATE_ABOUT).catch(() => ({}));
+
+import { TEMPLATE_ABOUT } from '../data-files/index.js';
 
 /** What every database's documentation says before its own notes. */
 export const KNOW = [
