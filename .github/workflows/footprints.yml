@@ -1,0 +1,23 @@
+# Every push and pull request is checked as the repository's own hooks check
+# a push from a clone: each commit's author, committer and message, each file
+# name, and each added line. A commit carrying an AI tool's attribution or
+# name, a long dash or an invisible character fails the check.
+name: No AI footprints
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: The hooks' awk is GNU awk
+        run: |
+          sudo apt-get install -y gawk >/dev/null
+          sudo update-alternatives --set awk /usr/bin/gawk || sudo ln -sf /usr/bin/gawk /usr/local/bin/awk
+      - name: Every commit checked, as pre-push checks a new branch
+        run: |
+          git remote remove origin
+          echo "refs/heads/check $(git rev-parse HEAD) refs/heads/check 0000000000000000000000000000000000000000" | sh .githooks/pre-push
