@@ -97,6 +97,9 @@ function guideRows(s) {
   return rows;
 }
 
+/** The oldest Office a sample needs (its module's `minOffice`), or null when any Office that has samples can make it. */
+export const sampleNeeds = (id) => sampleModule(id).minOffice || null;
+
 /** A sample's documentation: what the business is, each table, field, query and report in words. */
 export function sampleAbout(id) {
   const s = SAMPLES[id];

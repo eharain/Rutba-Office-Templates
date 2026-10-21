@@ -10,7 +10,9 @@
     "./catalogue": "./src/catalogue.js",
     "./make": "./src/make.js",
     "./word": "./src/word.js",
-    "./data-files": "./data-files/index.js"
+    "./data-files": "./data-files/index.js",
+    "./versions": "./src/versions.js",
+    "./manifest": "./src/manifest.js"
   },
   "sideEffects": false,
   "dependencies": {

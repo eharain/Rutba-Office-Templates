@@ -152,3 +152,6 @@ export function templateSpec(id) {
   if (!t) throw new Error(`There is no template called ${id}.`);
   return t;
 }
+
+/** The oldest Office a simple template needs (its `minOffice`), or null. */
+export const templateNeeds = (id) => templateSpec(id).minOffice || null;

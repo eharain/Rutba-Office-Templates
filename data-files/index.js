@@ -2,8 +2,8 @@
 // sample businesses, their designs, invented records and documentation.
 // Office's engine (@rutba/database) builds a database from them.
 
-export { TEMPLATE_IDS, templateTables, templateSpec } from './simple.js';
+export { TEMPLATE_IDS, templateTables, templateSpec, templateNeeds } from './simple.js';
 export { TEMPLATE_ABOUT } from './simple-about.js';
-export { SAMPLE_IDS, sampleSpec, sampleAbout, sampleModule, designOfModule, guideOf, GUIDE_TABLE } from './samples/index.js';
+export { SAMPLE_IDS, sampleSpec, sampleAbout, sampleModule, sampleNeeds, designOfModule, guideOf, GUIDE_TABLE } from './samples/index.js';
 export { checkSample } from './samples/check.js';
 export { random, calendar } from './samples/util.js';
