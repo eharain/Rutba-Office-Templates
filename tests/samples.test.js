@@ -30,9 +30,8 @@ const ORDER = ['shop', 'food', 'cafe', 'takeaway', 'florist', 'pharmacy', 'tradi
   'salon', 'barber', 'repairs', 'garage', 'cleaning', 'agency', 'gym', 'clinic', 'school', 'charity',
   'rentals', 'agent', 'guesthouse', 'visitors', 'payroll'];
 
-test('the samples are offered in the start screen\'s order, a sample for each kind of business', () => {
-  assert.deepEqual(SAMPLE_IDS, ORDER.filter((id) => SAMPLE_IDS.includes(id)), 'in order');
-  assert.ok(SAMPLE_IDS.length >= 11);
+test('twenty-five samples, a business of each kind Office is made for, in the start screen\'s order', () => {
+  assert.deepEqual(SAMPLE_IDS, ORDER);
 });
 
 for (const id of SAMPLE_IDS) {

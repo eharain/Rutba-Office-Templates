@@ -33,6 +33,7 @@ repository, zips it with a read-me into `public/samples/` and writes the pages' 
 | [Marigold Hair and Beauty](#marigold-hair-and-beauty) | Salon | 16 | 17 | 10 | 4 |
 | [Copper Pole Barbers](#copper-pole-barbers) | Barber shop | 14 | 18 | 12 | 4 |
 | [Ironbridge Repairs](#ironbridge-repairs) | Repair shop | 16 | 20 | 9 | 6 |
+| [Quarrybank Motors](#quarrybank-motors) | Garage and MOT centre | 19 | 17 | 10 | 5 |
 | [Fernhollow Cleaning](#fernhollow-cleaning) | Cleaning company | 16 | 14 | 8 | 5 |
 | [Bramble Studio](#bramble-studio) | Consultancy or agency | 13 | 17 | 8 | 5 |
 | [Tannery Yard Fitness](#tannery-yard-fitness) | Gym and fitness studio | 15 | 15 | 11 | 5 |
@@ -8556,6 +8557,747 @@ Open the query Accounts to chase, or print the Account statement for that busine
 **Can I start with my own shop instead of Ironbridge?**
 
 Yes. Make the database empty from the sample, fill in the Business record with your own name, address, VAT number and bank details, and every document prints with them.
+
+## Quarrybank Motors
+
+**Garage and MOT centre.** Customers, vehicles, bookings, job cards, MOT tests, services, reminders, parts and invoices for an independent garage.
+
+Quarrybank Motors is an invented independent garage and MOT test centre in Leeds, with four bays. Three technicians and a workshop manager do the work, two of them as MOT testers, and a service advisor runs the desk: the phone, the diary, the estimates and the customers waiting for their keys. A few local firms run their vans and cars on a trade account and pay by transfer within thirty days.
+
+Each vehicle is one record, known by its registration, with the dates its MOT and its service fall due. Four weeks before either, the garage sends a reminder, and most customers book in. A booking becomes a job card when the vehicle arrives; the labour (hours at the bench rate), the parts and the MOT fee go on it as lines, and when the work is done those lines are the invoice. An MOT test is recorded with its result, its own test number, and its failures and advisories; failures are put right and the car is retested, while most advisories wait for another day, so the garage can ring about them later.
+
+Prices are kept without VAT, as a garage quotes its trade customers, and VAT is added line by line. The MOT fee carries no VAT. The records cover about thirteen months up to the day the file is made, with bookings in the diary for the weeks ahead, reminders ready for next month, cars waiting on parts, a few estimates not yet answered, and trade invoices not yet paid.
+
+Every registration is invented and has a Q among its last three letters, which current British plates never use, and the makes and models are made up.
+
+It suits, with small changes: A tyre and exhaust centre; A van and light commercial workshop; A motorcycle workshop, with bikes as the vehicles; A mobile mechanic, with bookings at the customer's address; A body shop or smart repair business, with estimates for every job; An agricultural or plant repairer servicing machines by the hour.
+
+### Things you should know
+
+- Everything in a sample's records is invented: the business, the people, their addresses, e-mail addresses on example domains that reach nobody, and phone numbers from the ranges kept for drama and fiction. Tax, company and bank numbers are placeholders of zeros.
+- The dates count back from the day the file was made, and some run on into the weeks after it, as real bookings and due dates do. Made from the Data Files start screen, a sample is dated from that day. Queries that compare with today (overdue, due this week) show more as a downloaded file gets older.
+- To start empty, choose the same business on the start screen and then Empty: the same tables, queries, forms, reports and print templates, with nothing in them but the Start Here guide.
+- Your records live in one file on your computer. Keep copies: File, Save As makes one, and a copy on another drive or in your own cloud storage keeps it safe if this computer is lost. Close the database before copying the file by hand.
+- Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
+- Prices are kept without VAT and VAT is added on each line and rounded to the penny, then the lines are added up. An invoice's Tax is that sum, so it can differ by a penny from 20 percent of the net worked out once.
+- The MOT fee is a line of its own with a Tax Rate of 0: the test carries no VAT. Repairs to put a failure right are ordinary labour and part lines at the full rate.
+- An invoice's lines are the job card's own lines, pointed at the invoice once it is raised. Add all the work to the job card before you invoice it.
+- The numbers on job cards, invoices, estimates and MOT tests (JC-, INV-, EST-, MT-) are typed, not made by Data Files. Keep each run in date order and start again at 0001 each January. A real test centre records the national MOT test number in Test Number.
+- MOT Due and Service Due on a vehicle are kept by hand when a test or service is done here. A test passed up to a month before the due date keeps the same date and adds a year; a later test starts a new year from the test.
+- A print template prints every record of its table. Choose the record you want: the job card on screen, the reminders not yet sent, the accounts that owe something.
+- Every registration in this sample is invented, with a Q among its last three letters so it cannot be a real car's. Your own records will have real registrations: keep the file safe, as they identify your customers' vehicles.
+
+### Tutorial
+
+#### Take a booking
+
+1. Open the Vehicles form and find the registration. If the vehicle is new to you, first add the owner on the Customers form (choose their trade account in Account if they have one), then press New on Vehicles and fill in Registration, Customer, Make, Model, Fuel, Year and Tyre Size.
+2. Open the query Bookings next 7 days to find a day with room.
+3. Open the Bookings form and press New. Choose the vehicle, type the Date and Time, say what for in Work (MOT, Service, MOT and service, or the repair), tick Courtesy Car if it is needed, and set Booked On to today.
+
+#### Start the day and open the job cards
+
+1. Open the report Day sheet: today's and tomorrow's bookings in time order.
+2. When a vehicle arrives, set its booking's Status to Arrived. Open the Job Cards form, press New, type the next number (JC-2026- and the next in the run), choose the vehicle and the booking, the technician, today in Opened, the mileage in Mileage In and the work in Work Requested.
+3. With the job card on screen, open the print template Job card from Print templates and press Print. It goes on the dashboard with the keys; the technician writes on it what was done.
+4. During the day, the query Open job cards shows what is in, who has it and what each is waiting for.
+
+#### Record an MOT test
+
+1. Open the MOT Tests form and press New. Type the test number, choose the vehicle, the job card and the tester, and fill in Test Date, Mileage, Result and Fee.
+2. In MOT Items below, add each failure (Kind Fail) and each advisory (Kind Advisory) in the tester's words.
+3. On a pass, type the new expiry in Expires and the same date in the vehicle's MOT Due. On a fail, ring the customer, put the failures right on the job card, then add a retest with Retest Of set to the failed test and Fee 0, and tick Fixed on each failure.
+4. Add the MOT fee to the job card's Job Lines as Kind MOT, with Tax Rate 0.
+
+#### Record a service, then invoice the job
+
+1. On the job card, add a line in Job Lines for each part fitted (Kind Part, the part, its name, how many, its price and cost) and for the labour (Kind Labour, the technician, the hours and the rate). Fill in Done On on each.
+2. Open the Services form and press New: choose the vehicle and job card, the kind of service and the mileage, and when the next is due. Put the same date in the vehicle's Service Due.
+3. Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job card and the trade account if there is one, and fill in Invoice Date, Due Date, Net, Tax and Total. Then on each of the job card's lines choose the invoice in Invoice. Close the job card: Status Invoiced and Closed today.
+4. Open the print template Invoice, choose the invoice, and press Print or Save as PDF. When the customer pays, fill in Paid On and Method.
+
+#### Give an estimate
+
+1. Open the Estimates form and press New. Type the next number (EST-2026-...), choose the vehicle, today in Estimate Date, thirty days on in Valid Until, and the work in a few words.
+2. In Estimate Lines, add the labour (hours and rate) and each part, without VAT. Put the totals in Net, Tax and Total.
+3. Open the print template Estimate, choose it, and press Save as PDF to e-mail it, or Print.
+4. The query Estimates awaiting answer lists those not yet answered. When the customer says yes, fill in Answer and Answered On, take a booking, and later choose the job card in Job Card.
+
+#### Send next month's reminders
+
+1. Near the end of each month, open the query MOTs due next month and the query Services due next 30 days.
+2. For each vehicle, add a record on the Reminders form: the vehicle, the Kind (MOT, service, or MOT and service), the Due date and the Method from the customer's Remind By.
+3. Open the query Reminders to send to check them, then open the print template Reminder letter, choose the reminders not yet sent, and press Print. Fill in Sent On on each.
+4. When a customer books from a reminder, tick Booked on it.
+
+#### Month end: trade statements, hours and VAT
+
+1. Open the report Trade invoices due to see what each trade account owes.
+2. Open the print template Trade statement, choose the accounts that owe something, and press Save as PDF to e-mail each one.
+3. Open the report Technician hours for the hours each technician sold, and the report VAT by month for the VAT return.
+4. Every Monday, open the report Parts to order and place the orders; record them on the Part Orders form.
+
+### Tables
+
+#### Start Here
+
+The guide to this database: the everyday tasks a step at a time, each step saying which table, form, query, report or print template to open. Open its report, Start Here, to read or print it. Delete the table when you no longer need it; nothing else uses it. The sample has 31 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Order | Whole number | The order the steps are read in. |
+| Task | Short text, required | The everyday task the step belongs to. |
+| Step | Whole number | The step's number within its task. |
+| What To Do | Long text | What to open and what to do there. |
+
+#### Business
+
+The business's own details, in one record. Every document it prints, an invoice, a receipt, a statement or a letter, takes its name, address and payment details from here, so they are changed in one place. The sample has 1 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Name | Short text, required | The name printed at the top of every document. |
+| Address | Short text | The street address. |
+| City | Short text | The town or city. |
+| Postcode | Short text | The postcode or ZIP code. |
+| Country | Short text | The country. |
+| Phone | Short text | The phone number customers call. |
+| E-mail | Short text | The address customers write to. |
+| Website | Short text | The website, if there is one. |
+| Tax Number | Short text | The VAT or sales tax registration number, printed on invoices. The sample has a placeholder. |
+| Company Number | Short text | The registered company number, where the business is a company. The sample has a placeholder. |
+| Bank Details | Short text | Where customers pay by transfer: the bank, account name and number. The sample has a placeholder. |
+| Payment Terms | Short text | The words printed under an invoice's total, such as "Payment within 30 days". |
+| Tax Rate | Number | The usual rate of VAT or sales tax as a fraction: 0.2 is twenty percent. Lines may carry a rate of their own. |
+| Currency | Short text | The currency the business trades in, as its three-letter code. |
+| Document Footer | Long text | A line or two at the foot of every document: thanks, opening hours, returns policy. |
+
+#### Accounts
+
+The businesses with a trade account: their vehicles are invoiced to the account, and the account pays within its payment days. The sample has 4 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Name | Short text, required, unique | The business's name, printed on its invoices and statement. Each name is used once. |
+| Contact | Short text | The person who looks after the vehicles there, printed on the statement. |
+| Phone | Short text | The business's main number. |
+| E-mail | Short text | Where invoices and statements are sent. |
+| Address | Short text | The street address. |
+| City | Short text | The town or city. |
+| Postcode | Short text | The postcode. |
+| Payment Days | Whole number | How many days after the invoice date payment is due: 30 means thirty days. |
+| Credit Limit | Currency | The most the account may owe at once. |
+| Opened | Date | The day the account was opened. |
+
+#### Customers
+
+The people whose vehicles the garage looks after. A fleet manager or driver at a business on a trade account is linked to that account; everyone else pays when they collect. The sample has 817 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| First Name | Short text | First name. |
+| Last Name | Short text, required | Family name. Needed for every customer. |
+| Account | Points at Accounts | The trade account the customer's vehicles are invoiced to. Empty for private customers. |
+| Phone | Short text | The number the desk rings when the car is ready or a part is needed. |
+| E-mail | Short text | Where invoices and reminders go, when the customer gave one. |
+| Address | Short text | The postal address, used for reminder letters. |
+| City | Short text | The town or city. |
+| Postcode | Short text | The postcode. |
+| Remind By | Short text | How the customer wants their MOT and service reminders: Letter, E-mail, Text message, or None for someone who would rather not have them. |
+| Joined | Date | The day the customer first came in. |
+
+#### Staff
+
+The people at the garage: the workshop manager, the technicians and the service advisor. The sample has 5 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| First Name | Short text | First name. |
+| Last Name | Short text, required | Family name. |
+| Role | Short text | Workshop Manager, Technician or Service Advisor. |
+| MOT Tester | Yes/No | Yes for someone who may carry out MOT tests at this centre. |
+| Phone | Short text | Work mobile. |
+| E-mail | Short text | Work e-mail address. |
+| Started | Date | The day they joined. |
+| Active | Yes/No | No once someone has left, so they stop appearing in lists of who can take a job. |
+
+#### Suppliers
+
+The motor factors and wholesalers parts come from. The sample has 3 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Name | Short text, required | The supplier's name. |
+| Contact | Short text | The person at their counter the garage deals with. |
+| Phone | Short text | Their trade counter number. |
+| E-mail | Short text | Where orders are sent. |
+| Supplies | Short text | What the garage buys from them. |
+| Deliveries | Short text | How often they deliver, such as twice a day. |
+| Our Account | Short text | The garage's account reference with them (an invented reference here). |
+
+#### Parts
+
+Every part and fluid the garage fits, whether kept on the shelf or ordered in for a job. The sample has 26 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Code | Short text, unique | The garage's own code for the part, printed on the job card. |
+| Name | Short text, required | What the part is, in plain words, as the invoice prints it. |
+| Category | Short text | Service parts, Brakes, Suspension and steering, Exhaust, Tyres, Electrical, Engine, Clutch or Fluids. |
+| Supplier | Points at Suppliers | Who it is usually bought from. |
+| Unit | Short text | How it is counted: each, pair, set or litre. |
+| Cost | Currency | What one unit costs the garage, without VAT. |
+| Price | Currency | What one unit is charged at, without VAT. |
+| In Stock | Whole number | How many are on the shelf now. |
+| Reorder Level | Whole number | When stock falls to this number it is ordered again. |
+| Reorder Quantity | Whole number | How many to order at a time. |
+| Stocked | Yes/No | Yes for parts kept on the shelf. No for parts ordered in for each job, such as clutch kits. |
+| Bin | Short text | Where it is kept in the stores. |
+
+#### Vehicles
+
+One record for each vehicle the garage looks after, known by its registration, with when its MOT and service fall due. Its job cards, MOT tests and services are its history. The sample has 925 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Registration | Short text, required, unique | The number plate. Each is used once. In this sample every one is invented, with a Q among the last three letters. |
+| Customer | Points at Customers, required | Who the vehicle belongs to, or who runs it for a trade account. |
+| Make | Short text | The maker (invented makes in this sample). |
+| Model | Short text | The model. |
+| Body | Short text | Hatchback, Estate, SUV, Saloon or Van. |
+| Fuel | Short text | Petrol, Diesel, Hybrid or Electric. |
+| Year | Whole number | The year it was first registered. |
+| Colour | Short text | Its colour, which helps find it in the yard. |
+| Tyre Size | Short text | The size of its tyres, so the right ones are ordered. |
+| Mileage | Whole number | The mileage when it last came in. |
+| MOT Due | Date | The day its MOT certificate runs out. A test passed up to a month early keeps this date and adds a year. |
+| Service Due | Date | The day its next yearly service is due. |
+| Notes | Long text | Anything worth knowing: a locking wheel nut in the glovebox, a customer who wants the old parts back. |
+
+#### Bookings
+
+The diary: each vehicle booked in, the day and time and what for. A booking becomes a job card when the vehicle arrives. The sample has 1,995 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Vehicle | Points at Vehicles, required | The vehicle booked in. |
+| Date | Date, required | The day it is booked for. |
+| Time | Short text | The time it is due in, such as 08:30. |
+| Work | Short text | What it is booked in for: MOT, Service, MOT and service, or a repair in a few words. |
+| Booked On | Date | The day the booking was made. |
+| Status | Short text | Booked, Arrived, Done, Cancelled or No show. |
+| Courtesy Car | Yes/No | Yes when the customer needs the courtesy car that day. |
+| Notes | Short text | Anything the desk needs to know, such as how the booking came about. |
+
+#### Job Cards
+
+One record for each visit: the work asked for, the technician, and, in Job Lines, the labour and parts. The Job card print template prints from it for the workshop. The sample has 1,853 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Number | Short text, unique | The job card number, in the order cards are opened, a new run each year: JC-2026-0042. |
+| Vehicle | Points at Vehicles, required | The vehicle worked on. |
+| Booking | Points at Bookings | The booking it came from. Empty for a vehicle that came in without one. |
+| Technician | Points at Staff | Who the job is given to. |
+| Opened | Date | The day the vehicle arrived and the card was opened. |
+| Mileage In | Whole number | The mileage when it arrived, printed on the invoice. |
+| Work Requested | Short text | What the customer asked for, in their words. |
+| Status | Short text | Open, Awaiting parts, Awaiting authority (extra work found and the customer not yet asked) or Invoiced. |
+| Closed | Date | The day the work was finished and invoiced. Empty while the job is open. |
+| Notes | Long text | What the technician found, and any call to the customer about extra work. |
+
+#### Part Orders
+
+Parts ordered from suppliers: stock for the shelf each Monday, or a part for one job when the shelf has none. The sample has 521 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Supplier | Points at Suppliers, required | Who the order went to. |
+| Part | Points at Parts, required | The part ordered. |
+| Job Card | Points at Job Cards | The job the part is for, when it was ordered for one. Empty for shelf stock. |
+| Quantity | Whole number | How many. |
+| Unit Cost | Currency | The price paid for each, without VAT. |
+| Ordered On | Date | The day it was ordered. |
+| Expected | Date | The day it should arrive. |
+| Received On | Date | The day it arrived. Empty while it is on its way. |
+| Status | Short text | On order or Received. |
+
+#### Job Lines
+
+The labour, parts and MOT fee on each job card, without VAT. When the job is invoiced, each line points at the invoice, and they are its lines. The sample has 5,929 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Job Card | Points at Job Cards, required | The job card the line belongs to. |
+| Invoice | Points at Invoices | The invoice the line is on. Empty until the job is invoiced. |
+| Technician | Points at Staff | Who did the work, on a labour or MOT line; it is what the technician hours are counted from. |
+| Part | Points at Parts | The part fitted, on a part line. |
+| Kind | Short text | Labour, Part or MOT. |
+| Description | Short text | What the line is, as the invoice prints it. |
+| Quantity | Number | For labour, the hours (1.5 is an hour and a half); for parts, how many, or the litres of oil. |
+| Unit Price | Currency | The price of one hour or one part, without VAT. |
+| Unit Cost | Currency | What one part cost the garage, kept so the margin does not change when prices do. |
+| Tax Rate | Number | The VAT rate of the line, as a fraction: 0.2 is twenty percent, 0 for the MOT fee. |
+| Done On | Date | The day the work was done or the part fitted. |
+
+#### MOT Tests
+
+Every MOT test carried out, with its result. A failed test is followed by a retest once the failures are put right. The sample has 908 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Test Number | Short text, unique | The test's own number, in a sample format of the garage's own: MT-2026-00042. A real centre records the national test number here. |
+| Vehicle | Points at Vehicles, required | The vehicle tested. |
+| Job Card | Points at Job Cards | The job card the test was done on. |
+| Tester | Points at Staff | Who carried out the test. |
+| Test Date | Date | The day of the test. |
+| Mileage | Whole number | The mileage read at the test. |
+| Result | Short text | Pass or Fail. |
+| Expires | Date | For a pass, the day the new certificate runs out. |
+| Retest Of | Points at MOT Tests | For a retest, the failed test it follows. |
+| Fee | Currency | What the test was charged at: nothing for a retest within ten working days. |
+
+#### MOT Items
+
+The failures and advisories found at each MOT test. The sample has 1,043 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| MOT Test | Points at MOT Tests, required | The test the item was found at. |
+| Kind | Short text | Fail (it must be put right before the vehicle passes) or Advisory (it will need doing soon). |
+| Item | Short text | What the tester found, in plain words. |
+| Fixed | Yes/No | Yes once the garage has put it right. |
+| Fixed On | Date | The day it was put right. |
+
+#### Services
+
+Each service carried out: its kind, the mileage and when the next is due. Together with the job cards it is the vehicle's service history. The sample has 664 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Vehicle | Points at Vehicles, required | The vehicle serviced. |
+| Job Card | Points at Job Cards | The job card it was done on. |
+| Service Date | Date | The day of the service. |
+| Kind | Short text | Interim service, Full service or Electric vehicle service. |
+| Mileage | Whole number | The mileage at the service. |
+| Next Due | Date | When the next service is due: a year on. |
+| Next Due Mileage | Whole number | Or at this mileage, whichever comes first. |
+
+#### Reminders
+
+The reminders the garage sends four weeks before an MOT or service is due, and those ready to send. The Reminder letter print template prints from it. The sample has 1,619 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Vehicle | Points at Vehicles, required | The vehicle the reminder is about. |
+| Kind | Short text | MOT, service, or MOT and service when both fall due together. |
+| Due | Date | The day the MOT or service is due. |
+| Method | Short text | Letter, E-mail or Text message, from the customer's Remind By. |
+| Sent On | Date | The day it was sent. Empty for a reminder not yet sent. |
+| Booked | Yes/No | Yes once the customer has booked in. |
+
+#### Estimates
+
+Written estimates for repairs, given before the work is booked. The Estimate print template prints from it. The sample has 174 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Number | Short text, unique | The estimate's number, in date order, a new run each year: EST-2026-0042. |
+| Vehicle | Points at Vehicles, required | The vehicle, and through it the customer. |
+| Estimate Date | Date | The day it was given. |
+| Valid Until | Date | The last day the price holds: thirty days on. |
+| Work | Short text | The work in a few words. |
+| Net | Currency | The parts and labour without VAT. |
+| Tax | Currency | The VAT, each line's rounded to the penny and added up. |
+| Total | Currency | The estimated total with VAT. |
+| Answer | Short text | Accepted or Declined; empty while the customer is thinking about it. |
+| Answered On | Date | The day the customer answered. |
+| Job Card | Points at Job Cards | The job card the work was done on, once accepted and booked in. |
+
+#### Estimate Lines
+
+The labour and parts on each estimate. The sample has 440 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Estimate | Points at Estimates, required | The estimate the line belongs to. |
+| Kind | Short text | Labour or Part. |
+| Description | Short text | The work or the part. |
+| Quantity | Number | Hours of labour, or how many parts. |
+| Unit Price | Currency | The price of one hour or one part, without VAT. |
+| Tax Rate | Number | The VAT rate, as a fraction. |
+
+#### Invoices
+
+An invoice for every job card when the work is done. Private customers pay when they collect; trade accounts pay within their payment days. The sample has 1,844 records.
+
+| Field | Type | What it holds |
+|---|---|---|
+| ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
+| Number | Short text, unique | The invoice's number, given in date order and once only, a new run each year: INV-2026-0042. |
+| Job Card | Points at Job Cards, required | The job invoiced; its lines are the invoice's lines. |
+| Account | Points at Accounts | The trade account billed. Empty for a private customer. |
+| Invoice Date | Date | The day it was raised, the day the work was finished. It is the tax point for VAT. |
+| Due Date | Date | When payment is due: on collection for private customers, or the account's payment days on. |
+| Net | Currency | The parts, labour and fees without VAT. |
+| Tax | Currency | The VAT: each line's rounded to the penny, then added up, as the invoice prints it. |
+| Total | Currency | What the invoice comes to with VAT. |
+| Paid On | Date | The day it was paid; empty while it is owed. |
+| Method | Short text | Card, Cash or Bank transfer. |
+
+### Relationships
+
+- Customers.Account points at a record in Accounts
+- Parts.Supplier points at a record in Suppliers
+- Vehicles.Customer points at a record in Customers
+- Bookings.Vehicle points at a record in Vehicles
+- Job Cards.Vehicle points at a record in Vehicles
+- Job Cards.Booking points at a record in Bookings
+- Job Cards.Technician points at a record in Staff
+- Part Orders.Supplier points at a record in Suppliers
+- Part Orders.Part points at a record in Parts
+- Part Orders.Job Card points at a record in Job Cards
+- Job Lines.Job Card points at a record in Job Cards
+- Job Lines.Invoice points at a record in Invoices
+- Job Lines.Technician points at a record in Staff
+- Job Lines.Part points at a record in Parts
+- MOT Tests.Vehicle points at a record in Vehicles
+- MOT Tests.Job Card points at a record in Job Cards
+- MOT Tests.Tester points at a record in Staff
+- MOT Tests.Retest Of points at a record in MOT Tests
+- MOT Items.MOT Test points at a record in MOT Tests
+- Services.Vehicle points at a record in Vehicles
+- Services.Job Card points at a record in Job Cards
+- Reminders.Vehicle points at a record in Vehicles
+- Estimates.Vehicle points at a record in Vehicles
+- Estimates.Job Card points at a record in Job Cards
+- Estimate Lines.Estimate points at a record in Estimates
+- Invoices.Job Card points at a record in Job Cards
+- Invoices.Account points at a record in Accounts
+
+### Queries
+
+#### Bookings today and tomorrow
+
+The diary for today and tomorrow, in time order, with the registration, the customer's number, the work and whether they need the courtesy car. Cancelled bookings are left out. Open it first thing.
+
+From Bookings, Vehicles, Customers. Shows Date, Time, Registration, Vehicle, Customer, Phone, Work, Courtesy Car, Status.
+Calculated: Vehicle is `[Make] & " " & [Model]`; Customer is `[Customers].[First Name] & " " & [Customers].[Last Name]`.
+Only where `Days Ahead Between 0 And 1` and `Status <> "Cancelled"`.
+
+#### Bookings next 7 days
+
+How many vehicles are booked in for each of the next seven days, how many are MOTs and how many need the courtesy car, to see where there is room.
+
+From Bookings, Vehicles, Customers. Shows Date, Bookings, MOTs, Courtesy Cars.
+Calculated: MOTs is `IIf(Left([Work], 3) = "MOT", 1, 0)`; Courtesy Cars is `IIf([Courtesy Car], 1, 0)`.
+Only where `Days Ahead Between 0 And 7` and `Status <> "Cancelled"`.
+
+#### MOTs due next month
+
+Every vehicle whose MOT runs out next month, with the customer's address and how they like reminders: the list to send reminder letters from.
+
+From Vehicles, Customers. Shows MOT Due, Registration, Vehicle, Customer, Address, City, Postcode, Phone, Remind By.
+Calculated: Vehicle is `[Make] & " " & [Model]`; Customer is `[Customers].[First Name] & " " & [Customers].[Last Name]`.
+Only where `Months Ahead = 1`.
+
+#### Services due next 30 days
+
+Vehicles whose yearly service falls due in the next thirty days, with their last mileage.
+
+From Vehicles, Customers. Shows Service Due, Registration, Vehicle, Mileage, Customer, Phone, Remind By, Days Left.
+Calculated: Vehicle is `[Make] & " " & [Model]`; Customer is `[Customers].[First Name] & " " & [Customers].[Last Name]`; Days Left is `DateDiff("d", Date(), [Service Due])`.
+Only where `Days Left Between 0 And 30`.
+
+#### Reminders to send
+
+Reminders made ready and not yet sent, by due date, with how each customer wants them. Print the Reminder letter for the letters, then fill in Sent On.
+
+From Reminders, Vehicles, Customers. Shows Due, Kind, Registration, Customer, Method, E-mail, Phone.
+Calculated: Customer is `[Customers].[First Name] & " " & [Customers].[Last Name]`.
+Only where `Sent On Is Null`.
+
+#### Advisories not fixed
+
+Advisories from MOT tests in the last year that have not been put right, by registration: worn tyres, thin brake pads, a little corrosion. Ring the customer, or bring it up at the next visit.
+
+From MOT Items, MOT Tests, Vehicles, Customers. Shows Registration, Vehicle, Customer, Phone, Test Date, Advisory.
+Calculated: Vehicle is `[Make] & " " & [Model]`; Customer is `[Customers].[First Name] & " " & [Customers].[Last Name]`.
+Only where `Kind = Advisory` and `Fixed = No` and `Days Ago Between 0 And 365`.
+
+#### Open job cards
+
+Every job card not yet closed, oldest first, with the vehicle, the technician, its status and how many days it has been open.
+
+From Job Cards, Vehicles, Customers, Staff. Shows Job Card, Opened, Registration, Vehicle, Customer, Phone, Work Requested, Technician, Status, Days Open.
+Calculated: Vehicle is `[Make] & " " & [Model]`; Customer is `[Customers].[First Name] & " " & [Customers].[Last Name]`; Technician is `[Staff].[First Name] & " " & [Staff].[Last Name]`; Days Open is `DateDiff("d", [Opened], Date())`.
+Only where `Closed Is Null`.
+
+#### Technician hours last 30 days
+
+Hours of labour each technician has sold in the last thirty days, and what they came to without VAT.
+
+From Job Lines, Staff. Shows Technician, Hours Sold, Labour Sold, Lines.
+Calculated: Technician is `[Staff].[First Name] & " " & [Staff].[Last Name]`; Labour Sold is `Round([Quantity] * [Unit Price], 2)`.
+Only where `Kind = Labour` and `Days Ago Between 0 And 30`.
+
+#### Technician hours by month
+
+Hours of labour sold by each technician in each month, for the workshop manager's month-end look.
+
+From Job Lines, Staff. Shows Month, Technician, Hours Sold, Labour Sold.
+Calculated: Month is `Format([Done On], "yyyy-mm")`; Technician is `[Staff].[First Name] & " " & [Staff].[Last Name]`; Labour Sold is `Round([Quantity] * [Unit Price], 2)`.
+Only where `Kind = Labour` and `Done On Is Not Null`.
+
+#### Parts margin
+
+For each kind of part, what was sold without VAT, what it cost and the margin, the biggest first.
+
+From Job Lines, Parts. Shows Category, Units, Sales, Cost of Parts, Margin.
+Calculated: Sales is `Round([Quantity] * [Unit Price], 2)`; Cost of Parts is `Round([Quantity] * [Unit Cost], 2)`; Margin is `Round([Quantity] * ([Unit Price] - [Unit Cost]), 2)`.
+Only where `Done On Is Not Null`.
+
+#### Takings by month
+
+Money received each month from invoices paid, private and trade together.
+
+From Invoices. Shows Month, Invoices Paid, Takings.
+Calculated: Month is `Format([Paid On], "yyyy-mm")`.
+Only where `Paid On Is Not Null`.
+
+#### VAT by month
+
+For each month, the invoices raised, their net value, the VAT and the total: the figures for the VAT return.
+
+From Invoices. Shows Month, Invoices, Net Sales, VAT, Invoiced.
+Calculated: Month is `Format([Invoice Date], "yyyy-mm")`.
+
+#### MOT results by month
+
+How many MOT tests were done each month, how many passed and failed, and how many were retests.
+
+From MOT Tests. Shows Month, Tests, Passed, Failed, Retests.
+Calculated: Month is `Format([Test Date], "yyyy-mm")`; Passed is `IIf([Result] = "Pass", 1, 0)`; Failed is `IIf([Result] = "Fail", 1, 0)`; Retests is `IIf(Nz([Retest Of], 0) > 0, 1, 0)`.
+
+#### Service history
+
+Every service carried out, vehicle by vehicle, newest first, with the mileage, the job card and when the next is due.
+
+From Services, Job Cards, Vehicles. Shows Registration, Vehicle, Service Date, Kind, Mileage, Job Card, Next Due, Next Due Mileage.
+Calculated: Vehicle is `[Make] & " " & [Model]`.
+
+#### Estimates awaiting answer
+
+Estimates the customer has not yet said yes or no to, oldest first, with the phone number to follow up.
+
+From Estimates, Vehicles, Customers. Shows Estimate, Estimate Date, Registration, Customer, Phone, Work, Total, Valid Until.
+Calculated: Customer is `[Customers].[First Name] & " " & [Customers].[Last Name]`.
+Only where `Answer Is Null`.
+
+#### Parts to reorder
+
+Shelf parts at or below their reorder level, by supplier, with what a full reorder would cost.
+
+From Parts, Suppliers. Shows Supplier, Code, Part, In Stock, Reorder Level, Reorder Quantity, Cost, Order Value.
+Calculated: Order Value is `Round([Reorder Quantity] * [Cost], 2)`.
+Only where `Spare <= 0` and `Stocked = Yes`.
+
+#### Trade accounts to chase
+
+Every trade invoice not yet paid, by account and due date, with the registration and how many days overdue it is (nought when it is not due yet).
+
+From Invoices, Accounts, Job Cards, Vehicles. Shows Account, Contact, Phone, Invoice, Registration, Invoice Date, Due Date, Total, Days Overdue.
+Calculated: Days Overdue is `IIf(DateDiff("d", [Due Date], Date()) > 0, DateDiff("d", [Due Date], Date()), 0)`.
+Only where `Paid On Is Null`.
+
+### Forms
+
+Every table has a form of the same name, made by the form wizard: Start Here, Business, Accounts, Customers, Staff, Suppliers, Parts, Vehicles, Bookings, Job Cards, Part Orders, Job Lines, MOT Tests, MOT Items, Services, Reminders, Estimates, Estimate Lines, Invoices. A form shows one record at a time; a field that points at another table is a list of that table's records, and the records that point at this one are listed below it.
+
+### Reports
+
+#### Bookings: today and tomorrow
+
+The diary for today and tomorrow, one section a day in time order: pin it up in the workshop and keep one at the desk.
+
+From the query Bookings today and tomorrow, a group for each Date: Time, Registration, Vehicle, Customer, Phone, Work, Courtesy Car, Status, with the count of Registration.
+
+#### MOTs due next month
+
+Every vehicle with its MOT due next month and the address to write to, for checking the reminder letters before they go.
+
+From the query MOTs due next month: MOT Due, Registration, Vehicle, Customer, Address, City, Postcode, Remind By, with the count of Registration.
+
+#### Advisories to follow up
+
+Unfixed advisories, a section for each vehicle, with the customer's number: the list for a quiet afternoon on the phone.
+
+From the query Advisories not fixed, a group for each Registration: Test Date, Advisory, Customer, Phone, with the count of Advisory.
+
+#### Work in progress
+
+Open job cards, a section for each status, with the technician and how long each has been open.
+
+From the query Open job cards, a group for each Status: Job Card, Opened, Registration, Vehicle, Work Requested, Technician, Days Open, with the count of Job Card.
+
+#### Hours sold by technician, by month
+
+Hours and labour sold by each technician, a section for each month, with the totals.
+
+From the query Technician hours by month, a group for each Month: Technician, Hours Sold, Labour Sold, with the total of Hours Sold, total of Labour Sold.
+
+#### Takings by month
+
+Money received each month with a grand total.
+
+From the query Takings by month: Month, Invoices Paid, Takings, with the total of Invoices Paid, total of Takings.
+
+#### VAT by month, from the invoices
+
+Net sales, VAT and invoiced totals for each month, with the grand totals, for the VAT return or the accountant.
+
+From the query VAT by month: Month, Invoices, Net Sales, VAT, Invoiced, with the total of Net Sales, total of VAT, total of Invoiced.
+
+#### Parts to order
+
+The parts to reorder, a page for each supplier, with the value of each order.
+
+From the query Parts to reorder, a group for each Supplier: Code, Part, In Stock, Reorder Level, Reorder Quantity, Cost, Order Value, with the total of Order Value.
+
+#### Trade invoices due
+
+Unpaid trade invoices, a section for each account, with days overdue and the total owed.
+
+From the query Trade accounts to chase, a group for each Account: Invoice, Registration, Invoice Date, Due Date, Days Overdue, Total, with the total of Total.
+
+#### Start here: the everyday tasks, step by step
+
+The guide to this database printed: each everyday task and its steps, from the Start Here table.
+
+From the table Start Here, a group for each Task: Step, What to do.
+
+### Print templates
+
+#### Estimate
+
+The written estimate for a repair: the vehicle, the work, the labour and parts with VAT, the total and how long it holds. One for each record in Estimates. One for each record of Estimates, on a4 paper, with the Business record at the head.
+
+- Heading: Estimate {Number}
+- Fields: Estimate, Date, Valid until, For, Address, Postcode, Registration, Make, Model, Mileage
+- Fields: Work to be done
+- Lines from Estimate Lines: Item, Description, Qty or hours, Price, Net, VAT rate, VAT
+- Totals: Net, VAT, Estimated total
+- Words: This estimate is our price for the work above, and holds until {Valid Until}. If we find anything else once the work starts, we will ring you before we do it: nothing more is done without your say-so.
+- Words: To book the work in, call us on {Business.Phone} quoting {Number}.
+- Words: {Business.Document Footer}
+
+#### Job card
+
+Printed when a vehicle arrives and kept with its keys: the vehicle, mileage and work asked for, then the work done and parts fitted with who did them, and two lines to sign. Prices are left off, as the workshop does not need them. One for each record in Job Cards; print the one on screen. One for each record of Job Cards, on a4 paper, with the Business record at the head.
+
+- Heading: Job card {Number}
+- Fields: Job card, Opened, Technician, Registration, Make, Model, Fuel, Year, Mileage in, Customer, Phone, Tyres
+- Fields: Work requested, Notes
+- Lines from Job Lines: Kind, Work done or part fitted, Part, Qty or hours, By, Date
+- Words: Before work starts: check the mileage, note any damage and warning lights, and fit seat and floor covers. Any work beyond what is asked for above is authorised by the customer first, and the call is noted here.
+- Signed by: Technician, Road test and quality check
+
+#### Invoice
+
+The VAT invoice for a job card: the labour, parts and MOT fee with the VAT on each line, the net, VAT and total, and how to pay. One for each record in Invoices. One for each record of Invoices, on a4 paper, with the Business record at the head.
+
+- Heading: VAT invoice {Number}
+- Fields: Invoice, Date and tax point, Due, Job card, Customer, Trade account, Address, Postcode, Registration, Make, Model, Mileage
+- Lines from Job Lines: Item, Description, Qty or hours, Price, Net, VAT rate, VAT
+- Totals: Net, VAT, Total
+- Words: The MOT test fee carries no VAT. {Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.
+- Words: {Business.Document Footer}
+
+#### Reminder letter
+
+The letter sent four weeks before an MOT or service is due: short and friendly, with the registration, the due date and how to book. One for each record in Reminders; print those in the query Reminders to send. Have the wording checked for your own country. One for each record of Reminders, on a4 paper, with the Business record at the head.
+
+- Fields: To, Address, Town, Postcode
+- Heading: {Vehicle}: {Kind} due on {Due}
+- Words: Dear {Vehicle.Customer.First Name} {Vehicle.Customer.Last Name},
+- Words: Our records show that your {Vehicle.Make} {Vehicle.Model}, registration {Vehicle}, is due its {Kind} on {Due}. We are writing in good time so that you can book a day that suits you.
+- Words: An MOT can be done up to a month before the due date without losing any time on the certificate, and if your service is due too we can do both on the same visit. A courtesy car can be booked if you need one, and we can collect the car from a local address.
+- Words: To book, ring us on {Business.Phone}, write to {Business.E-mail}, or call in. If the car has been sold, or the work done elsewhere, just let us know and we will update our records.
+- Words: Yours sincerely,
+- Signed by: Service desk
+- Words: {Business.Document Footer}
+
+#### Trade statement
+
+Sent to each trade account at the month end: every invoice raised to the account with the day it was paid, what is still owing and how much is overdue. One for each record in Accounts. One for each record of Accounts, on a4 paper, with the Business record at the head.
+
+- Heading: Statement of account
+- Fields: Account, For the attention of, Address, City, Postcode, Days to pay, Credit limit
+- Lines from Invoices: Invoice, Registration, Date, Due, Amount, Paid on, Owing, Overdue
+- Totals: Of which overdue, Balance owing
+- Words: Invoices are due {Payment Days} days from their date. Please pay by bank transfer to {Business.Bank Details}, quoting the invoice numbers. If you have paid in the last few days, thank you, and please ignore what is shown as owing.
+- Words: {Business.Document Footer}
+
+### Starting empty
+
+Start with Business, your own name, address, VAT number and payment details, which every document prints. Then Staff (tick MOT Tester for your testers), Suppliers and Parts (each part pointing at its supplier, with its cost and price without VAT), and Accounts for any trade customers. Customers and their Vehicles come in as people ring; add each vehicle's MOT Due and Service Due so reminders work from the start. Then the diary: Bookings, Job Cards with their Job Lines, MOT Tests with their items, Services, Invoices, Estimates and Reminders as the work goes on.
+
+### Making it yours
+
+- For a tyre centre, add a Tyre Brand and Load Rating to Parts and a Tread Depth field to Job Lines, and a query of vehicles with tread below 3 mm.
+- Add a Courtesy Cars table (registration, insurance, next service) and point Bookings at it instead of the Yes/No, so two cars can be booked separately.
+- For a mobile mechanic, add a Visit Address and a Travel line to Job Cards, and sort the day sheet by postcode.
+- Add a Labour Rate to Accounts for trade customers on a lower rate, and use it on their labour lines.
+- Add a Warranty Until to Job Lines for parts with a maker's warranty, and a query of parts still covered.
+- Record what technicians clock on in a Time Sheets table (technician, day, hours attended) and compare it with Technician hours by month to see efficiency.
+
+### Questions people ask
+
+**How do I see everything done to one car?**
+
+Open the Vehicles form and find the registration: its job cards, MOT tests and services are its history. The query Service history lists every service by registration.
+
+**How do I find whose MOT is due so I can send reminders?**
+
+Open the query MOTs due next month, or the report MOT reminder list to print it. Add a Reminders record for each, and print the Reminder letter.
+
+**A car failed its MOT. What do I record?**
+
+The failed test with its failures as MOT Items of Kind Fail. Put the work on the job card, then add a retest with Retest Of pointing at the failed test, and tick Fixed on each failure. Advisories stay unticked until they are done; the query Advisories not fixed lists them.
+
+**Why is there no VAT on the MOT line?**
+
+The MOT test fee carries no VAT, so its line has a Tax Rate of 0. Everything else on the invoice is at the standard rate.
+
+**How do I print an older invoice or job card?**
+
+Open the print template and choose the record by its number; every invoice and job card ever made is there.
+
+**How do I see how busy each technician is?**
+
+Open the query Technician hours last 30 days for hours sold, or the query Open job cards for what each has in the workshop now.
+
+**Can I start with my own garage instead of Quarrybank?**
+
+Yes. Make the database empty from the sample, fill in the Business record with your own name, address, VAT number and bank details, then add your parts and staff. Every document prints with your details.
 
 ## Fernhollow Cleaning
 

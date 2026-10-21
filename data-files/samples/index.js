@@ -19,6 +19,7 @@ import * as cars from './cars.js';
 import * as salon from './salon.js';
 import * as barber from './barber.js';
 import * as repairs from './repairs.js';
+import * as garage from './garage.js';
 import * as cleaning from './cleaning.js';
 import * as agency from './agency.js';
 import * as gym from './gym.js';
@@ -31,7 +32,7 @@ import * as guesthouse from './guesthouse.js';
 import * as visitors from './visitors.js';
 import * as payroll from './payroll.js';
 
-const SAMPLES = { shop, food, cafe, takeaway, florist, pharmacy, trading, workshop, builder, cars, salon, barber, repairs, cleaning, agency, gym, clinic, school, charity, rentals, agent, guesthouse, visitors, payroll };
+const SAMPLES = { shop, food, cafe, takeaway, florist, pharmacy, trading, workshop, builder, cars, salon, barber, repairs, garage, cleaning, agency, gym, clinic, school, charity, rentals, agent, guesthouse, visitors, payroll };
 
 /** The samples, in the order a window offers them. */
 export const SAMPLE_IDS = Object.keys(SAMPLES);
