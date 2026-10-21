@@ -245,7 +245,7 @@ export const spec = {
           { field: 'Family', label: 'Account' },
         ] },
         { type: 'lines', table: 'Enrolments', sort: 'Student', columns: [
-          { field: 'Student' }, { field: 'Class.Course.Name', as: 'Course' }, { field: 'Class.Weekday', as: 'Day' }, { field: 'Class.Start Time', as: 'Time' },
+          { field: 'Student', type: 'text' }, { field: 'Class.Course.Name', as: 'Course' }, { field: 'Class.Weekday', as: 'Day' }, { field: 'Class.Start Time', as: 'Time' },
           { field: 'Lessons Billed', as: 'Lessons', type: 'integer' }, { field: 'Class.Course.Fee per Lesson', as: 'Per Lesson', type: 'currency' },
           { expr: 'Round([Per Lesson] * [Lessons], 2)', as: 'Fees', type: 'currency' },
           { expr: 'Round([Fees] - Round([Per Lesson] * [Lessons] * (1 - Nz([Discount])), 2), 2)', as: 'Less', label: 'Discount', type: 'currency' },
@@ -283,7 +283,7 @@ export const spec = {
         { type: 'fields', columns: 2, items: [
           { field: 'Student.Family.Contact', label: 'To' }, { field: 'Enrolled On', label: 'Date' },
           { field: 'Student.Family.Address', label: 'Address' }, { field: 'Student.Family.City', label: 'City' },
-          { field: 'Student.Family.Postcode', label: 'Postcode' }, { field: 'Class', label: 'Our reference' },
+          { field: 'Student.Family.Postcode', label: 'Postcode' }, { field: 'Class', label: 'Our reference', type: 'text' },
         ] },
         { type: 'heading', text: 'Your place is confirmed: {Student.First Name} on {Class.Course.Name}' },
         { type: 'text', text: 'Dear {Student.Family.Contact},' },
@@ -303,7 +303,7 @@ export const spec = {
       blocks: [
         { type: 'heading', text: 'Progress report, {Term}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Student' }, { field: 'School Year' }, { field: 'Term' }, { field: 'Written On', label: 'Date' },
+          { field: 'Student', type: 'text' }, { field: 'School Year' }, { field: 'Term' }, { field: 'Written On', label: 'Date' },
           { field: 'Student.Family.Contact', label: 'Sent to' },
         ] },
         { type: 'lines', table: 'Report Lines', columns: [
@@ -343,7 +343,7 @@ export const spec = {
           { field: 'Hourly Rate' },
         ] },
         { type: 'lines', table: 'Lessons', sort: 'Lesson Date', columns: [
-          { field: 'Lesson Date', as: 'Date' }, { field: 'Class', as: 'Class' }, { field: 'Class.Course.Name', as: 'Course' },
+          { field: 'Lesson Date', as: 'Date' }, { field: 'Class', as: 'Class', type: 'text' }, { field: 'Class.Course.Name', as: 'Course' },
           { field: 'Minutes', type: 'integer' }, { expr: 'Round([Minutes] / 60, 2)', as: 'Hours', type: 'number' },
           { field: 'Teacher.Hourly Rate', as: 'Rate', type: 'currency' },
           { expr: 'Round([Minutes] / 60 * [Rate], 2)', as: 'Pay', type: 'currency' },

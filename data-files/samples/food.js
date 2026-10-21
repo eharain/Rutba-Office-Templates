@@ -223,7 +223,7 @@ export const spec = {
         { field: 'Supplier.Contact', label: 'For the attention of' }, { field: 'Ordered On', label: 'Date' },
         { field: 'Supplier.Address', label: 'Address' }, { field: 'Expected', label: 'Deliver on' },
         { field: 'Supplier.City', label: 'City' }, { field: 'Supplier.Account Number', label: 'Our account' },
-        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Staff', label: 'Ordered by' },
+        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Staff', label: 'Ordered by', type: 'text' },
       ] },
       { type: 'lines', table: 'Purchase Lines', link: 'Purchase Order', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Product' }, { field: 'Product.Unit', label: 'Unit' },
@@ -237,7 +237,7 @@ export const spec = {
     { name: 'Markdown label sheet', table: 'Date Checks', paper: 'a4', letterhead: { table: 'Business', fields: ['Name'] }, blocks: [
       { type: 'heading', text: 'Date check {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Date', label: 'Date' }, { field: 'Staff', label: 'Checked by' }, { field: 'Fridge Temperatures', label: 'Fridges' },
+        { field: 'Date', label: 'Date' }, { field: 'Staff', label: 'Checked by', type: 'text' }, { field: 'Fridge Temperatures', label: 'Fridges' },
       ] },
       { type: 'text', text: 'Reduce to clear: print a label for each, stick it over the shelf price on the pack, and put the packs at the front.' },
       { type: 'lines', table: 'Markdowns', link: 'Check', columns: [
@@ -275,7 +275,7 @@ export const spec = {
       { type: 'lines', table: 'Refusals', link: 'Register', sort: 'When', columns: [
         { field: 'Number', label: 'No' }, { field: 'When', label: 'Date and time' }, { field: 'Product.Name', label: 'Asked for' },
         { field: 'Reason' }, { field: 'Approx Age', label: 'Age (about)', type: 'text' }, { field: 'ID Shown', label: 'ID shown' },
-        { field: 'Description', label: 'What happened' }, { field: 'Staff', label: 'Refused by' },
+        { field: 'Description', label: 'What happened' }, { field: 'Staff', label: 'Refused by', type: 'text' },
       ] },
       { type: 'totals', rows: [{ label: 'Refusals this month', expr: '[Refusals Logged]', type: 'integer', strong: true }] },
       { type: 'text', text: 'Kept on the premises for the licensing authority, trading standards and the police to see on request.', small: true },

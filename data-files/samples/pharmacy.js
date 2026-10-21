@@ -243,7 +243,7 @@ export const spec = {
         { field: 'Delivery Date', label: 'Date' }, { field: 'Driver' }, { field: 'Area' }, { field: 'Stops' }, { field: 'Status' },
       ] },
       { type: 'lines', table: 'Deliveries', link: 'Round', sort: 'Stop', columns: [
-        { field: 'Stop' }, { field: 'Customer' }, { field: 'Customer.Address', label: 'Address' }, { field: 'Customer.Postcode', label: 'Postcode' },
+        { field: 'Stop' }, { field: 'Customer', type: 'text' }, { field: 'Customer.Address', label: 'Address' }, { field: 'Customer.Postcode', label: 'Postcode' },
         { field: 'Customer.Phone', label: 'Phone' }, { field: 'Customer.Access Notes', label: 'At the door' }, { field: 'Prescription Ref', label: 'Prescription' },
         { field: 'Bags', type: 'integer' }, { expr: '""', as: 'Signed' },
       ] },
@@ -273,7 +273,7 @@ export const spec = {
   reports: [
     { name: 'Expiry check', title: 'Stock expiring in the next 30 days', query: 'Expiring in the next 30 days', group: 'Supplier', columns: ['Code', 'Product', 'Batch No', { field: 'Expiry Date', type: 'date' }, { field: 'Days Left', type: 'integer' }, { field: 'Quantity Left', type: 'integer' }, { field: 'Value at Cost', type: 'currency' }], totals: [{ field: 'Quantity Left', fn: 'sum' }, { field: 'Value at Cost', fn: 'sum' }] },
     { name: 'Prescriptions to chase', title: 'Prescriptions waiting over 7 days', query: 'Prescriptions waiting over 7 days', columns: ['Reference', 'Initials', { field: 'Items', type: 'integer' }, { field: 'Ready On', type: 'date' }, { field: 'Days Waiting', type: 'integer' }, 'Shelf'], totals: [{ field: 'Reference', fn: 'count' }, { field: 'Items', fn: 'sum' }] },
-    { name: 'Delivery list', title: 'Deliveries today and tomorrow', query: 'Deliveries today and tomorrow', group: 'Driver', columns: [{ field: 'Delivery Date', type: 'date' }, { field: 'Stop', type: 'integer' }, 'Customer', 'Address', 'Postcode', 'Phone', 'Prescription', { field: 'Bags', type: 'integer' }], totals: [{ field: 'Customer', fn: 'count' }, { field: 'Bags', fn: 'sum' }] },
+    { name: 'Delivery list', title: 'Deliveries today and tomorrow', query: 'Deliveries today and tomorrow', group: 'Driver', columns: [{ field: 'Delivery Date', type: 'date' }, { field: 'Stop', type: 'integer' }, 'Customer', 'Address', 'Postcode', 'Phone', 'Prescription', { field: 'Bags', type: 'integer' }], totals: [{ field: 'Customer', fn: 'count', type: 'text' }, { field: 'Bags', fn: 'sum' }] },
     { name: 'Stock to reorder', query: 'Stock to reorder', group: 'Supplier', columns: ['Code', 'Product', 'Pack', { field: 'Units in Stock', type: 'integer' }, { field: 'Reorder Level', type: 'integer' }, { field: 'Reorder Quantity', type: 'integer' }], totals: [{ field: 'Reorder Quantity', fn: 'sum' }] },
     { name: 'Takings by category', title: 'Takings by category, last 12 months', query: 'Takings by category', columns: ['Category', { field: 'Items', type: 'integer' }, { field: 'Takings', type: 'currency' }, { field: 'VAT', type: 'currency' }, { field: 'Net', type: 'currency' }], totals: [{ field: 'Items', fn: 'sum' }, { field: 'Takings', fn: 'sum' }, { field: 'VAT', fn: 'sum' }, { field: 'Net', fn: 'sum' }] },
     { name: 'Margin by category', title: 'Margin by category, last 12 months', query: 'Margin by category', columns: ['Category', { field: 'Net Sales', type: 'currency' }, { field: 'Cost', type: 'currency' }, { field: 'Margin', type: 'currency' }], totals: [{ field: 'Net Sales', fn: 'sum' }, { field: 'Cost', fn: 'sum' }, { field: 'Margin', fn: 'sum' }] },

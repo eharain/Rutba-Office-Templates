@@ -248,7 +248,7 @@ export const spec = {
           { field: 'Building Clear At', label: 'Building clear at' }, { field: 'Minutes to Clear' }, { field: 'All Accounted' },
         ] },
         { type: 'lines', table: 'Roll Call Lines', sort: 'Floor', columns: [
-          { field: 'Floor', as: 'Floor' }, { field: 'Kind' }, { field: 'Name' }, { field: 'Company' },
+          { field: 'Floor', as: 'Floor', type: 'text' }, { field: 'Kind' }, { field: 'Name' }, { field: 'Company' },
           { field: 'People', type: 'integer' }, { expr: 'IIf([Accounted], "Yes", "Not found")', as: 'Accounted For' },
         ] },
         { type: 'totals', rows: [{ label: 'People counted', expr: '[People]', type: 'integer', strong: true }] },

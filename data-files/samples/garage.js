@@ -258,7 +258,7 @@ export const spec = {
       blocks: [
         { type: 'heading', text: 'Job card {Number}' },
         { type: 'fields', columns: 3, items: [
-          { field: 'Number', label: 'Job card' }, { field: 'Opened', label: 'Opened' }, { field: 'Technician', label: 'Technician' },
+          { field: 'Number', label: 'Job card' }, { field: 'Opened', label: 'Opened' }, { field: 'Technician', label: 'Technician', type: 'text' },
           { field: 'Vehicle', label: 'Registration' }, { field: 'Vehicle.Make', label: 'Make' }, { field: 'Vehicle.Model', label: 'Model' },
           { field: 'Vehicle.Fuel', label: 'Fuel' }, { field: 'Vehicle.Year', label: 'Year' }, { field: 'Mileage In', label: 'Mileage in' },
           { field: 'Vehicle.Customer', label: 'Customer' }, { field: 'Vehicle.Customer.Phone', label: 'Phone' }, { field: 'Vehicle.Tyre Size', label: 'Tyres' },
@@ -266,7 +266,7 @@ export const spec = {
         { type: 'fields', columns: 1, items: [{ field: 'Work Requested', label: 'Work requested' }, { field: 'Notes', label: 'Notes' }] },
         { type: 'lines', table: 'Job Lines', link: 'Job Card', columns: [
           { field: 'Kind' }, { field: 'Description', label: 'Work done or part fitted' }, { field: 'Part.Code', label: 'Part' },
-          { field: 'Quantity', label: 'Qty or hours', type: 'number' }, { field: 'Technician', label: 'By' }, { field: 'Done On', label: 'Date' },
+          { field: 'Quantity', label: 'Qty or hours', type: 'number' }, { field: 'Technician', label: 'By', type: 'text' }, { field: 'Done On', label: 'Date' },
         ] },
         { type: 'text', text: 'Before work starts: check the mileage, note any damage and warning lights, and fit seat and floor covers. Any work beyond what is asked for above is authorised by the customer first, and the call is noted here.', small: true },
         { type: 'spacer', size: 24 },

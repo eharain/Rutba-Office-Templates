@@ -81,6 +81,16 @@ export function checkSample(base, spec) {
     }
     if (!out.documents.length) problems.push(`The print template ${name} has nothing to print: ${layout.table} has no records.`);
     if (layout.letterhead?.table && !out.letterhead) problems.push(`The print template ${name}'s letterhead, ${layout.letterhead.table}, has no record.`);
+    // A lines column naming a pointing field alone prints the related record's
+    // words, but keeps the field's number type unless told, and a page then
+    // shows NaN: such a column says type 'text'.
+    const rels = base.relationships();
+    for (const b of (layout.blocks || []).filter((x) => x.type === 'lines')) {
+      for (const c of b.columns || []) {
+        const pointing = c.field && !c.field.includes('.') && rels.some((r) => r.from.table === b.table && r.from.field === c.field);
+        if (pointing && c.type !== 'text') problems.push(`The print template ${name}'s lines column ${c.field} points at another table: give it type 'text', or a page shows NaN.`);
+      }
+    }
   }
   return problems;
 }

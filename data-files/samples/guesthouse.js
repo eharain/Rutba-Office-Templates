@@ -233,7 +233,7 @@ export const spec = {
     { name: 'Booking confirmation', table: 'Bookings', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Booking confirmation {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Guest', label: 'Guest' }, { field: 'Number', label: 'Booking' },
+        { field: 'Guest', label: 'Guest', type: 'text' }, { field: 'Number', label: 'Booking' },
         { field: 'Guest.Address', label: 'Address' }, { field: 'Booked On', label: 'Booked on' },
         { field: 'Guest.City', label: 'Town' }, { field: 'Arrival', label: 'Arriving' },
         { field: 'Guest.Postcode', label: 'Postcode' }, { field: 'Departure', label: 'Leaving' },
@@ -298,7 +298,7 @@ export const spec = {
         { field: 'Adults', label: 'Adults' }, { field: 'Children', label: 'Children' },
       ] },
       { type: 'fields', columns: 2, items: [
-        { field: 'Guest', label: 'Full name' }, { field: 'Guest.Nationality', label: 'Nationality' },
+        { field: 'Guest', label: 'Full name', type: 'text' }, { field: 'Guest.Nationality', label: 'Nationality' },
         { field: 'Guest.Passport Number', label: 'Passport number' }, { field: 'Guest.Passport Issued By', label: 'Passport issued by' },
         { field: 'Guest.Address', label: 'Home address' }, { field: 'Guest.City', label: 'Town' },
         { field: 'Guest.Postcode', label: 'Postcode' }, { field: 'Guest.Country', label: 'Country' },
@@ -321,7 +321,7 @@ export const spec = {
         { field: 'Source.Country', label: 'Country' }, { field: 'Paid On', label: 'Paid on' },
       ] },
       { type: 'lines', table: 'Bookings', link: 'Statement', sort: 'Departure', columns: [
-        { field: 'Number', label: 'Booking' }, { field: 'Site Reference', label: 'Your reference' }, { field: 'Guest' },
+        { field: 'Number', label: 'Booking' }, { field: 'Site Reference', label: 'Your reference' }, { field: 'Guest', type: 'text' },
         { field: 'Arrival' }, { field: 'Departure' }, { field: 'Nights', type: 'integer' },
         { field: 'Room Total', label: 'Room takings', type: 'currency' }, { expr: 'Nz([Commission Rate]) * 100', as: 'Rate %', type: 'number' },
         { field: 'Commission', type: 'currency' },

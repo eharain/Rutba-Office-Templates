@@ -270,7 +270,7 @@ export const spec = {
       blocks: [
         { type: 'heading', text: 'Quote {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Quote' }, { field: 'Quoted On', label: 'Date' }, { field: 'Valid Until', label: 'Valid until' }, { field: 'Job', label: 'Job number' },
+          { field: 'Number', label: 'Quote' }, { field: 'Quoted On', label: 'Date' }, { field: 'Valid Until', label: 'Valid until' }, { field: 'Job', label: 'Job number', type: 'text' },
           { field: 'Job.Device.Customer', label: 'For' }, { field: 'Job.Device.Customer.Phone', label: 'Phone' },
           { field: 'Job.Device.Make', label: 'Make' }, { field: 'Job.Device.Model', label: 'Model' }, { field: 'Job.Device.Serial', label: 'Serial number' },
         ] },
@@ -291,7 +291,7 @@ export const spec = {
       blocks: [
         { type: 'heading', text: 'VAT invoice {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date and tax point' }, { field: 'Due Date', label: 'Due' }, { field: 'Job', label: 'Job number' },
+          { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date and tax point' }, { field: 'Due Date', label: 'Due' }, { field: 'Job', label: 'Job number', type: 'text' },
           { field: 'Job.Device.Customer', label: 'Customer' }, { field: 'Account.Name', label: 'Account' },
           { field: 'Job.Device.Customer.Address', label: 'Address' }, { field: 'Job.Device.Customer.Postcode', label: 'Postcode' },
           { field: 'Job.Device.Make', label: 'Make' }, { field: 'Job.Device.Model', label: 'Model' }, { field: 'Job.Device.Serial', label: 'Serial number' },
@@ -332,7 +332,7 @@ export const spec = {
       blocks: [
         { type: 'heading', text: 'Repair warranty {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Certificate' }, { field: 'Job', label: 'Job number' }, { field: 'Issued', label: 'Repaired on' }, { field: 'Job.Warranty Until', label: 'Covered until' },
+          { field: 'Number', label: 'Certificate' }, { field: 'Job', label: 'Job number', type: 'text' }, { field: 'Issued', label: 'Repaired on' }, { field: 'Job.Warranty Until', label: 'Covered until' },
           { field: 'Job.Device.Customer', label: 'Customer' }, { field: 'Job.Device.Kind', label: 'Device' }, { field: 'Job.Device.Make', label: 'Make' },
           { field: 'Job.Device.Model', label: 'Model' }, { field: 'Job.Device.Serial', label: 'Serial number' },
         ] },
@@ -353,7 +353,7 @@ export const spec = {
           { field: 'Postcode' }, { field: 'Payment Days', label: 'Days to pay' }, { field: 'Credit Limit', label: 'Credit limit' },
         ] },
         { type: 'lines', table: 'Invoices', link: 'Account', sort: 'Invoice Date', columns: [
-          { field: 'Number', label: 'Invoice' }, { field: 'Job', label: 'Job' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Due Date', label: 'Due' },
+          { field: 'Number', label: 'Invoice' }, { field: 'Job', label: 'Job', type: 'text' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Due Date', label: 'Due' },
           { field: 'Total', label: 'Amount', type: 'currency' }, { field: 'Paid On', label: 'Paid on' },
           { expr: 'IIf(Nz([Paid On], "") = "", [Balance], 0)', as: 'Owing', type: 'currency' },
           { expr: 'IIf(Nz([Paid On], "") = "" And [Due Date] < Date(), [Balance], 0)', as: 'Overdue', type: 'currency' },
