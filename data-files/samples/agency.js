@@ -939,8 +939,19 @@ export function fill(base, { r, cal, days = 480 }) {
     }
   }
 
-  // Always a few proposals out waiting for an answer.
-  while (projects.filter((p) => p.status === 'Proposal').length < 3) { const work = pickWork(); propose(pickClient(work), work, open(-r.int(3, 14)), { decide: false, queue: queueFor(work) }); }
+  // Always a few proposals out waiting for an answer, sent on a day the studio was open before today.
+  const openBefore = (d) => { let x = d; while (closed(x)) x--; return x; };
+  while (projects.filter((p) => p.status === 'Proposal').length < 3) { const work = pickWork(); propose(pickClient(work), work, openBefore(-r.int(3, 14)), { decide: false, queue: queueFor(work) }); }
+  // Always a cost waiting to be passed on: if every one has been invoiced, one was run up on a project in hand yesterday.
+  if (!projects.some((p) => (p.costs || []).some((e) => e.recharge && !e.invoice))) {
+    const p = projects.find((x) => x.started && x.finished == null && x.kind !== 'Internal' && x.status === 'Active');
+    if (p) {
+      const c = p.work.costs.find((x) => x[4]) || p.work.costs[0];
+      const e = { p, d: openBefore(-1), text: c[0], amount: money(between([c[2], c[3]])), recharge: true };
+      e.id = add('Expenses', { Date: cal.day(e.d), Project: p.id, Staff: team[5].id, Category: c[1], Description: c[0], Amount: e.amount, Rechargeable: true });
+      (p.costs ||= []).push(e);
+    }
+  }
   // Clients were clients from before their first proposal.
   for (const c of clients) base.update('Clients', c.id, { 'Client Since': cal.day((c.first ?? -r.int(30, 200)) - r.int(0, 900)) });
 

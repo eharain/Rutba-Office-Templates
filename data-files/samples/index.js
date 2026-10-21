@@ -6,19 +6,31 @@
 // engine builds a database from them (@rutba/database buildSample), through
 // the same calls a person's own design goes through.
 
-import * as trading from './trading.js';
 import * as shop from './shop.js';
-import * as clinic from './clinic.js';
-import * as salon from './salon.js';
-import * as repairs from './repairs.js';
-import * as agency from './agency.js';
+import * as food from './food.js';
 import * as cafe from './cafe.js';
-import * as rentals from './rentals.js';
+import * as takeaway from './takeaway.js';
+import * as florist from './florist.js';
+import * as pharmacy from './pharmacy.js';
+import * as trading from './trading.js';
+import * as workshop from './workshop.js';
+import * as builder from './builder.js';
+import * as cars from './cars.js';
+import * as salon from './salon.js';
+import * as barber from './barber.js';
+import * as repairs from './repairs.js';
+import * as cleaning from './cleaning.js';
+import * as agency from './agency.js';
+import * as gym from './gym.js';
+import * as clinic from './clinic.js';
 import * as school from './school.js';
 import * as charity from './charity.js';
-import * as workshop from './workshop.js';
+import * as rentals from './rentals.js';
+import * as agent from './agent.js';
+import * as guesthouse from './guesthouse.js';
+import * as payroll from './payroll.js';
 
-const SAMPLES = { trading, shop, clinic, salon, repairs, agency, cafe, rentals, school, charity, workshop };
+const SAMPLES = { shop, food, cafe, takeaway, florist, pharmacy, trading, workshop, builder, cars, salon, barber, repairs, cleaning, agency, gym, clinic, school, charity, rentals, agent, guesthouse, payroll };
 
 /** The samples, in the order a window offers them. */
 export const SAMPLE_IDS = Object.keys(SAMPLES);

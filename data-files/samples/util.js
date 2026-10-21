@@ -70,9 +70,12 @@ export const LAST = [
   'Chaudhry', 'Byrne', 'Brennan', 'Tanaka', 'Rossi', 'Jensen', 'Patel', 'Ali', 'Khan', 'Ahmed', 'Lopez', 'Murphy', 'Walsh', 'Sutherland',
 ];
 
+/** The postcode areas of each UK city, so a Leeds address has a Leeds postcode. */
+const UK_AREAS = { London: ['N', 'SE', 'EC', 'E', 'W', 'NW'], Manchester: ['M'], Leeds: ['LS'], Bristol: ['BS'], Glasgow: ['G'], Birmingham: ['B'], Cardiff: ['CF'] };
+
 /** Cities by country, with how an address there is written: a postcode or ZIP pattern and a phone maker. */
 export const PLACES = [
-  { country: 'United Kingdom', cities: ['London', 'Manchester', 'Leeds', 'Bristol', 'Glasgow', 'Birmingham', 'Cardiff'], post: (r) => `${r.pick(['LS', 'M', 'BS', 'G', 'B', 'CF', 'N', 'SE', 'EC'])}${r.int(1, 19)} ${r.int(1, 9)}${r.pick(['AB', 'DE', 'FG', 'HJ', 'NP', 'QR', 'TU'])}` },
+  { country: 'United Kingdom', cities: ['London', 'Manchester', 'Leeds', 'Bristol', 'Glasgow', 'Birmingham', 'Cardiff'], post: (r, city) => `${r.pick(UK_AREAS[city] || ['N'])}${r.int(1, 19)} ${r.int(1, 9)}${r.pick(['AB', 'DE', 'FG', 'HJ', 'NP', 'QR', 'TU'])}` },
   { country: 'United States', cities: ['Boston', 'Chicago', 'Denver', 'Seattle', 'Austin', 'Atlanta'], post: (r) => String(r.int(10000, 98999)) },
   { country: 'Canada', cities: ['Toronto', 'Vancouver', 'Montreal', 'Calgary'], post: (r) => `${r.pick(['M5V', 'V6B', 'H2X', 'T2P'])} ${r.int(1, 9)}${r.pick(['A', 'B', 'C'])}${r.int(1, 9)}` },
   { country: 'Ireland', cities: ['Dublin', 'Cork', 'Galway'], post: (r) => `${r.pick(['D02', 'T12', 'H91'])} ${r.pick(['X', 'Y', 'K'])}${r.int(100, 999)}` },
@@ -95,7 +98,9 @@ export function phoneFor(r, country) {
 /** An invented address somewhere among `places` (all of them by default). */
 export function address(r, places = PLACES) {
   const p = r.pick(places);
-  return { Address: `${r.int(1, 240)} ${r.pick(STREETS)}`, City: r.pick(p.cities), Postcode: p.post(r), Country: p.country };
+  const line = `${r.int(1, 240)} ${r.pick(STREETS)}`;
+  const city = r.pick(p.cities);
+  return { Address: line, City: city, Postcode: p.post(r, city), Country: p.country };
 }
 
 /** An invented person: names, and an e-mail address on an example domain. */
@@ -117,8 +122,18 @@ export function companies(r, n, tails = COMPANY_B) {
   return [...out];
 }
 
-/** Money rounded to cents, as a till rounds it. */
-export const money = (n) => Math.round(n * 100) / 100;
+/**
+ * Money rounded to cents as SQLite's Round(x, 2) rounds it, so a figure
+ * stored by a sample agrees to the penny with the one its queries and print
+ * templates work out: 0.115 is 0.11 there, not 0.12. Near a half penny the
+ * double's exact digits decide (toFixed); elsewhere Math.round is the same
+ * and faster.
+ */
+export const money = (n) => {
+  const y = n * 100;
+  const k = Math.round(y);
+  return Math.abs(Math.abs(y - k) - 0.5) < 1e-6 ? Number(n.toFixed(2)) : k / 100;
+};
 
 /**
  * The business's own details, one record, printed at the head and foot of

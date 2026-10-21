@@ -247,7 +247,7 @@ export const spec = {
         { label: 'Deposit received', expr: 'Nz([Deposit Paid])' }, { label: 'Balance due on departure', expr: '[Room Total] - Nz([Deposit Paid])', strong: true },
       ] },
       { type: 'text', text: 'Dear {Guest.First Name},' },
-      { type: 'text', text: 'Thank you for booking with us. This letter confirms room {Room.Number}, {Room.Name}, from {Arrival} to {Departure}, {Nights} nights, at the rate shown above. Our rates include VAT. Where the rate is bed and breakfast, breakfast is included for the guests booked; on a room only rate it can be added on the morning.' },
+      { type: 'text', text: 'Thank you for booking with us. This letter confirms room {Room.Number}, {Room.Name}, arriving on {Arrival} and leaving on {Departure}, at the rate shown above. Our rates include VAT. Where the rate is bed and breakfast, breakfast is included for the guests booked; on a room only rate it can be added on the morning.' },
       { type: 'text', text: 'Deposit. To hold a room booked with us directly we ask for a deposit of the first night. What we have received so far is shown above. If it is not yet paid, please pay it within three days of this letter, by card on {Business.Phone} or by bank transfer to {Business.Bank Details}, quoting {Number}. The balance and anything charged to the room are paid when you leave.' },
       { type: 'text', text: 'Arriving and leaving. Check-in is from 3 pm to 8 pm. If you will be later than 8 pm, please ring us and we will leave your key in the lock box by the front door. On the day you leave the room is needed by 10.30 am, and you are welcome to leave your bags with us. A late check-out until 1 pm can be arranged for a small charge when the room is not needed.' },
       { type: 'text', text: 'Cancelling. If you cancel seven days or more before you arrive, we return your deposit in full. If you cancel later than that, we keep the deposit unless we let the room to someone else. If you do not arrive and have not told us, the first night is charged.' },
@@ -285,9 +285,9 @@ export const spec = {
       { type: 'fields', columns: 1, items: [
         { field: 'Date' }, { field: 'Booking.Guest', label: 'Received from' }, { field: 'Booking.Number', label: 'Booking' },
         { field: 'Booking.Room.Number', label: 'Room' }, { field: 'Booking.Arrival', label: 'Arrival' }, { field: 'Booking.Departure', label: 'Departure' },
-        { field: 'Kind', label: 'For' }, { field: 'Method', label: 'Paid by' }, { field: 'Refunded On', label: 'Refunded on' },
+        { field: 'Kind', label: 'For' }, { field: 'Method', label: 'Paid by' },
       ] },
-      { type: 'totals', rows: [{ label: 'Amount received', expr: '[Amount]', strong: true }, { label: 'Refunded', expr: 'Nz([Refund])' }] },
+      { type: 'totals', rows: [{ label: 'Amount received', expr: '[Amount]', strong: true }] },
       { type: 'text', text: 'Thank you. Your VAT invoice is the bill you are given when you leave.', small: true },
     ] },
     { name: 'Registration card', table: 'Bookings', paper: 'a5', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, blocks: [
@@ -458,7 +458,7 @@ export const about = {
   documents: {
     'Booking confirmation': 'The letter sent when a booking is taken: the dates, the room, the rate, the deposit received and the balance, check-in and check-out times, the cancellation terms and how to find the house. Print it from the Bookings form for the booking on screen; the template prints every booking when run alone, including those from booking sites.',
     'Guest bill': 'The bill and VAT invoice given on leaving: each night and each extra as a line with the VAT within it, the total, the deposit taken off and the balance paid. Numbered INV-2026-0042.',
-    Receipt: 'A till-roll receipt for each payment: a deposit, a balance or a no-show charge, with the refund if a deposit was paid back.',
+    Receipt: 'A till-roll receipt for each payment: a deposit, a balance or a no-show charge. A deposit paid back is kept on the payment\'s record (Refunded On and Refund), not on the receipt, which is printed when the money is taken.',
     'Registration card': 'The card a guest fills in and signs on arrival: name, nationality, passport where it must be recorded and blank otherwise, home address, car registration and signature. Print it from the Bookings form for the day\'s arrivals; run alone it prints every booking.',
     'Commission statement': 'Sent to each booking site at the start of the month: the stays it sent that ended last month, with their references, and the commission owed. Numbered COM-2026-0012.',
   },
@@ -779,8 +779,11 @@ export function fill(base, { r, cal, days = 450, ahead = 180 }) {
     b.dep = dep;
     const site = b.source.site;
     // A guest who has stayed before and has no stay to come.
-    const back = guests.filter((g) => g.lastDep < b.bookedOn);
-    b.guest = back.length && r.chance(site ? 0.06 : b.source.code === 'WLK' ? 0.05 : 0.35) ? r.pick(back) : newGuest(site);
+    let back = null;
+    if (guests.length && r.chance(site ? 0.06 : b.source.code === 'WLK' ? 0.05 : 0.35)) {
+      for (let k = 0; k < 12 && !back; k++) { const g = r.pick(guests); if (g.lastDep < b.bookedOn) back = g; }
+    }
+    b.guest = back || newGuest(site);
     if (b.cancelled === undefined) b.guest.lastDep = Math.max(b.guest.lastDep, dep);
     b.rates = Array.from({ length: b.nights }, (_, k) => rateFor(b.type, b.a + k, b.plan));
     b.total = money(b.rates.reduce((n, x) => n + x, 0));
