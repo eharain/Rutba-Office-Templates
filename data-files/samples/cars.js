@@ -660,7 +660,7 @@ export function fill(base, { r, cal, days = 450 }) {
   // Customers, made as they first come in.
   const customers = [];
   const newCustomer = (d, heard) => {
-    const p = person(r, { domain: r.pick(['example.com', 'example.org', 'example.net']) });
+    const p = person(r, { domain: r.pick(['mail.example', 'post.example', 'inbox.example']) });
     const [town, districts] = r.weighted(AREAS.map((a, i) => [a, i === 0 ? 4 : 1]));
     const id = add('Customers', {
       'First Name': p['First Name'], 'Last Name': p['Last Name'], Address: `${r.int(1, 180)} ${r.pick(STREETS)}`, City: town,

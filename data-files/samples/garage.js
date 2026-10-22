@@ -888,7 +888,7 @@ export function fill(base, { r, cal, days = 400 }) {
   const area = () => ({ Address: `${r.int(1, 240)} ${r.pick(['Mill Lane', 'Station Road', 'Orchard Way', 'Church Street', 'Canal Walk', 'Beech Grove', 'Riverside Drive', 'Cedar Avenue', 'Linden Close', 'Harbour Street'])}`, City: 'Leeds', Postcode: `LS${r.int(1, 28)} ${r.int(1, 9)}${r.pick(['AB', 'DE', 'FG', 'HJ', 'NP', 'QR', 'TU'])}` });
   const privates = [];
   const newCustomer = (d) => {
-    const p = person(r, { domain: r.pick(['mail.example', 'post.example', 'example.com']) });
+    const p = person(r, { domain: r.pick(['mail.example', 'post.example', 'mail.example']) });
     const email = r.chance(0.65);
     const c = { vehicles: [], account: null };
     c.remind = r.weighted([['Letter', 5], ['Text message', 3], ...(email ? [['E-mail', 3]] : []), ['None', 0.4]]);

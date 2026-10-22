@@ -559,7 +559,7 @@ export function fill(base, { r, cal, days = 380, ahead = 14 }) {
   const phone = () => mobiles.pop() || landlines.pop() || '';
   const mails = new Set();
   const mailFor = (first, last) => {
-    const domain = r.pick(['example.com', 'example.org', 'example.net']);
+    const domain = r.pick(['mail.example', 'post.example', 'inbox.example']);
     let m = `${first}.${last}`.toLowerCase().replace(/[^a-z.]/g, '');
     for (let i = 2; mails.has(`${m}@${domain}`); i++) m = `${first}.${last}${i}`.toLowerCase().replace(/[^a-z.0-9]/g, '');
     mails.add(`${m}@${domain}`);
@@ -610,7 +610,7 @@ export function fill(base, { r, cal, days = 380, ahead = 14 }) {
     if (home) home.Postcode = `${r.pick(['E5', 'E9', 'N16', 'E2', 'N1'])} ${r.int(1, 9)}${r.pick(['AB', 'DF', 'HP', 'QT', 'RW'])}`;
     b.id = add('Barbers', {
       'First Name': first, 'Last Name': last, Role: b.role, Basis: b.basis, Chair: chairs[b.chair].id, Phone: phone(),
-      'E-mail': b.renter ? `${first}.${last}@example.com`.toLowerCase() : `${first.toLowerCase()}@copperpole.example`,
+      'E-mail': b.renter ? `${first}.${last}@mail.example`.toLowerCase() : `${first.toLowerCase()}@copperpole.example`,
       Works: b.days.map((d) => DAY_NAMES[d]).join(', '), Started: cal.day(b.since), Left: Number.isFinite(b.to) ? cal.day(b.to) : null, Active: !Number.isFinite(b.to),
       'Trading Name': b.renter ? `${first} ${last} Barbering` : null, Address: home?.Address ?? null, City: home?.City ?? null, Postcode: home?.Postcode ?? null,
       'Insurance Policy': b.renter ? `PL-${r.int(10000, 99999)}` : null, 'Insurance Expires': b.renter ? cal.day(Number.isFinite(b.to) ? b.to + r.int(20, 200) : r.int(20, 330)) : null,

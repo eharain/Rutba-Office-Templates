@@ -162,7 +162,7 @@ export const spec = {
       { table: 'Cash Ups', field: 'Covers', as: 'Covers', total: 'sum' }, { expr: TAKINGS, as: 'Takings', total: 'sum' },
       { table: 'Cash Ups', field: 'Wage Cost', as: 'Wages', total: 'sum' },
       { expr: `Round(${TAKINGS} - [Wage Cost], 2)`, as: 'Left After Wages', total: 'sum' },
-      { expr: `Round(100 * [Wage Cost] / (${TAKINGS}), 1)`, as: 'Average Day Wage %', total: 'avg' },
+      { expr: `Round(100 * [Wage Cost] / (${TAKINGS}), 1)`, as: 'Average Day Wage %', total: 'avg', decimals: 1 },
     ] },
     'Takings by month': { tables: ['Cash Ups'], columns: [
       { expr: 'Format([Date], "yyyy-mm")', as: 'Month', total: 'group', sort: 'asc' }, { table: 'Cash Ups', field: 'Date', as: 'Days Open', total: 'count' },

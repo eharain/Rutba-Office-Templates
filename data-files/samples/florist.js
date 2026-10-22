@@ -800,7 +800,7 @@ export function fill(base, { r, cal, days = 365 }) {
   // Customers: most order once or twice; some come back.
   const people = [];
   const newCustomer = (d, extra = {}) => {
-    const p = person(r, { domain: r.pick(['example.com', 'example.org', 'example.net']) });
+    const p = person(r, { domain: r.pick(['mail.example', 'post.example', 'inbox.example']) });
     const w = where();
     const c = { first: p['First Name'], last: p['Last Name'] };
     c.id = add('Customers', { 'First Name': p['First Name'], 'Last Name': p['Last Name'], Kind: 'Private', Address: w.Address, City: w.City, Postcode: w.Postcode, Phone: phoneFor(r, 'United Kingdom'), 'E-mail': p['E-mail'], Added: iso(d), ...extra });

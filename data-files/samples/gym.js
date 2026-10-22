@@ -655,7 +655,7 @@ export function fill(base, { r, cal, days = 370 }) {
     m.id = add('Members', {
       'First Name': first, 'Last Name': last, 'Date of Birth': dayOf(joined - age * 365 - r.int(0, 364)),
       Address: `${r.int(1, 160)} ${r.pick(STREETS)}`, City: town, Postcode: `${r.pick(districts)} ${r.int(1, 9)}${r.pick(['AB', 'DE', 'FG', 'HJ', 'NP', 'QR', 'TU', 'XY'])}`,
-      Phone: phoneFor(r, 'United Kingdom'), 'E-mail': `${first}.${last}@${r.pick(['example.com', 'example.org', 'example.net', 'mail.example'])}`.toLowerCase(),
+      Phone: phoneFor(r, 'United Kingdom'), 'E-mail': `${first}.${last}@${r.pick(['mail.example', 'post.example', 'inbox.example', 'mail.example'])}`.toLowerCase(),
       Plan: plan.id, 'Monthly Fee': plan.fee, Joined: dayOf(joined), 'Payment Day': dom, 'Minimum Term Ends': dayOf(m.minEnd),
       'Health Declaration': r.chance(0.97), 'Emergency Contact': `${r.pick(FIRST)} ${last}`, 'Emergency Phone': phoneFor(r, 'United Kingdom'),
       Notes: r.chance(0.06) ? r.pick(MEMBER_NOTES) : null,

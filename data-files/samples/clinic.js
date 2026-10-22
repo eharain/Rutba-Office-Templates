@@ -718,7 +718,7 @@ export function fill(base, { r, cal, days = 365 }) {
   const phone = () => (mobiles.length ? `07700 900${pad(mobiles.pop(), 3)}` : `020 7946 0${r.int(400, 999)}`);
   const mails = new Set();
   const newPatient = (registered) => {
-    const p = person(r, { domain: r.pick(['example.com', 'example.net', 'mail.example']) });
+    const p = person(r, { domain: r.pick(['mail.example', 'inbox.example', 'mail.example']) });
     for (let k = 2; mails.has(p['E-mail']); k++) p['E-mail'] = p['E-mail'].replace(/^([^@]*?)\d*@/, `$1${k}@`);
     mails.add(p['E-mail']);
     const age = r.weighted([[r.int(1, 17), 15], [r.int(18, 64), 60], [r.int(65, 90), 25]]);

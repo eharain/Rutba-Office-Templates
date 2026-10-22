@@ -104,7 +104,7 @@ export function address(r, places = PLACES) {
 }
 
 /** An invented person: names, and an e-mail address on an example domain. */
-export function person(r, { domain = 'example.com' } = {}) {
+export function person(r, { domain = 'mail.example' } = {}) {
   const first = r.pick(FIRST);
   const last = r.pick(LAST);
   return { 'First Name': first, 'Last Name': last, 'E-mail': `${first}.${last}@${domain}`.toLowerCase() };

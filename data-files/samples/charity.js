@@ -741,7 +741,7 @@ export function fill(base, { r, cal, days = 540 }) {
     let last;
     do { first = r.pick(FIRST); last = r.pick(LAST); } while (taken.has(`${first} ${last}`));
     taken.add(`${first} ${last}`);
-    const mail = r.chance(0.82) ? `${first}.${last}@${r.pick(['example.com', 'example.org', 'example.net', 'mail.example'])}`.toLowerCase() : '';
+    const mail = r.chance(0.82) ? `${first}.${last}@${r.pick(['mail.example', 'post.example', 'inbox.example', 'mail.example'])}`.toLowerCase() : '';
     const declared = r.chance(declare);
     const later = joined + r.int(20, 200);
     const declOffset = declared ? (r.chance(0.8) || later > 0 ? joined : later) : null;

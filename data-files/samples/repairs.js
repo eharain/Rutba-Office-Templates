@@ -925,7 +925,7 @@ export function fill(base, { r, cal, days = 450 }) {
   const area = () => ({ Address: `${r.int(1, 220)} ${r.pick(['Mill Lane', 'Station Road', 'Orchard Way', 'Church Street', 'Canal Walk', 'Quarry Road', 'Cedar Avenue', 'Linden Close', 'Harbour Street'])}`, City: 'Bristol', Postcode: `BS${r.int(1, 16)} ${r.int(1, 9)}${r.pick(['AB', 'DE', 'FG', 'HJ', 'NP', 'QR', 'TU'])}` });
   const walkins = [];
   const newCustomer = (d) => {
-    const p = person(r, { domain: r.pick(['mail.example', 'post.example', 'example.com']) });
+    const p = person(r, { domain: r.pick(['mail.example', 'post.example', 'mail.example']) });
     const email = r.chance(0.7);
     const c = { devices: [], account: null };
     c.id = add('Customers', {

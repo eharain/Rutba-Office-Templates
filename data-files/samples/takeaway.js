@@ -1042,7 +1042,7 @@ export function fill(base, { r, cal, days = 425, orderDays = 84 }) {
   const ensure = (c, day) => {
     if (c.id) return;
     c.id = add('Customers', {
-      'First Name': c.first, 'Last Name': c.last, Phone: phone(), 'E-mail': c.online ? `${c.first}.${c.last}${r.int(1, 99)}@example.com`.toLowerCase() : null,
+      'First Name': c.first, 'Last Name': c.last, Phone: phone(), 'E-mail': c.online ? `${c.first}.${c.last}${r.int(1, 99)}@mail.example`.toLowerCase() : null,
       Address: c.address, Postcode: c.postcode, Zone: c.z.id, 'Delivery Notes': c.notes, 'First Order': cal.day(day), Offers: c.offers,
     });
   };
