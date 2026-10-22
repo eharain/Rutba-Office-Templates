@@ -12,7 +12,9 @@
     "./word": "./src/word.js",
     "./data-files": "./data-files/index.js",
     "./versions": "./src/versions.js",
-    "./manifest": "./src/manifest.js"
+    "./manifest": "./src/manifest.js",
+    "./active": "./src/active.js",
+    "./data-files/active": "./data-files/active.js"
   },
   "sideEffects": false,
   "dependencies": {
