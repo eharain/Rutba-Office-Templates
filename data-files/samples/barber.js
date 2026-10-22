@@ -46,7 +46,7 @@ export const spec = {
       { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' }, { name: 'Insurance Policy', type: 'text' },
       { name: 'Insurance Expires', type: 'date' }, { name: 'Receipt Note', type: 'text' },
     ] },
-    { name: 'Clients', fields: [
+    { name: 'Clients', show: ['First Name', 'Last Name', 'Phone'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Phone', type: 'text' },
       { name: 'E-mail', type: 'text' }, { name: 'Joined', type: 'date' }, { name: 'Usual Cut', type: 'text' },
       { name: 'Marketing Consent', type: 'yesno' }, { name: 'Notes', type: 'text' },
@@ -61,13 +61,13 @@ export const spec = {
       { name: 'In Stock', type: 'integer', default: 0 }, { name: 'Reorder Level', type: 'integer', default: 3 },
       { name: 'Reorder Quantity', type: 'integer', default: 10 }, { name: 'Active', type: 'yesno', default: true },
     ] },
-    { name: 'Loyalty Cards', fields: [
+    { name: 'Loyalty Cards', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Client', ...ref('Clients'), required: true }, { name: 'Started', type: 'date' },
       { name: 'Stamps', type: 'integer', default: 0 }, { name: 'Status', type: 'text', default: 'Open' },
       { name: 'Full On', type: 'date' }, { name: 'Free Cut On', type: 'date' },
     ] },
     // Every visit on the queue board, booked or walked in, and its receipt once paid.
-    { name: 'Visits', fields: [
+    { name: 'Visits', show: ['Name', 'Barber', 'Arrived', 'Booked For'], fields: [
       { name: 'Receipt No', type: 'text', unique: true }, { name: 'Client', ...ref('Clients') }, { name: 'Name', type: 'text' },
       { name: 'Barber', ...ref('Barbers'), required: true }, { name: 'Kind', type: 'text', default: 'Walk-in' },
       { name: 'Booked On', type: 'date' }, { name: 'Booked For', type: 'datetime' }, { name: 'Arrived', type: 'datetime' },
@@ -84,14 +84,14 @@ export const spec = {
       { name: 'Product', ...ref('Products'), required: true }, { name: 'Received', type: 'date' }, { name: 'Quantity', type: 'integer' },
       { name: 'Unit Cost', type: 'currency' }, { name: 'Invoice Number', type: 'text' },
     ] },
-    { name: 'Chair Rentals', fields: [
+    { name: 'Chair Rentals', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Barber', ...ref('Barbers'), required: true }, { name: 'Chair', ...ref('Chairs'), required: true },
       { name: 'Signed On', type: 'date' }, { name: 'Start Date', type: 'date' }, { name: 'End Date', type: 'date' },
       { name: 'Weekly Rent', type: 'currency' }, { name: 'Rent Day', type: 'text', default: 'Monday' }, { name: 'Deposit', type: 'currency' },
       { name: 'Notice Weeks', type: 'integer', default: 4 }, { name: 'Hours', type: 'text' }, { name: 'Included', type: 'longtext' },
       { name: 'Insurance Cover', type: 'currency' }, { name: 'Status', type: 'text', default: 'Active' },
     ] },
-    { name: 'Rent Charges', fields: [
+    { name: 'Rent Charges', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Rental', ...ref('Chair Rentals'), required: true }, { name: 'Invoice Date', type: 'date' },
       { name: 'Week Starting', type: 'date' }, { name: 'Due On', type: 'date' }, { name: 'Net', type: 'currency' }, { name: 'VAT', type: 'currency' },
       { name: 'Total', type: 'currency' }, { name: 'Paid On', type: 'date' }, { name: 'Paid By', type: 'text' },

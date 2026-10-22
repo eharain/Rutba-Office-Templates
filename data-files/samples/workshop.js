@@ -67,7 +67,7 @@ export const spec = {
     // Material Purchases comes before Materials: a query joins two tables by
     // the first relationship between them, so a purchase order's supplier is
     // the one it was sent to, not the usual supplier of its materials.
-    { name: 'Material Purchases', fields: [
+    { name: 'Material Purchases', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Supplier', ...ref('Suppliers'), required: true }, { name: 'Ordered On', type: 'date' },
       { name: 'Expected', type: 'date' }, { name: 'Received On', type: 'date' }, { name: 'Status', type: 'text', default: 'Ordered' },
     ] },
@@ -98,12 +98,12 @@ export const spec = {
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Role', type: 'text' },
       { name: 'Hourly Cost', type: 'currency' }, { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Started', type: 'date' },
     ] },
-    { name: 'Customers', fields: [
+    { name: 'Customers', show: ['Name', 'Postcode'], fields: [
       { name: 'Name', type: 'text', required: true }, { name: 'Kind', type: 'text', default: 'Public' }, { name: 'Contact', type: 'text' },
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' },
       { name: 'Postcode', type: 'text' }, { name: 'Payment Days', type: 'integer', default: 0 }, { name: 'Trade Discount', type: 'number', default: 0 },
     ] },
-    { name: 'Sales Orders', fields: [
+    { name: 'Sales Orders', show: ['Order Date', 'Customer'], fields: [
       { name: 'Customer', ...ref('Customers'), required: true }, { name: 'Order Date', type: 'date' }, { name: 'Delivery Due', type: 'date' },
       { name: 'Delivered On', type: 'date' }, { name: 'Status', type: 'text', default: 'Open' }, { name: 'Delivery Fee', type: 'currency', default: 0 },
       { name: 'Invoice No', type: 'text', unique: true }, { name: 'Invoice Date', type: 'date' }, { name: 'Net', type: 'currency' }, { name: 'VAT', type: 'currency' },
@@ -115,7 +115,7 @@ export const spec = {
       { name: 'Tax Rate', type: 'number', default: STANDARD_RATE },
     ] },
     // A quote for made-to-order work; accepted, it becomes a sales order.
-    { name: 'Quotes', fields: [
+    { name: 'Quotes', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Customer', ...ref('Customers'), required: true }, { name: 'Quote Date', type: 'date' },
       { name: 'Valid Until', type: 'date' }, { name: 'Status', type: 'text', default: 'Sent' }, { name: 'Delivery Fee', type: 'currency', default: 0 },
       { name: 'Net', type: 'currency' }, { name: 'VAT', type: 'currency' }, { name: 'Total', type: 'currency' },
@@ -133,7 +133,7 @@ export const spec = {
       { name: 'Maker', ...ref('Makers'), required: true }, { name: 'Work Order', ...ref('Work Orders'), required: true },
       { name: 'Worked On', type: 'date' }, { name: 'Hours', type: 'number' },
     ] },
-    { name: 'Work Orders', fields: [
+    { name: 'Work Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Product', ...ref('Products'), required: true }, { name: 'Quantity', type: 'integer', default: 1 },
       { name: 'Maker', ...ref('Makers') }, { name: 'Sales Order', ...ref('Sales Orders') }, { name: 'Planned Start', type: 'date' }, { name: 'Due Date', type: 'date' },
       { name: 'Started', type: 'date' }, { name: 'Finished', type: 'date' }, { name: 'Status', type: 'text', default: 'Planned' },

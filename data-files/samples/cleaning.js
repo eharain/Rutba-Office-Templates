@@ -45,7 +45,7 @@ export const spec = {
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Payment Days', type: 'integer', default: 30 },
       { name: 'Client Since', type: 'date' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Sites', fields: [
+    { name: 'Sites', show: ['Name', 'Postcode'], fields: [
       { name: 'Client', ...ref('Clients'), required: true }, { name: 'Name', type: 'text', required: true }, { name: 'Site Type', type: 'text' },
       { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Site Contact', type: 'text' }, { name: 'Access Notes', type: 'longtext' },
@@ -65,7 +65,7 @@ export const spec = {
       { name: 'Status', type: 'text', default: 'Booked' }, { name: 'Signed Off', type: 'yesno' }, { name: 'Signed Off By', type: 'text' },
       { name: 'Notes', type: 'text' }, { name: 'Invoice', ...ref('Invoices') },
     ] },
-    { name: 'Contracts', fields: [
+    { name: 'Contracts', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Client', ...ref('Clients'), required: true }, { name: 'Site', ...ref('Sites'), required: true },
       { name: 'Cleaner', ...ref('Cleaners') }, { name: 'Start Date', type: 'date' }, { name: 'End Date', type: 'date' }, { name: 'Last Renewed', type: 'date' },
       { name: 'Visits per Week', type: 'number' }, { name: 'Days', type: 'text' }, { name: 'Start Time', type: 'text' },
@@ -77,7 +77,7 @@ export const spec = {
       { name: 'Contract', ...ref('Contracts'), required: true }, { name: 'Order', type: 'integer' }, { name: 'Area', type: 'text' },
       { name: 'Task', type: 'text', required: true }, { name: 'How Often', type: 'text', default: 'Every visit' },
     ] },
-    { name: 'Jobs', fields: [
+    { name: 'Jobs', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Client', ...ref('Clients'), required: true }, { name: 'Site', ...ref('Sites') },
       { name: 'Kind', type: 'text' }, { name: 'Quoted On', type: 'date' }, { name: 'Valid Until', type: 'date' }, { name: 'Booked For', type: 'date' },
       { name: 'Cleaner', ...ref('Cleaners') }, { name: 'Estimated Hours', type: 'number' }, { name: 'Hours Worked', type: 'number' },
@@ -88,7 +88,7 @@ export const spec = {
       { name: 'Job', ...ref('Jobs'), required: true }, { name: 'Description', type: 'text' }, { name: 'Quantity', type: 'number', default: 1 },
       { name: 'Unit Price', type: 'currency' }, { name: 'Tax Rate', type: 'number', default: 0.2 },
     ] },
-    { name: 'Invoices', fields: [
+    { name: 'Invoices', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Client', ...ref('Clients'), required: true }, { name: 'Site', ...ref('Sites') },
       { name: 'Contract', ...ref('Contracts') }, { name: 'Job', ...ref('Jobs') }, { name: 'Period', type: 'text' }, { name: 'Invoice Date', type: 'date' }, { name: 'Due Date', type: 'date' },
       { name: 'Net', type: 'currency' }, { name: 'VAT', type: 'currency' }, { name: 'Total', type: 'currency' },
@@ -108,7 +108,7 @@ export const spec = {
       { name: 'Supply', ...ref('Supplies'), required: true }, { name: 'Date', type: 'date' }, { name: 'Kind', type: 'text' },
       { name: 'Quantity', type: 'integer' }, { name: 'Unit Cost', type: 'currency' }, { name: 'Contract', ...ref('Contracts') }, { name: 'Reference', type: 'text' },
     ] },
-    { name: 'Payslips', fields: [
+    { name: 'Payslips', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Cleaner', ...ref('Cleaners'), required: true }, { name: 'Period', type: 'text' },
       { name: 'Period Start', type: 'date' }, { name: 'Period End', type: 'date' }, { name: 'Pay Date', type: 'date' },
       { name: 'Contract Hours', type: 'number' }, { name: 'Job Hours', type: 'number' }, { name: 'Hours', type: 'number' }, { name: 'Gross', type: 'currency' },

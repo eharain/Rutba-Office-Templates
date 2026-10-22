@@ -57,13 +57,13 @@ export const spec = {
       { name: 'Name', type: 'text', required: true }, { name: 'Kind', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' },
       { name: 'Postcode', type: 'text' }, { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Account No', type: 'text' },
     ] },
-    { name: 'Customers', fields: [
+    { name: 'Customers', show: ['First Name', 'Last Name', 'Postcode'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Address', type: 'text' },
       { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' }, { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' },
       { name: 'Heard Of Us', type: 'text' }, { name: 'Added', type: 'date' }, { name: 'Marketing Consent', type: 'yesno' },
     ] },
     // Registration is the first text field, so a car is known by its registration in every list.
-    { name: 'Vehicles', fields: [
+    { name: 'Vehicles', show: ['Registration', 'Make', 'Model'], fields: [
       { name: 'Registration', type: 'text', required: true, unique: true }, { name: 'Stock No', type: 'text', unique: true },
       { name: 'Make', type: 'text' }, { name: 'Model', type: 'text' }, { name: 'Body', type: 'text' }, { name: 'Year', type: 'integer' },
       { name: 'First Registered', type: 'date' }, { name: 'Colour', type: 'text' }, { name: 'Fuel', type: 'text' }, { name: 'Transmission', type: 'text' },
@@ -82,7 +82,7 @@ export const spec = {
       { name: 'Vehicle', ...ref('Vehicles'), required: true }, { name: 'Customer', ...ref('Customers'), required: true }, { name: 'Staff', ...ref('Staff') },
       { name: 'When', type: 'datetime' }, { name: 'Outcome', type: 'text', default: 'Booked' }, { name: 'Notes', type: 'text' },
     ] },
-    { name: 'Sales', fields: [
+    { name: 'Sales', show: ['Order No'], fields: [
       { name: 'Order No', type: 'text', unique: true }, { name: 'Invoice No', type: 'text', unique: true },
       { name: 'Vehicle', ...ref('Vehicles'), required: true }, { name: 'Customer', ...ref('Customers'), required: true }, { name: 'Salesperson', ...ref('Staff') },
       { name: 'Agreed On', type: 'date' }, { name: 'Handover', type: 'date' }, { name: 'Price', type: 'currency' }, { name: 'Total', type: 'currency' },

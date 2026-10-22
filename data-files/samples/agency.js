@@ -55,19 +55,19 @@ export const spec = {
       { name: 'Charge-out Rate', type: 'currency' }, { name: 'Hours per Week', type: 'number', default: 37.5 },
       { name: 'Started', type: 'date' }, { name: 'Active', type: 'yesno', default: true },
     ] },
-    { name: 'Projects', fields: [
+    { name: 'Projects', show: ['Code', 'Name'], fields: [
       { name: 'Code', type: 'text', unique: true }, { name: 'Name', type: 'text', required: true }, { name: 'Client', ...ref('Clients'), required: true },
       { name: 'Kind', type: 'text', default: 'Fixed fee' }, { name: 'Work Type', type: 'text' }, { name: 'Budget Hours', type: 'number' },
       { name: 'Fee', type: 'currency' }, { name: 'Proposed On', type: 'date' }, { name: 'Start Date', type: 'date' }, { name: 'Due Date', type: 'date' },
       { name: 'Finished On', type: 'date' }, { name: 'Status', type: 'text', default: 'Proposal' }, { name: 'Notes', type: 'longtext' },
       { name: 'Quote No', type: 'text', unique: true }, { name: 'Client PO', type: 'text' }, { name: 'Contact', ...ref('Contacts') },
     ] },
-    { name: 'Tasks', fields: [
+    { name: 'Tasks', show: ['Project', 'Name'], fields: [
       { name: 'Project', ...ref('Projects'), required: true }, { name: 'Name', type: 'text', required: true }, { name: 'Role', type: 'text' },
       { name: 'Estimated Hours', type: 'number' }, { name: 'Done', type: 'yesno' },
     ] },
     // One a person a week, which their hours are logged on and which is approved before invoicing.
-    { name: 'Time Sheets', fields: [
+    { name: 'Time Sheets', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Staff', ...ref('Staff'), required: true }, { name: 'Week Commencing', type: 'date' },
       { name: 'Status', type: 'text', default: 'Open' }, { name: 'Submitted On', type: 'date' }, { name: 'Approved On', type: 'date' },
     ] },
@@ -83,7 +83,7 @@ export const spec = {
       { name: 'Category', type: 'text' }, { name: 'Description', type: 'text' }, { name: 'Amount', type: 'currency' },
       { name: 'Rechargeable', type: 'yesno', default: true }, { name: 'Invoice', ...ref('Invoices') },
     ] },
-    { name: 'Invoices', fields: [
+    { name: 'Invoices', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Project', ...ref('Projects'), required: true }, { name: 'Client', ...ref('Clients') },
       { name: 'Invoice Date', type: 'date' }, { name: 'Due Date', type: 'date' }, { name: 'Net', type: 'currency' }, { name: 'VAT', type: 'currency' },
       { name: 'Total', type: 'currency' }, { name: 'Paid', type: 'currency', default: 0 }, { name: 'Status', type: 'text', default: 'Sent' },

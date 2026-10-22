@@ -54,13 +54,13 @@ export const spec = {
       { name: 'Junior Price', type: 'currency' }, { name: 'Stylist Price', type: 'currency' }, { name: 'Senior Price', type: 'currency' },
       { name: 'Patch Test', type: 'yesno' }, { name: 'Tax Rate', type: 'number', default: 0.2 }, { name: 'Active', type: 'yesno', default: true },
     ] },
-    { name: 'Clients', fields: [
+    { name: 'Clients', show: ['First Name', 'Last Name', 'Phone'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Phone', type: 'text' },
       { name: 'E-mail', type: 'text' }, { name: 'Heard Of Us', type: 'text' }, { name: 'Client Since', type: 'date' },
       { name: 'Patch Test Date', type: 'date' }, { name: 'Allergies', type: 'text' }, { name: 'Colour Notes', type: 'text' },
       { name: 'Marketing Consent', type: 'yesno' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Bookings', fields: [
+    { name: 'Bookings', show: ['Start', 'Client'], fields: [
       { name: 'Client', ...ref('Clients'), required: true }, { name: 'Staff', ...ref('Staff'), required: true },
       { name: 'Start', type: 'datetime' }, { name: 'Minutes', type: 'integer' }, { name: 'Status', type: 'text', default: 'Booked' },
       { name: 'Booked On', type: 'date' }, { name: 'Booked Via', type: 'text' }, { name: 'Deposit', type: 'currency', default: 0 },
@@ -95,7 +95,7 @@ export const spec = {
     ] },
     // The till's record of each visit paid for: its own copy of what was charged, kept as it was
     // printed, so a receipt reprinted next year says what the client was given on the day.
-    { name: 'Receipts', fields: [
+    { name: 'Receipts', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Booking', ...ref('Bookings') }, { name: 'Taken', type: 'datetime' },
       { name: 'Net', type: 'currency' }, { name: 'VAT', type: 'currency' }, { name: 'Total', type: 'currency' },
       { name: 'Deposit Paid', type: 'currency', default: 0 }, { name: 'Voucher', type: 'currency', default: 0 }, { name: 'Voucher Code', type: 'text' },
@@ -106,7 +106,7 @@ export const spec = {
       { name: 'Quantity', type: 'integer', default: 1 }, { name: 'Unit Price', type: 'currency' }, { name: 'Tax Rate', type: 'number', default: 0.2 },
     ] },
     // A statement for each person on commission each month, its lines the takings by kind of work.
-    { name: 'Commission Statements', fields: [
+    { name: 'Commission Statements', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Staff', ...ref('Staff'), required: true }, { name: 'Month', type: 'text' },
       { name: 'Prepared On', type: 'date' }, { name: 'Commission Due', type: 'currency' }, { name: 'Paid On', type: 'date' },
     ] },

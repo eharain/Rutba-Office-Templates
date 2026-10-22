@@ -48,13 +48,13 @@ export const spec = {
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Kind', type: 'text', default: 'Term' },
       { name: 'Starts', type: 'date', required: true }, { name: 'Ends', type: 'date', required: true },
     ] },
-    { name: 'Families', fields: [
+    { name: 'Families', show: ['Name', 'Contact'], fields: [
       { name: 'Name', type: 'text', required: true }, { name: 'Contact', type: 'text' }, { name: 'Relationship', type: 'text' },
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Second Contact', type: 'text' }, { name: 'Second Phone', type: 'text' },
       { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Pays By', type: 'text', default: 'Bank transfer' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Students', fields: [
+    { name: 'Students', show: ['First Name', 'Last Name', 'School Year'], fields: [
       { name: 'Family', ...ref('Families'), required: true }, { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true },
       { name: 'Date of Birth', type: 'date' }, { name: 'School Year', type: 'text' }, { name: 'Medical Note', type: 'text' },
       { name: 'Photo Consent', type: 'yesno' }, { name: 'Joined', type: 'date' }, { name: 'Active', type: 'yesno', default: true },
@@ -70,19 +70,19 @@ export const spec = {
       { name: 'Minutes', type: 'integer', default: 60 }, { name: 'Fee per Lesson', type: 'currency' }, { name: 'Capacity', type: 'integer', default: 10 },
       { name: 'What to Bring', type: 'text' },
     ] },
-    { name: 'Classes', fields: [
+    { name: 'Classes', show: ['Code', 'Term'], fields: [
       { name: 'Code', type: 'text', required: true }, { name: 'Course', ...ref('Courses'), required: true }, { name: 'Teacher', ...ref('Teachers') },
       { name: 'Term', ...ref('Terms'), required: true }, { name: 'Weekday', type: 'text' }, { name: 'Start Time', type: 'text' },
       { name: 'Room', type: 'text' }, { name: 'Capacity', type: 'integer', default: 10 }, { name: 'Lessons Planned', type: 'integer' },
     ] },
-    { name: 'Enrolments', fields: [
+    { name: 'Enrolments', show: ['Student', 'Class'], fields: [
       { name: 'Student', ...ref('Students'), required: true }, { name: 'Class', ...ref('Classes'), required: true },
       { name: 'Enrolled On', type: 'date' }, { name: 'Status', type: 'text', default: 'Enrolled' },
       { name: 'Lessons Billed', type: 'integer' }, { name: 'Discount', type: 'number', default: 0 }, { name: 'Left On', type: 'date' },
       // The first lesson the student comes to, and the term's invoice the place is billed on: a line of it.
       { name: 'First Lesson', type: 'date' }, { name: 'Invoice', ...ref('Fee Invoices') },
     ] },
-    { name: 'Lessons', fields: [
+    { name: 'Lessons', show: ['Lesson Date', 'Class'], fields: [
       { name: 'Class', ...ref('Classes'), required: true }, { name: 'Teacher', ...ref('Teachers') }, { name: 'Lesson Date', type: 'date', required: true },
       { name: 'Minutes', type: 'integer' }, { name: 'Topic', type: 'text' }, { name: 'Status', type: 'text', default: 'Planned' },
       // The month's pay statement a taught lesson was paid on: a line of it.
@@ -92,7 +92,7 @@ export const spec = {
       { name: 'Lesson', ...ref('Lessons'), required: true }, { name: 'Student', ...ref('Students'), required: true },
       { name: 'Mark', type: 'text', default: 'Present' }, { name: 'Reason', type: 'text' },
     ] },
-    { name: 'Assessments', fields: [
+    { name: 'Assessments', show: ['Assessment Date', 'Title', 'Class'], fields: [
       { name: 'Class', ...ref('Classes'), required: true }, { name: 'Assessment Date', type: 'date' }, { name: 'Title', type: 'text' },
       { name: 'Out Of', type: 'integer' },
     ] },
@@ -111,7 +111,7 @@ export const spec = {
       { name: 'Method', type: 'text' }, { name: 'Balance After', type: 'currency' },
     ] },
     // The report sent home at the end of each term: one for each student, a line for each class.
-    { name: 'Term Reports', fields: [
+    { name: 'Term Reports', show: ['Student', 'Term'], fields: [
       { name: 'Student', ...ref('Students'), required: true }, { name: 'Term', ...ref('Terms'), required: true },
       { name: 'School Year', type: 'text' }, { name: 'Written On', type: 'date' }, { name: 'Comment', type: 'longtext' },
     ] },
@@ -125,7 +125,7 @@ export const spec = {
       { name: 'Issued On', type: 'date' }, { name: 'Lessons Attended', type: 'integer' }, { name: 'Hours', type: 'number' },
     ] },
     // A teacher's pay for a month: the lessons taught are its lines.
-    { name: 'Pay Statements', fields: [
+    { name: 'Pay Statements', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Teacher', ...ref('Teachers'), required: true }, { name: 'Month', type: 'text' },
       { name: 'Period Start', type: 'date' }, { name: 'Period End', type: 'date' }, { name: 'Paid On', type: 'date' },
       { name: 'Hourly Rate', type: 'currency' }, { name: 'Lessons', type: 'integer' }, { name: 'Hours', type: 'number' }, { name: 'Gross', type: 'currency' },

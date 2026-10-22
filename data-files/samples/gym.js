@@ -63,7 +63,7 @@ export const spec = {
       { name: 'Member', ...ref('Members'), required: true }, { name: 'Starts', type: 'date' }, { name: 'Ends', type: 'date' },
       { name: 'Reason', type: 'text' }, { name: 'Monthly Fee', type: 'currency' },
     ] },
-    { name: 'Invoices', fields: [
+    { name: 'Invoices', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Member', ...ref('Members'), required: true }, { name: 'Invoice Date', type: 'date' },
       { name: 'Period From', type: 'date' }, { name: 'Period To', type: 'date' }, { name: 'Due Date', type: 'date' },
       { name: 'Net', type: 'currency' }, { name: 'Tax', type: 'currency' }, { name: 'Total', type: 'currency' },
@@ -81,7 +81,7 @@ export const spec = {
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Description', type: 'text' }, { name: 'Minutes', type: 'integer', default: 45 },
       { name: 'Capacity', type: 'integer' }, { name: 'Studio', type: 'text' },
     ] },
-    { name: 'Class Sessions', fields: [
+    { name: 'Class Sessions', show: ['Starts', 'Class'], fields: [
       { name: 'Class', ...ref('Classes'), required: true }, { name: 'Instructor', ...ref('Staff') }, { name: 'Starts', type: 'datetime' },
       { name: 'Studio', type: 'text' }, { name: 'Capacity', type: 'integer' }, { name: 'Places Booked', type: 'integer', default: 0 },
       { name: 'Instructor Fee', type: 'currency' }, { name: 'Status', type: 'text', default: 'Scheduled' },
@@ -93,7 +93,7 @@ export const spec = {
     { name: 'Visits', fields: [
       { name: 'Member', ...ref('Members'), required: true }, { name: 'Visited At', type: 'datetime' }, { name: 'Entry', type: 'text', default: 'Gym floor' },
     ] },
-    { name: 'PT Packs', fields: [
+    { name: 'PT Packs', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Member', ...ref('Members'), required: true }, { name: 'Trainer', ...ref('Staff') },
       { name: 'Bought On', type: 'date' }, { name: 'Sessions', type: 'integer' }, { name: 'Price', type: 'currency' }, { name: 'Tax Rate', type: 'number', default: 0.2 },
       { name: 'Paid By', type: 'text' }, { name: 'Expires', type: 'date' }, { name: 'Sessions Used', type: 'integer', default: 0 }, { name: 'Status', type: 'text', default: 'Open' },

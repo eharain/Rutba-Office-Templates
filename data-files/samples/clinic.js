@@ -46,7 +46,7 @@ export const spec = {
       { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' }, { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Payment Days', type: 'integer', default: 30 },
       { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Patients', fields: [
+    { name: 'Patients', show: ['First Name', 'Last Name', 'Patient No'], fields: [
       { name: 'Patient No', type: 'text', unique: true }, { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true },
       { name: 'Date of Birth', type: 'date' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Insurer', ...ref('Insurers'), required: true },
@@ -63,7 +63,7 @@ export const spec = {
       { name: 'Minutes', type: 'integer', default: 15 }, { name: 'Price', type: 'currency' }, { name: 'Insurer Pays', type: 'yesno' },
       { name: 'Recall Months', type: 'integer' },
     ] },
-    { name: 'Appointments', fields: [
+    { name: 'Appointments', show: ['Start', 'Patient'], fields: [
       { name: 'Patient', ...ref('Patients'), required: true }, { name: 'Practitioner', ...ref('Practitioners'), required: true },
       { name: 'Service', ...ref('Services'), required: true }, { name: 'Start', type: 'datetime', required: true },
       { name: 'Status', type: 'text', default: 'Booked' }, { name: 'Booked On', type: 'date' }, { name: 'Booked Via', type: 'text' },
@@ -75,7 +75,7 @@ export const spec = {
     ] },
     // An invoice keeps the name and address it was sent to, and points at the insurer when one is
     // billed, so each insurer's statement lists its own claims.
-    { name: 'Invoices', fields: [
+    { name: 'Invoices', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Appointment', ...ref('Appointments'), required: true },
       { name: 'Invoice Date', type: 'date' }, { name: 'Due Date', type: 'date' },
       { name: 'Bill To', type: 'text', default: 'Patient' }, { name: 'Insurer', ...ref('Insurers') }, { name: 'Bill To Name', type: 'text' },

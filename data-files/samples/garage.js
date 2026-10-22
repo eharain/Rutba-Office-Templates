@@ -47,7 +47,7 @@ export const spec = {
       { name: 'E-mail', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Payment Days', type: 'integer', default: 30 }, { name: 'Credit Limit', type: 'currency' }, { name: 'Opened', type: 'date' },
     ] },
-    { name: 'Customers', fields: [
+    { name: 'Customers', show: ['First Name', 'Last Name', 'Postcode'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Account', ...ref('Accounts') },
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' },
       { name: 'Postcode', type: 'text' }, { name: 'Remind By', type: 'text', default: 'Letter' }, { name: 'Joined', type: 'date' },
@@ -68,19 +68,19 @@ export const spec = {
       { name: 'Reorder Quantity', type: 'integer', default: 6 }, { name: 'Stocked', type: 'yesno', default: true }, { name: 'Bin', type: 'text' },
     ] },
     // Registration is the first text field, so a document that names a vehicle alone prints its registration.
-    { name: 'Vehicles', fields: [
+    { name: 'Vehicles', show: ['Registration'], fields: [
       { name: 'Registration', type: 'text', required: true, unique: true }, { name: 'Customer', ...ref('Customers'), required: true },
       { name: 'Make', type: 'text' }, { name: 'Model', type: 'text' }, { name: 'Body', type: 'text' }, { name: 'Fuel', type: 'text' },
       { name: 'Year', type: 'integer' }, { name: 'Colour', type: 'text' }, { name: 'Tyre Size', type: 'text' }, { name: 'Mileage', type: 'integer' },
       { name: 'MOT Due', type: 'date' }, { name: 'Service Due', type: 'date' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Bookings', fields: [
+    { name: 'Bookings', show: ['Date', 'Time', 'Vehicle'], fields: [
       { name: 'Vehicle', ...ref('Vehicles'), required: true }, { name: 'Date', type: 'date', required: true }, { name: 'Time', type: 'text' },
       { name: 'Work', type: 'text' }, { name: 'Booked On', type: 'date' }, { name: 'Status', type: 'text', default: 'Booked' },
       { name: 'Courtesy Car', type: 'yesno' }, { name: 'Notes', type: 'text' },
     ] },
     // Number is the first text field, so a document that names a job card alone prints its number.
-    { name: 'Job Cards', fields: [
+    { name: 'Job Cards', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Vehicle', ...ref('Vehicles'), required: true }, { name: 'Booking', ...ref('Bookings') },
       { name: 'Technician', ...ref('Staff') }, { name: 'Opened', type: 'date' }, { name: 'Mileage In', type: 'integer' },
       { name: 'Work Requested', type: 'text' }, { name: 'Status', type: 'text', default: 'Open' }, { name: 'Closed', type: 'date' },
@@ -98,7 +98,7 @@ export const spec = {
       { name: 'Quantity', type: 'number', default: 1 }, { name: 'Unit Price', type: 'currency' }, { name: 'Unit Cost', type: 'currency' },
       { name: 'Tax Rate', type: 'number', default: 0.2 }, { name: 'Done On', type: 'date' },
     ] },
-    { name: 'MOT Tests', fields: [
+    { name: 'MOT Tests', show: ['Test Number'], fields: [
       { name: 'Test Number', type: 'text', unique: true }, { name: 'Vehicle', ...ref('Vehicles'), required: true }, { name: 'Job Card', ...ref('Job Cards') },
       { name: 'Tester', ...ref('Staff') }, { name: 'Test Date', type: 'date' }, { name: 'Mileage', type: 'integer' }, { name: 'Result', type: 'text' },
       { name: 'Expires', type: 'date' }, { name: 'Retest Of', ...ref('MOT Tests') }, { name: 'Fee', type: 'currency' },
@@ -115,7 +115,7 @@ export const spec = {
       { name: 'Vehicle', ...ref('Vehicles'), required: true }, { name: 'Kind', type: 'text' }, { name: 'Due', type: 'date' },
       { name: 'Method', type: 'text', default: 'Letter' }, { name: 'Sent On', type: 'date' }, { name: 'Booked', type: 'yesno' },
     ] },
-    { name: 'Estimates', fields: [
+    { name: 'Estimates', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Vehicle', ...ref('Vehicles'), required: true }, { name: 'Estimate Date', type: 'date' },
       { name: 'Valid Until', type: 'date' }, { name: 'Work', type: 'text' }, { name: 'Net', type: 'currency' }, { name: 'Tax', type: 'currency' },
       { name: 'Total', type: 'currency' }, { name: 'Answer', type: 'text' }, { name: 'Answered On', type: 'date' }, { name: 'Job Card', ...ref('Job Cards') },

@@ -49,7 +49,7 @@ export const spec = {
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Code', type: 'text', unique: true }, { name: 'Notes', type: 'text' },
     ] },
     // Department comes before Manager: a query joins Employees to Departments by the first field that relates them.
-    { name: 'Employees', fields: [
+    { name: 'Employees', show: ['Employee No', 'First Name', 'Last Name'], fields: [
       { name: 'Employee No', type: 'text', required: true, unique: true }, { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true },
       { name: 'Job Title', type: 'text' }, { name: 'Department', ...ref('Departments') }, { name: 'Manager', ...ref('Employees') },
       { name: 'Start Date', type: 'date' }, { name: 'Leave Date', type: 'date' }, { name: 'Leaving Reason', type: 'text' }, { name: 'Date of Birth', type: 'date' },
@@ -71,7 +71,7 @@ export const spec = {
       { name: 'Issued On', type: 'date' }, { name: 'Completed On', type: 'date' }, { name: 'Checked By', ...ref('Employees') },
       { name: 'Expires On', type: 'date' }, { name: 'Notes', type: 'text' },
     ] },
-    { name: 'Holiday Allowances', fields: [
+    { name: 'Holiday Allowances', show: ['Employee', 'Holiday Year'], fields: [
       { name: 'Employee', ...ref('Employees'), required: true }, { name: 'Reference', type: 'text' }, { name: 'Holiday Year', type: 'text' },
       { name: 'Year Starts', type: 'date' }, { name: 'Year Ends', type: 'date' }, { name: 'Days per Week', type: 'number' },
       { name: 'Full-time Days', type: 'number', default: 28 }, { name: 'Allowance', type: 'number' }, { name: 'Carried Over', type: 'number', default: 0 },
@@ -86,13 +86,13 @@ export const spec = {
     { name: 'Pay Years', fields: [
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Starts', type: 'date' }, { name: 'Ends', type: 'date' }, { name: 'Notes', type: 'text' },
     ] },
-    { name: 'Pay Runs', fields: [
+    { name: 'Pay Runs', show: ['Number', 'Period'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Pay Year', ...ref('Pay Years'), required: true }, { name: 'Frequency', type: 'text', default: 'Monthly' },
       { name: 'Period', type: 'text' }, { name: 'Period Starts', type: 'date' }, { name: 'Period Ends', type: 'date' }, { name: 'Pay Date', type: 'date' },
       { name: 'Status', type: 'text', default: 'Open' }, { name: 'Notes', type: 'text' },
     ] },
     // Employee comes before Approved By, so a query joins a timesheet to the person whose hours they are.
-    { name: 'Timesheets', fields: [
+    { name: 'Timesheets', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Employee', ...ref('Employees'), required: true }, { name: 'Week Commencing', type: 'date' },
       { name: 'Contract Hours', type: 'number' }, { name: 'Total Hours', type: 'number' }, { name: 'Overtime Hours', type: 'number' },
       { name: 'Status', type: 'text', default: 'Submitted' }, { name: 'Submitted On', type: 'date' }, { name: 'Approved By', ...ref('Employees') },
@@ -120,7 +120,7 @@ export const spec = {
       { name: 'Item', type: 'text' }, { name: 'Hours', type: 'number' }, { name: 'Rate', type: 'currency' },
       { name: 'Amount', type: 'currency' }, { name: 'Year to Date', type: 'currency' },
     ] },
-    { name: 'Annual Summaries', fields: [
+    { name: 'Annual Summaries', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Pay Year', ...ref('Pay Years'), required: true }, { name: 'Employee', ...ref('Employees'), required: true },
       { name: 'Tax Code', type: 'text' }, { name: 'Issued On', type: 'date' }, { name: 'Payslip Count', type: 'integer' }, { name: 'Gross Pay', type: 'currency' },
       { name: 'Deductions', type: 'currency' }, { name: 'Net Pay', type: 'currency' }, { name: 'Employer Costs', type: 'currency' }, { name: 'Notes', type: 'text' },

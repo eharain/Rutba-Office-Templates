@@ -35,7 +35,7 @@ export const spec = {
     BUSINESS_TABLE,
     { name: 'Seasons', fields: [
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Months', type: 'text' },
-      { name: 'Minimum Weekend Nights', type: 'integer', default: 1 }, { name: 'Notes', type: 'longtext' },
+      { name: 'Minimum Weekend Nights', caption: 'Weekend minimum', type: 'integer', default: 1 }, { name: 'Notes', type: 'longtext' },
     ] },
     { name: 'Room Types', fields: [
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Description', type: 'text' },
@@ -69,13 +69,13 @@ export const spec = {
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Kind', type: 'text' }, { name: 'Price', type: 'currency' },
       { name: 'Per', type: 'text' }, { name: 'Tax Rate', type: 'number', default: 0.2 }, { name: 'Available', type: 'yesno', default: true },
     ] },
-    { name: 'Commission Statements', fields: [
+    { name: 'Commission Statements', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Source', ...ref('Booking Sources'), required: true },
       { name: 'Month', type: 'text' }, { name: 'Statement Date', type: 'date' }, { name: 'Stays', type: 'integer', default: 0 },
       { name: 'Room Takings', type: 'currency' }, { name: 'Commission', type: 'currency' }, { name: 'Paid On', type: 'date' },
     ] },
     // Bookings point at Guests before Rooms and Sources, so a query on bookings and guests joins the guest who booked.
-    { name: 'Bookings', fields: [
+    { name: 'Bookings', show: ['Number', 'Guest'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Guest', ...ref('Guests'), required: true }, { name: 'Room', ...ref('Rooms'), required: true },
       { name: 'Source', ...ref('Booking Sources'), required: true }, { name: 'Site Reference', type: 'text' }, { name: 'Booked On', type: 'date' },
       { name: 'Arrival', type: 'date' }, { name: 'Departure', type: 'date' }, { name: 'Nights', type: 'integer', default: 1 },
@@ -90,7 +90,7 @@ export const spec = {
       { name: 'Room', ...ref('Rooms'), required: true }, { name: 'Night', type: 'date', required: true }, { name: 'Weekday', type: 'text' },
       { name: 'Status', type: 'text', default: 'Free' }, { name: 'Booking', ...ref('Bookings') }, { name: 'Rate', type: 'currency' },
     ] },
-    { name: 'Bills', fields: [
+    { name: 'Bills', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Booking', ...ref('Bookings'), required: true }, { name: 'Bill Date', type: 'date' },
       { name: 'Total', type: 'currency' }, { name: 'VAT', type: 'currency' }, { name: 'Deposit', type: 'currency', default: 0 },
       { name: 'Balance', type: 'currency' }, { name: 'Paid By', type: 'text' },

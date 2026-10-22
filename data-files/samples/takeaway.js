@@ -51,7 +51,7 @@ export const spec = {
       { name: 'Charge', type: 'currency' }, { name: 'Free Over', type: 'currency' }, { name: 'Minimum Order', type: 'currency' },
       { name: 'Target Minutes', type: 'integer' }, { name: 'Drop Fee', type: 'currency' },
     ] },
-    { name: 'Customers', fields: [
+    { name: 'Customers', show: ['First Name', 'Last Name', 'Phone'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Phone', type: 'text' },
       { name: 'E-mail', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Zone', ...ref('Delivery Zones') }, { name: 'Delivery Notes', type: 'text' }, { name: 'First Order', type: 'date' },
@@ -87,7 +87,7 @@ export const spec = {
       { name: 'Week Beginning', type: 'date' }, { name: 'Week Ending', type: 'date' }, { name: 'Pay Date', type: 'date' },
       { name: 'Drops', type: 'integer' }, { name: 'Drop Pay', type: 'currency' },
     ] },
-    { name: 'Orders', fields: [
+    { name: 'Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Placed', type: 'datetime' }, { name: 'Channel', type: 'text', default: 'Phone' },
       { name: 'Method', type: 'text', default: 'Collection' }, { name: 'Customer', ...ref('Customers') }, { name: 'Zone', ...ref('Delivery Zones') },
       { name: 'Driver', ...ref('Staff') }, { name: 'Driver Pay', ...ref('Driver Pay') }, { name: 'Due', type: 'datetime' },

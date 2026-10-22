@@ -43,16 +43,16 @@ export const spec = {
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Tenant', ...ref('Tenants'), required: true },
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Active', type: 'yesno', default: true },
     ] },
-    { name: 'Visitors', fields: [
+    { name: 'Visitors', show: ['First Name', 'Last Name', 'Company', 'First Visit'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Company', type: 'text' },
       { name: 'Car Registration', type: 'text' }, { name: 'Kind', type: 'text', default: 'Guest' }, { name: 'Regular', type: 'yesno' },
       { name: 'First Visit', type: 'date' },
     ] },
-    { name: 'Badges', fields: [
+    { name: 'Badges', show: ['Number'], fields: [
       { name: 'Number', type: 'text', required: true, unique: true }, { name: 'Kind', type: 'text', default: 'Visitor' },
       { name: 'Status', type: 'text', default: 'Available' }, { name: 'Added On', type: 'date' },
     ] },
-    { name: 'Visits', fields: [
+    { name: 'Visits', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Visitor', ...ref('Visitors'), required: true }, { name: 'Host', ...ref('Hosts'), required: true },
       { name: 'Expected On', type: 'date' }, { name: 'Expected At', type: 'text' }, { name: 'Pre-registered', type: 'yesno' },
       { name: 'Purpose', type: 'text' }, { name: 'Parking', type: 'yesno' },
@@ -75,7 +75,7 @@ export const spec = {
       { name: 'Reference', type: 'text' }, { name: 'Stored In', type: 'text' }, { name: 'Collected At', type: 'datetime' },
       { name: 'Collected By', type: 'text' }, { name: 'Status', type: 'text', default: 'Waiting' },
     ] },
-    { name: 'Roll Calls', fields: [
+    { name: 'Roll Calls', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Kind', type: 'text', default: 'Drill' }, { name: 'Started At', type: 'datetime' },
       { name: 'Building Clear At', type: 'datetime' }, { name: 'Minutes to Clear', type: 'number' }, { name: 'All Accounted', type: 'yesno' },
       { name: 'Led By', type: 'text' }, { name: 'Notes', type: 'longtext' },

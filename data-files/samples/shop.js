@@ -49,7 +49,7 @@ export const spec = {
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Phone', type: 'text' },
       { name: 'E-mail', type: 'text' }, { name: 'Joined', type: 'date' }, { name: 'Points', type: 'integer', default: 0 },
     ] },
-    { name: 'Sales', fields: [
+    { name: 'Sales', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'When', type: 'datetime' }, { name: 'Staff', ...ref('Staff') }, { name: 'Customer', ...ref('Customers') },
       { name: 'Payment', type: 'text', default: 'Card' }, { name: 'Total', type: 'currency' }, { name: 'VAT', type: 'currency' },
       { name: 'Standard Rated', type: 'currency' }, { name: 'Saved', type: 'currency', default: 0 },
@@ -61,7 +61,7 @@ export const spec = {
       { name: 'Quantity', type: 'integer', default: 1 }, { name: 'Unit Price', type: 'currency' }, { name: 'Discount', type: 'number', default: 0 },
       { name: 'Tax Rate', type: 'number', default: 0 },
     ] },
-    { name: 'Supplier Orders', fields: [
+    { name: 'Supplier Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Supplier', ...ref('Suppliers'), required: true }, { name: 'Staff', ...ref('Staff') },
       { name: 'Ordered On', type: 'date' }, { name: 'Delivery Due', type: 'date' }, { name: 'Status', type: 'text', default: 'Sent' },
     ] },

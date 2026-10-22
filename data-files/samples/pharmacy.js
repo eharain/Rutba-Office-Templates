@@ -53,11 +53,11 @@ export const spec = {
     ] },
     // Supplier Orders and Supplier Returns come before Products: a query joins two tables by the first
     // relationship between them, so an order's or a return's supplier is its own, not its products'.
-    { name: 'Supplier Orders', fields: [
+    { name: 'Supplier Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Supplier', ...ref('Suppliers'), required: true }, { name: 'Ordered By', ...ref('Staff') },
       { name: 'Ordered On', type: 'date' }, { name: 'Expected', type: 'date' }, { name: 'Received On', type: 'date' }, { name: 'Status', type: 'text', default: 'Submitted' },
     ] },
-    { name: 'Supplier Returns', fields: [
+    { name: 'Supplier Returns', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Supplier', ...ref('Suppliers'), required: true }, { name: 'Raised On', type: 'date' },
       { name: 'Collected On', type: 'date' }, { name: 'Status', type: 'text', default: 'Awaiting collection' }, { name: 'Credit Claimed', type: 'currency' },
       { name: 'Credit Note', type: 'text' }, { name: 'Credited On', type: 'date' },
@@ -80,7 +80,7 @@ export const spec = {
       { name: 'Batch', ...ref('Batches'), required: true }, { name: 'Return', ...ref('Supplier Returns') }, { name: 'Written Off On', type: 'date' },
       { name: 'Quantity', type: 'integer' }, { name: 'Unit Cost', type: 'currency' }, { name: 'Reason', type: 'text' },
     ] },
-    { name: 'Sales', fields: [
+    { name: 'Sales', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'When', type: 'datetime' }, { name: 'Till', type: 'text', default: 'Till 1' },
       { name: 'Served By', ...ref('Staff') }, { name: 'Payment', type: 'text', default: 'Card' }, { name: 'Total', type: 'currency' },
       { name: 'VAT', type: 'currency' }, { name: 'Paid', type: 'currency' }, { name: 'Change', type: 'currency', default: 0 },
@@ -106,7 +106,7 @@ export const spec = {
       { name: 'Area', type: 'text' }, { name: 'Round Day', type: 'text' }, { name: 'Every Weeks', type: 'integer', default: 1 },
       { name: 'Access Notes', type: 'text' }, { name: 'Active', type: 'yesno', default: true }, { name: 'Since', type: 'date' },
     ] },
-    { name: 'Delivery Rounds', fields: [
+    { name: 'Delivery Rounds', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Delivery Date', type: 'date' }, { name: 'Driver', ...ref('Staff'), required: true },
       { name: 'Area', type: 'text' }, { name: 'Stops', type: 'integer' }, { name: 'Bags', type: 'integer' }, { name: 'Status', type: 'text', default: 'Planned' },
     ] },

@@ -51,7 +51,7 @@ export const spec = {
       { name: 'E-mail', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Payment Days', type: 'integer', default: 30 }, { name: 'Credit Limit', type: 'currency' }, { name: 'Opened', type: 'date' },
     ] },
-    { name: 'Customers', fields: [
+    { name: 'Customers', show: ['First Name', 'Last Name', 'Phone'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Account', ...ref('Accounts') },
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' },
       { name: 'Postcode', type: 'text' }, { name: 'Contact By', type: 'text', default: 'Text message' }, { name: 'Joined', type: 'date' },
@@ -71,12 +71,12 @@ export const spec = {
       { name: 'In Stock', type: 'integer', default: 0 }, { name: 'Reorder Level', type: 'integer', default: 2 },
       { name: 'Reorder Quantity', type: 'integer', default: 4 }, { name: 'Stocked', type: 'yesno', default: true }, { name: 'Bin', type: 'text' },
     ] },
-    { name: 'Devices', fields: [
+    { name: 'Devices', show: ['Make', 'Model', 'Serial'], fields: [
       { name: 'Customer', ...ref('Customers'), required: true }, { name: 'Kind', type: 'text' }, { name: 'Make', type: 'text' },
       { name: 'Model', type: 'text' }, { name: 'Serial', type: 'text' }, { name: 'Colour', type: 'text' },
     ] },
     // Number is the first text field, so a document that names a job alone prints its number.
-    { name: 'Jobs', fields: [
+    { name: 'Jobs', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Device', ...ref('Devices'), required: true }, { name: 'Technician', ...ref('Staff') },
       { name: 'Booked In', type: 'date' }, { name: 'Fault', type: 'text' }, { name: 'Left With It', type: 'text' }, { name: 'Promised', type: 'date' },
       { name: 'Status', type: 'text', default: 'Booked in' }, { name: 'Quote', type: 'currency' }, { name: 'Quoted On', type: 'date' },
@@ -95,7 +95,7 @@ export const spec = {
       { name: 'Part', ...ref('Parts') }, { name: 'Description', type: 'text' }, { name: 'Quantity', type: 'number', default: 1 },
       { name: 'Unit Price', type: 'currency' }, { name: 'Tax Rate', type: 'number', default: 0.2 }, { name: 'Done On', type: 'date' },
     ] },
-    { name: 'Quotes', fields: [
+    { name: 'Quotes', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Job', ...ref('Jobs'), required: true }, { name: 'Quoted On', type: 'date' },
       { name: 'Valid Until', type: 'date' }, { name: 'Net', type: 'currency' }, { name: 'Tax', type: 'currency' }, { name: 'Total', type: 'currency' },
       { name: 'Answer', type: 'text' }, { name: 'Answered On', type: 'date' },

@@ -233,7 +233,7 @@ Regulars who signed up for the loyalty card. The sample has 60 records.
 
 #### Sales
 
-Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 21,581 records.
+Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 21,618 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -254,7 +254,7 @@ Each time the till is rung up: one record per receipt, with the totals the recei
 
 #### Sale Lines
 
-The items on each receipt. The sample has 56,691 records.
+The items on each receipt. The sample has 56,789 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -268,7 +268,7 @@ The items on each receipt. The sample has 56,691 records.
 
 #### Supplier Orders
 
-The orders the shop sends its suppliers, one record each, made from the shopping list the evening before the supplier's delivery day. The sample has 856 records.
+The orders the shop sends its suppliers, one record each, made from the shopping list the evening before the supplier's delivery day. The sample has 857 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -282,7 +282,7 @@ The orders the shop sends its suppliers, one record each, made from the shopping
 
 #### Supplier Order Lines
 
-The products on each supplier order. The sample has 4,191 records.
+The products on each supplier order. The sample has 4,193 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -793,7 +793,7 @@ The orders sent to suppliers, and the delivery that answers each. The sample has
 
 #### Purchase Lines
 
-The products on each purchase order. The sample has 3,989 records.
+The products on each purchase order. The sample has 3,991 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -822,7 +822,7 @@ Stock as it really sits on the shelf: each delivery of each product is a batch w
 
 #### Sales
 
-Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 9,412 records.
+Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 9,434 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -842,7 +842,7 @@ Each time the till is rung up: one record per receipt, with the totals the recei
 
 #### Sale Lines
 
-The items on each receipt, each taken from one batch. The sample has 20,129 records.
+The items on each receipt, each taken from one batch. The sample has 20,167 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2038,7 +2038,7 @@ The areas the takeaway delivers to, each with its charges and the driver's fee f
 
 #### Customers
 
-Everyone who has ordered by phone or online, and the regulars who come in, with where to deliver to. The sample has 1,127 records.
+Everyone who has ordered by phone or online, and the regulars who come in, with where to deliver to. The sample has 1,128 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2152,7 +2152,7 @@ A pay sheet for each driver for each week, Monday to Sunday. Its lines are the o
 
 #### Orders
 
-One record per order, from the moment it is taken to the moment it is handed over. Each prints as a customer receipt, a kitchen ticket and a delivery slip. The sample has 3,752 records.
+One record per order, from the moment it is taken to the moment it is handed over. Each prints as a customer receipt, a kitchen ticket and a delivery slip. The sample has 3,785 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2184,7 +2184,7 @@ One record per order, from the moment it is taken to the moment it is handed ove
 
 #### Order Lines
 
-What is on each order, one line per item. A meal deal is a line at the deal's price followed by what the customer chose, at nought; an extra is a line of its own under the dish it goes on. The sample has 19,057 records.
+What is on each order, one line per item. A meal deal is a line at the deal's price followed by what the customer chose, at nought; an extra is a line of its own under the dish it goes on. The sample has 19,201 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2718,7 +2718,7 @@ What goes into each product: the stems, foliage and sundries, and how many of ea
 
 #### Purchases
 
-Each buy at the market, from the grower or from the sundries wholesaler. The sample has 336 records.
+Each buy at the market, from the grower or from the sundries wholesaler. The sample has 334 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2730,7 +2730,7 @@ Each buy at the market, from the grower or from the sundries wholesaler. The sam
 
 #### Purchase Lines
 
-What was bought on each buy. Each line is a batch of stems with its own use-by day. The sample has 2,467 records.
+What was bought on each buy. Each line is a batch of stems with its own use-by day. The sample has 2,494 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2744,7 +2744,7 @@ What was bought on each buy. Each line is a batch of stems with its own use-by d
 
 #### Waste
 
-Stems thrown away, past their best or damaged, logged at the morning check. The sample has 379 records.
+Stems thrown away, past their best or damaged, logged at the morning check. The sample has 366 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2769,7 +2769,7 @@ The areas the van delivers to and what each costs. The sample has 8 records.
 
 #### Delivery Runs
 
-Each morning or afternoon run of the van, with its driver. The sample has 582 records.
+Each morning or afternoon run of the van, with its driver. The sample has 583 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2781,7 +2781,7 @@ Each morning or afternoon run of the van, with its driver. The sample has 582 re
 
 #### Customers
 
-Everyone who orders: people sending flowers, the couples and families who book weddings, and businesses with a standing order. The sample has 977 records.
+Everyone who orders: people sending flowers, the couples and families who book weddings, and businesses with a standing order. The sample has 981 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2799,7 +2799,7 @@ Everyone who orders: people sending flowers, the couples and families who book w
 
 #### Orders
 
-Every order taken by phone, online or in the shop, for delivery, collection or a funeral, and the weekly standing orders for businesses. The sample has 1,707 records.
+Every order taken by phone, online or in the shop, for delivery, collection or a funeral, and the weekly standing orders for businesses. The sample has 1,711 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2833,7 +2833,7 @@ Every order taken by phone, online or in the shop, for delivery, collection or a
 
 #### Order Lines
 
-What is on each order. The sample has 1,855 records.
+What is on each order. The sample has 1,860 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2846,7 +2846,7 @@ What is on each order. The sample has 1,855 records.
 
 #### Till Sales
 
-Every sale over the counter, one record per receipt. The sample has 2,438 records.
+Every sale over the counter, one record per receipt. The sample has 2,397 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2861,7 +2861,7 @@ Every sale over the counter, one record per receipt. The sample has 2,438 record
 
 #### Till Lines
 
-What was sold on each receipt. The sample has 2,717 records.
+What was sold on each receipt. The sample has 2,680 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2874,7 +2874,7 @@ What was sold on each receipt. The sample has 2,717 records.
 
 #### Weddings
 
-Every wedding quoted, with its booking, deposit, invoice and balance. The sample has 35 records.
+Every wedding quoted, with its booking, deposit, invoice and balance. The sample has 39 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2902,7 +2902,7 @@ Every wedding quoted, with its booking, deposit, invoice and balance. The sample
 
 #### Wedding Lines
 
-What is quoted and made for each wedding. The sample has 253 records.
+What is quoted and made for each wedding. The sample has 288 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3381,7 +3381,7 @@ Everyone who works at the pharmacy: the pharmacists, the technician, the counter
 
 #### Supplier Orders
 
-The orders sent to suppliers, one record each, with their lines in Supplier Order Lines. The sample has 388 records.
+The orders sent to suppliers, one record each, with their lines in Supplier Order Lines. The sample has 390 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3433,7 +3433,7 @@ Everything on the shelves, one record for each line, under its generic name. Wha
 
 #### Supplier Order Lines
 
-The products on each supplier order. The sample has 1,114 records.
+The products on each supplier order. The sample has 1,118 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3445,7 +3445,7 @@ The products on each supplier order. The sample has 1,114 records.
 
 #### Batches
 
-Stock as it arrived: one record for each delivery of a product, with its batch number and expiry date, and how much of it is left. The sample has 1,219 records.
+Stock as it arrived: one record for each delivery of a product, with its batch number and expiry date, and how much of it is left. The sample has 1,229 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3459,7 +3459,7 @@ Stock as it arrived: one record for each delivery of a product, with its batch n
 
 #### Waste
 
-Stock written off: out of date, or damaged. Out-of-date stock from a supplier that takes returns points at the return note it went back on. The sample has 61 records.
+Stock written off: out of date, or damaged. Out-of-date stock from a supplier that takes returns points at the return note it went back on. The sample has 62 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3473,7 +3473,7 @@ Stock written off: out of date, or damaged. Out-of-date stock from a supplier th
 
 #### Sales
 
-The till: one record for each sale, with its lines in Sale Lines. Each prints as a till receipt. The sample has 5,214 records.
+The till: one record for each sale, with its lines in Sale Lines. Each prints as a till receipt. The sample has 5,231 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3490,7 +3490,7 @@ The till: one record for each sale, with its lines in Sale Lines. Each prints as
 
 #### Sale Lines
 
-The products on each sale. The sample has 7,879 records.
+The products on each sale. The sample has 7,903 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3505,7 +3505,7 @@ The products on each sale. The sample has 7,879 records.
 
 #### Pharmacist Checks
 
-A record of every request for a pharmacy-only line: the pharmacist spoke to the customer and decided whether to sell. The words are short and practical, never clinical. The sample has 818 records.
+A record of every request for a pharmacy-only line: the pharmacist spoke to the customer and decided whether to sell. The words are short and practical, never clinical. The sample has 819 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3521,7 +3521,7 @@ A record of every request for a pharmacy-only line: the pharmacist spoke to the 
 
 #### Prescriptions
 
-A minimal log of prescriptions waiting to be collected or delivered: initials, a reference and a count of items. It holds nothing clinical; the dispensary keeps its own records. The sample has 3,244 records.
+A minimal log of prescriptions waiting to be collected or delivered: initials, a reference and a count of items. It holds nothing clinical; the dispensary keeps its own records. The sample has 3,242 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3559,7 +3559,7 @@ Customers who cannot get to the pharmacy and have their prescriptions delivered,
 
 #### Delivery Rounds
 
-One record for each driver's round on each day, with its stops in Deliveries. Each prints as a round sheet. The sample has 546 records.
+One record for each driver's round on each day, with its stops in Deliveries. Each prints as a round sheet. The sample has 547 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6027,7 +6027,7 @@ Where cars are bought: the auctions and the trade sellers. Part-exchanges come f
 
 #### Customers
 
-Everyone who has test driven, bought or had a car valued, one record each. The sample has 1,527 records.
+Everyone who has test driven, bought or had a car valued, one record each. The sample has 1,524 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6104,7 +6104,7 @@ Every job done to get a car ready for sale, with what it cost. The sample has 1,
 
 #### Test Drives
 
-Every test drive, taken or booked, and how it ended. The sample has 1,569 records.
+Every test drive, taken or booked, and how it ended. The sample has 1,567 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6118,7 +6118,7 @@ Every test drive, taken or booked, and how it ended. The sample has 1,569 record
 
 #### Sales
 
-Every car sold or reserved: the order, and the invoice when it is handed over. The sample has 471 records.
+Every car sold or reserved: the order, and the invoice when it is handed over. The sample has 472 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6143,7 +6143,7 @@ Every car sold or reserved: the order, and the invoice when it is handed over. T
 
 #### Sale Lines
 
-What is on each sale: the car, the warranty and any extras, each with its price. The sample has 1,112 records.
+What is on each sale: the car, the warranty and any extras, each with its price. The sample has 1,114 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6222,7 +6222,7 @@ The warranty each car left with, and when it runs out. The sample has 448 record
 
 #### Part Exchanges
 
-Every valuation of a customer's car, taken in or not. The sample has 284 records.
+Every valuation of a customer's car, taken in or not. The sample has 285 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7424,7 +7424,7 @@ The styling and beard products the shop sells at the desk. The sample has 12 rec
 
 #### Loyalty Cards
 
-Each loyalty card a client has had: a stamp for each paid cut, and once there are nine, the next cut is free and the card is done. The sample has 1,426 records.
+Each loyalty card a client has had: a stamp for each paid cut, and once there are nine, the next cut is free and the card is done. The sample has 1,429 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7439,7 +7439,7 @@ Each loyalty card a client has had: a stamp for each paid cut, and once there ar
 
 #### Visits
 
-The queue board: every visit, booked or walked in, past, today and to come. A visit that was paid for is also its receipt. The sample has 10,489 records.
+The queue board: every visit, booked or walked in, past, today and to come. A visit that was paid for is also its receipt. The sample has 10,503 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7464,7 +7464,7 @@ The queue board: every visit, booked or walked in, past, today and to come. A vi
 
 #### Visit Lines
 
-What was done and sold in each visit: a line for each service and each product. The sample has 11,485 records.
+What was done and sold in each visit: a line for each service and each product. The sample has 11,504 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8846,7 +8846,7 @@ The diary: each vehicle booked in, the day and time and what for. A booking beco
 
 #### Job Cards
 
-One record for each visit: the work asked for, the technician, and, in Job Lines, the labour and parts. The Job card print template prints from it for the workshop. The sample has 1,879 records.
+One record for each visit: the work asked for, the technician, and, in Job Lines, the labour and parts. The Job card print template prints from it for the workshop. The sample has 1,883 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10908,7 +10908,7 @@ Each time a class runs, past and on the timetable for the fortnight ahead. The s
 
 #### Bookings
 
-Each place a member books in a class. The sample has 9,433 records.
+Each place a member books in a class. The sample has 9,429 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10920,7 +10920,7 @@ Each place a member books in a class. The sample has 9,433 records.
 
 #### Visits
 
-Every time a member comes through the door, as the door reader records it. The sample has 14,291 records.
+Every time a member comes through the door, as the door reader records it. The sample has 14,319 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10950,7 +10950,7 @@ Packs of personal training sessions sold to members, each with a trainer and a u
 
 #### PT Sessions
 
-Each personal training session, given, missed or booked ahead. The sample has 831 records.
+Each personal training session, given, missed or booked ahead. The sample has 829 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15559,7 +15559,7 @@ The people in the building whom visitors come to see and deliveries are addresse
 
 #### Visitors
 
-Everyone who has been to the building or is booked to come, once each, however many times they visit. Kept to a name, a company and a car registration. The sample has 2,790 records.
+Everyone who has been to the building or is booked to come, once each, however many times they visit. Kept to a name, a company and a car registration. The sample has 2,798 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15586,7 +15586,7 @@ The numbered visitor and contractor badges at the desk. A badge is given out at 
 
 #### Visits
 
-One record for each visit, booked or walked in: who, to see whom, when they were expected, when they signed in and out, and the badge they had. The sample has 6,935 records.
+One record for each visit, booked or walked in: who, to see whom, when they were expected, when they signed in and out, and the badge they had. The sample has 6,956 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15639,7 +15639,7 @@ Permits to work, issued at the desk for a contractor's visit when the work carri
 
 #### Deliveries
 
-Every parcel, letter, pallet and order taken in at the desk for someone in the building, until it is collected. The sample has 2,754 records.
+Every parcel, letter, pallet and order taken in at the desk for someone in the building, until it is collected. The sample has 2,763 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -16851,7 +16851,7 @@ Every table has a form of the same name, made by the form wizard: Contacts. A fo
 
 A printed list of every contact by last name, with their phone, mobile and e-mail, to pin up by the phone or keep in a folder.
 
-From the table Contacts: Last name, First name, Phone, Mobile, E mail.
+From the table Contacts: Last name, First name, Phone, Mobile, E-mail.
 
 ### Starting empty
 

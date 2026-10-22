@@ -44,7 +44,7 @@ export const spec = {
     ] },
     // Orders come before Products: a query joins two tables by the first relationship between them,
     // so an order's Companies record is its customer, not its products' supplier.
-    { name: 'Orders', fields: [
+    { name: 'Orders', show: ['ID', 'Customer', 'Order Date'], fields: [
       { name: 'Customer', ...ref('Companies'), required: true }, { name: 'Employee', ...ref('Employees') }, { name: 'Order Date', type: 'date' },
       { name: 'Required Date', type: 'date' }, { name: 'Shipped Date', type: 'date' }, { name: 'Shipper', ...ref('Companies') },
       { name: 'Shipping Fee', type: 'currency' }, { name: 'Status', type: 'text', default: 'New' }, { name: 'Notes', type: 'longtext' },
@@ -61,7 +61,7 @@ export const spec = {
       { name: 'Units in Stock', type: 'integer', default: 0 }, { name: 'Reorder Level', type: 'integer', default: 10 },
       { name: 'Reorder Quantity', type: 'integer', default: 40 }, { name: 'Discontinued', type: 'yesno' },
     ] },
-    { name: 'Purchase Orders', fields: [
+    { name: 'Purchase Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Supplier', ...ref('Companies'), required: true }, { name: 'Employee', ...ref('Employees') }, { name: 'Ordered On', type: 'date' },
       { name: 'Expected', type: 'date' }, { name: 'Received On', type: 'date' }, { name: 'Status', type: 'text', default: 'Submitted' },
     ] },

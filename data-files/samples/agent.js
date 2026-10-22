@@ -52,7 +52,7 @@ export const spec = {
       { name: 'Price', type: 'currency' }, { name: 'Listed On', type: 'date' }, { name: 'Status', type: 'text', default: 'For sale' },
       { name: 'Energy Rating', type: 'text' }, { name: 'Fee Rate', type: 'number' }, { name: 'Description', type: 'longtext' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Applicants', fields: [
+    { name: 'Applicants', show: ['First Name', 'Last Name', 'Phone'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Looking To', type: 'text', default: 'Buy' },
       { name: 'Area', ...ref('Areas') }, { name: 'Min Bedrooms', type: 'integer', default: 1 }, { name: 'Budget', type: 'currency' },
       { name: 'Position', type: 'text' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
@@ -64,7 +64,7 @@ export const spec = {
       { name: 'Accompanied By', ...ref('Staff') }, { name: 'Booked On', type: 'date' }, { name: 'Viewing Date', type: 'date' }, { name: 'Viewing Time', type: 'text' },
       { name: 'Status', type: 'text', default: 'Booked' }, { name: 'Confirmation Sent', type: 'date' }, { name: 'Feedback', type: 'longtext' },
     ] },
-    { name: 'Offers', fields: [
+    { name: 'Offers', show: ['Made On', 'Property', 'Applicant'], fields: [
       { name: 'Property', ...ref('Properties'), required: true }, { name: 'Applicant', ...ref('Applicants'), required: true }, { name: 'Made On', type: 'date' },
       { name: 'Amount', type: 'currency' }, { name: 'Conditions', type: 'text' }, { name: 'Status', type: 'text', default: 'Awaiting decision' },
       { name: 'Decided On', type: 'date' }, { name: 'Notes', type: 'longtext' },
@@ -74,7 +74,7 @@ export const spec = {
       { name: 'Postcode', type: 'text' }, { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' },
     ] },
     // Property, then Offer, then Buyer: a query that has Sales and Applicants joins the buyer through the sale.
-    { name: 'Sales', fields: [
+    { name: 'Sales', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Property', ...ref('Properties'), required: true }, { name: 'Offer', ...ref('Offers') },
       { name: 'Buyer', ...ref('Applicants'), required: true }, { name: 'Negotiator', ...ref('Staff') },
       { name: 'Buyer Solicitor', ...ref('Solicitors') }, { name: 'Seller Solicitor', ...ref('Solicitors') },
@@ -83,7 +83,7 @@ export const spec = {
       { name: 'Exchanged On', type: 'date' }, { name: 'Completed On', type: 'date' }, { name: 'Target Completion', type: 'date' },
       { name: 'Included', type: 'text' }, { name: 'Fee Rate', type: 'number' }, { name: 'Fee', type: 'currency' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Tenancies', fields: [
+    { name: 'Tenancies', show: ['Reference'], fields: [
       { name: 'Reference', type: 'text', unique: true }, { name: 'Property', ...ref('Properties'), required: true }, { name: 'Tenant', ...ref('Applicants'), required: true },
       { name: 'Signed On', type: 'date' }, { name: 'Start', type: 'date' }, { name: 'End', type: 'date' }, { name: 'Monthly Rent', type: 'currency' },
       { name: 'Rent Day', type: 'integer', default: 1 }, { name: 'Deposit', type: 'currency' }, { name: 'Deposit Ref', type: 'text' },
@@ -91,7 +91,7 @@ export const spec = {
       { name: 'Rent Paid To', type: 'text' }, { name: 'Repairs To', type: 'text' }, { name: 'Pets', type: 'text', default: 'None' },
       { name: 'Renewal', type: 'yesno' }, { name: 'Status', type: 'text', default: 'Active' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Landlord Statements', fields: [
+    { name: 'Landlord Statements', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Client', ...ref('Clients'), required: true }, { name: 'Period', type: 'text' },
       { name: 'Statement Date', type: 'date' }, { name: 'Rent Collected', type: 'currency' }, { name: 'Deductions', type: 'currency' },
       { name: 'Paid Out', type: 'currency' }, { name: 'Paid On', type: 'date' },
@@ -116,7 +116,7 @@ export const spec = {
       { name: 'Statement', ...ref('Landlord Statements') }, { name: 'Notes', type: 'longtext' },
     ] },
     // Client first: a query with Agency Invoices and Clients joins the client billed.
-    { name: 'Agency Invoices', fields: [
+    { name: 'Agency Invoices', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Client', ...ref('Clients'), required: true }, { name: 'Sale', ...ref('Sales') },
       { name: 'Tenancy', ...ref('Tenancies') }, { name: 'Statement', ...ref('Landlord Statements') }, { name: 'Invoice Date', type: 'date' },
       { name: 'Due Date', type: 'date' }, { name: 'Net', type: 'currency' }, { name: 'Tax', type: 'currency' }, { name: 'Amount', type: 'currency' },

@@ -78,7 +78,7 @@ export const spec = {
       { name: 'Break Minutes', type: 'integer', default: 0 }, { name: 'Paid Hours', type: 'number' },
       { name: 'Station', type: 'text' }, { name: 'Status', type: 'text', default: 'Rota' }, { name: 'Payslip', ...ref('Payslips') },
     ] },
-    { name: 'Orders', fields: [
+    { name: 'Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'When', type: 'datetime' }, { name: 'Service', type: 'text', default: 'Dine in' }, { name: 'Table No', type: 'integer' },
       { name: 'Covers', type: 'integer', default: 0 }, { name: 'Staff', ...ref('Staff'), required: true },
       { name: 'Payment', type: 'text', default: 'Card' }, { name: 'Net', type: 'currency' }, { name: 'Tax', type: 'currency' },

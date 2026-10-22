@@ -50,7 +50,7 @@ export const spec = {
       { name: 'Bought', type: 'date' }, { name: 'Purchase Price', type: 'currency' }, { name: 'Current Value', type: 'currency' },
       { name: 'Valued On', type: 'date' }, { name: 'VAT on Rent', type: 'yesno' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Units', fields: [
+    { name: 'Units', show: ['Name', 'Property'], fields: [
       { name: 'Property', ...ref('Properties'), required: true }, { name: 'Name', type: 'text', required: true }, { name: 'Kind', type: 'text' },
       { name: 'Postal Address', type: 'text' }, { name: 'Bedrooms', type: 'integer', default: 0 }, { name: 'Market Rent', type: 'currency' },
       { name: 'Has Gas', type: 'yesno' }, { name: 'Furnished', type: 'yesno' }, { name: 'Rent Includes', type: 'text' },
@@ -63,7 +63,7 @@ export const spec = {
       { name: 'Emergency Phone', type: 'text' }, { name: 'References Checked', type: 'yesno' }, { name: 'ID Checked', type: 'yesno' },
       { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Leases', fields: [
+    { name: 'Leases', show: ['Unit', 'Tenant', 'Start'], fields: [
       { name: 'Unit', ...ref('Units'), required: true }, { name: 'Tenant', ...ref('Tenants'), required: true }, { name: 'Type', type: 'text', default: 'Residential' },
       { name: 'Signed On', type: 'date' }, { name: 'Start', type: 'date' }, { name: 'End', type: 'date' }, { name: 'Monthly Rent', type: 'currency' },
       { name: 'Tax Rate', type: 'number', default: 0 }, { name: 'Rent Day', type: 'integer', default: 1 }, { name: 'Pays By', type: 'text', default: 'Standing order' },
@@ -72,7 +72,7 @@ export const spec = {
       { name: 'Status', type: 'text', default: 'Active' }, { name: 'Notes', type: 'longtext' },
     ] },
     // Lease before Tenant: a query that has Rent Charges, Leases and Tenants joins the tenant through the lease.
-    { name: 'Rent Charges', fields: [
+    { name: 'Rent Charges', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Lease', ...ref('Leases'), required: true }, { name: 'Tenant', ...ref('Tenants') },
       { name: 'Period', type: 'text' }, { name: 'Invoice Date', type: 'date' }, { name: 'Due Date', type: 'date' }, { name: 'Period End', type: 'date' },
       { name: 'Net', type: 'currency' }, { name: 'Tax Rate', type: 'number', default: 0 }, { name: 'Tax', type: 'currency', default: 0 },

@@ -50,7 +50,7 @@ export const spec = {
   },
   tables: [
     BUSINESS_TABLE,
-    { name: 'Clients', fields: [
+    { name: 'Clients', show: ['Name', 'Postcode'], fields: [
       { name: 'Name', type: 'text', required: true }, { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' },
       { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Payment Days', type: 'integer', default: 7 }, { name: 'Notes', type: 'longtext' },
@@ -66,12 +66,12 @@ export const spec = {
       { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' }, { name: 'Payment Days', type: 'integer', default: 30 },
       { name: 'VAT Registered', type: 'yesno', default: true },
     ] },
-    { name: 'Enquiries', fields: [
+    { name: 'Enquiries', show: ['Received On', 'Work'], fields: [
       { name: 'Client', ...ref('Clients'), required: true }, { name: 'Received On', type: 'date' }, { name: 'Work', type: 'text' },
       { name: 'Description', type: 'longtext' }, { name: 'Source', type: 'text' }, { name: 'Status', type: 'text', default: 'New' },
       { name: 'Visit Date', type: 'date' }, { name: 'Visited By', ...ref('Staff') }, { name: 'Visit Notes', type: 'longtext' },
     ] },
-    { name: 'Quotes', fields: [
+    { name: 'Quotes', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Enquiry', ...ref('Enquiries') }, { name: 'Client', ...ref('Clients'), required: true },
       { name: 'Title', type: 'text' }, { name: 'Quote Date', type: 'date' }, { name: 'Valid Until', type: 'date' }, { name: 'Status', type: 'text', default: 'Sent' },
       { name: 'Weeks on Site', type: 'integer' }, { name: 'Net', type: 'currency' }, { name: 'VAT', type: 'currency' }, { name: 'Total', type: 'currency' },
@@ -85,7 +85,7 @@ export const spec = {
     // Jobs comes before Invoices and the Job Ledger: a query joins two tables
     // by the first relationship between them, so with Jobs, Invoices and
     // Clients together the client is the job's.
-    { name: 'Jobs', fields: [
+    { name: 'Jobs', show: ['Number', 'Title'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Quote', ...ref('Quotes') }, { name: 'Client', ...ref('Clients'), required: true },
       { name: 'Title', type: 'text' }, { name: 'Work', type: 'text' }, { name: 'Site Manager', ...ref('Staff') }, { name: 'Signed On', type: 'date' },
       { name: 'Contract Sum', type: 'currency' }, { name: 'Contingency', type: 'currency', default: 0 }, { name: 'Start Date', type: 'date' },
@@ -93,7 +93,7 @@ export const spec = {
       { name: 'Current Stage', type: 'text' }, { name: 'Retention Percent', type: 'number', default: 5 }, { name: 'Defects Months', type: 'integer', default: 6 },
       { name: 'Retention Due', type: 'date' }, { name: 'Retention Released On', type: 'date' }, { name: 'Notes', type: 'longtext' },
     ] },
-    { name: 'Job Stages', fields: [
+    { name: 'Job Stages', show: ['Job', 'Name'], fields: [
       { name: 'Job', ...ref('Jobs'), required: true }, { name: 'Stage', type: 'integer' }, { name: 'Name', type: 'text' },
       { name: 'Payment Percent', type: 'number' }, { name: 'Amount', type: 'currency' }, { name: 'Planned Finish', type: 'date' }, { name: 'Done On', type: 'date' },
     ] },
@@ -102,7 +102,7 @@ export const spec = {
       { name: 'Description', type: 'longtext' }, { name: 'Reason', type: 'text' }, { name: 'Amount', type: 'currency' }, { name: 'Extra Days', type: 'integer', default: 0 },
       { name: 'Status', type: 'text', default: 'Proposed' }, { name: 'Agreed On', type: 'date' }, { name: 'Invoice', ...ref('Invoices') },
     ] },
-    { name: 'Invoices', fields: [
+    { name: 'Invoices', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Job', ...ref('Jobs'), required: true }, { name: 'Client', ...ref('Clients'), required: true },
       { name: 'Stage', ...ref('Job Stages') }, { name: 'Kind', type: 'text' }, { name: 'Invoice Date', type: 'date' }, { name: 'Due Date', type: 'date' },
       { name: 'Gross', type: 'currency' }, { name: 'Retention', type: 'currency', default: 0 }, { name: 'Net', type: 'currency' },

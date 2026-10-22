@@ -65,7 +65,7 @@ export const spec = {
       { name: 'Number', type: 'text', unique: true }, { name: 'Supplier', ...ref('Suppliers'), required: true }, { name: 'Bought On', type: 'date' },
       { name: 'Total', type: 'currency' },
     ] },
-    { name: 'Purchase Lines', fields: [
+    { name: 'Purchase Lines', show: ['Item', 'Purchase'], fields: [
       { name: 'Purchase', ...ref('Purchases'), required: true }, { name: 'Item', ...ref('Items'), required: true }, { name: 'Units', type: 'integer' },
       { name: 'Unit Cost', type: 'currency' }, { name: 'Stems', type: 'integer' }, { name: 'Use By', type: 'date' },
     ] },
@@ -77,15 +77,15 @@ export const spec = {
       { name: 'Name', type: 'text', required: true, unique: true }, { name: 'Postcodes', type: 'text' }, { name: 'Charge', type: 'currency' },
     ] },
     // Delivery Runs come before Orders: a delivery's Staff record is its driver, not who took the order.
-    { name: 'Delivery Runs', fields: [
+    { name: 'Delivery Runs', show: ['Run Date', 'Slot'], fields: [
       { name: 'Run Date', type: 'date' }, { name: 'Slot', type: 'text' }, { name: 'Driver', ...ref('Staff') }, { name: 'Notes', type: 'text' },
     ] },
-    { name: 'Customers', fields: [
+    { name: 'Customers', show: ['First Name', 'Last Name', 'Postcode'], fields: [
       { name: 'First Name', type: 'text' }, { name: 'Last Name', type: 'text', required: true }, { name: 'Company', type: 'text' },
       { name: 'Kind', type: 'text', default: 'Private' }, { name: 'Address', type: 'text' }, { name: 'City', type: 'text' }, { name: 'Postcode', type: 'text' },
       { name: 'Phone', type: 'text' }, { name: 'E-mail', type: 'text' }, { name: 'Added', type: 'date' },
     ] },
-    { name: 'Orders', fields: [
+    { name: 'Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Customer', ...ref('Customers'), required: true }, { name: 'Taken By', ...ref('Staff') },
       { name: 'Taken', type: 'datetime' }, { name: 'Kind', type: 'text', default: 'Delivery' }, { name: 'Occasion', type: 'text' },
       { name: 'Due Date', type: 'date' }, { name: 'Slot', type: 'text' }, { name: 'Recipient', type: 'text' }, { name: 'Recipient Phone', type: 'text' },
@@ -99,7 +99,7 @@ export const spec = {
       { name: 'Order', ...ref('Orders'), required: true }, { name: 'Product', ...ref('Products'), required: true },
       { name: 'Quantity', type: 'integer', default: 1 }, { name: 'Unit Price', type: 'currency' }, { name: 'Tax Rate', type: 'number', default: 0.2 },
     ] },
-    { name: 'Till Sales', fields: [
+    { name: 'Till Sales', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Sold At', type: 'datetime' }, { name: 'Served By', ...ref('Staff') },
       { name: 'Payment', type: 'text' }, { name: 'Net', type: 'currency' }, { name: 'Tax', type: 'currency' }, { name: 'Total', type: 'currency' },
     ] },

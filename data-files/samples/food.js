@@ -54,7 +54,7 @@ export const spec = {
       { name: 'In Stock', type: 'integer', default: 0 }, { name: 'Reorder Level', type: 'integer', default: 6 }, { name: 'Pack Size', type: 'integer', default: 1 },
       { name: 'Active', type: 'yesno', default: true },
     ] },
-    { name: 'Purchase Orders', fields: [
+    { name: 'Purchase Orders', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Supplier', ...ref('Suppliers'), required: true }, { name: 'Staff', ...ref('Staff') },
       { name: 'Ordered On', type: 'date' }, { name: 'Expected', type: 'date' }, { name: 'Received On', type: 'date' },
       { name: 'Status', type: 'text', default: 'Submitted' }, { name: 'Supplier Invoice', type: 'text' }, { name: 'Paid', type: 'yesno' },
@@ -63,12 +63,12 @@ export const spec = {
       { name: 'Purchase Order', ...ref('Purchase Orders'), required: true }, { name: 'Product', ...ref('Products'), required: true },
       { name: 'Quantity', type: 'integer' }, { name: 'Unit Cost', type: 'currency' },
     ] },
-    { name: 'Batches', fields: [
+    { name: 'Batches', show: ['Batch Code', 'Product', 'Expiry Date'], fields: [
       { name: 'Product', ...ref('Products'), required: true }, { name: 'Purchase Order', ...ref('Purchase Orders') }, { name: 'Batch Code', type: 'text' },
       { name: 'Received', type: 'date' }, { name: 'Expiry Date', type: 'date' }, { name: 'Quantity', type: 'integer' },
       { name: 'Unit Cost', type: 'currency' }, { name: 'Remaining', type: 'integer' }, { name: 'Marked Down To', type: 'currency' },
     ] },
-    { name: 'Sales', fields: [
+    { name: 'Sales', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'When', type: 'datetime' }, { name: 'Staff', ...ref('Staff') },
       { name: 'Payment', type: 'text', default: 'Card' }, { name: 'Total', type: 'currency' }, { name: 'VAT', type: 'currency' },
       { name: 'Standard Rated', type: 'currency' }, { name: 'Saved', type: 'currency', default: 0 },
@@ -80,7 +80,7 @@ export const spec = {
       { name: 'Quantity', type: 'integer', default: 1 }, { name: 'Full Price', type: 'currency' }, { name: 'Unit Price', type: 'currency' },
       { name: 'Discount', type: 'number', default: 0 }, { name: 'Tax Rate', type: 'number', default: 0 }, { name: 'Unit Cost', type: 'currency' },
     ] },
-    { name: 'Date Checks', fields: [
+    { name: 'Date Checks', show: ['Number'], fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Date', type: 'date' }, { name: 'Staff', ...ref('Staff') },
       { name: 'Fridge Temperatures', type: 'text' },
     ] },

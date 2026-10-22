@@ -73,7 +73,7 @@ export const spec = {
       { name: 'Gift Date', type: 'date' }, { name: 'Amount', type: 'currency' }, { name: 'Method', type: 'text' },
       { name: 'Regular', type: 'yesno' }, { name: 'Claimable', type: 'yesno' }, { name: 'Tax Claim', ...ref('Tax Claims') },
     ] },
-    { name: 'Events', fields: [
+    { name: 'Events', show: ['Name', 'Event Date'], fields: [
       { name: 'Name', type: 'text', required: true }, { name: 'Event Date', type: 'date' }, { name: 'Start Time', type: 'text' },
       { name: 'Venue', type: 'text' }, { name: 'Capacity', type: 'integer' }, { name: 'Ticket Price', type: 'currency', default: 0 },
       { name: 'Costs', type: 'currency', default: 0 }, { name: 'Status', type: 'text', default: 'Planned' },
