@@ -81,6 +81,22 @@ export function checkSample(base, spec) {
     }
     if (!out.documents.length) problems.push(`The print template ${name} has nothing to print: ${layout.table} has no records.`);
     if (layout.letterhead?.table && !out.letterhead) problems.push(`The print template ${name}'s letterhead, ${layout.letterhead.table}, has no record.`);
+    // Nothing printed reads NaN, null or undefined: a value that cannot be
+    // worked out or a name that found nothing shows on paper as that word.
+    const odd = (v) => (typeof v === 'number' && !Number.isFinite(v)) || (typeof v === 'string' && /^(NaN|null|undefined)$/.test(v.trim()));
+    const seen = new Set();
+    for (const d of out.documents) {
+      for (const bl of d.blocks) {
+        const values = [
+          ...(bl.items || []).map((i) => [i.label, i.value]),
+          ...(bl.rows || []).flatMap((r) => (r && typeof r === 'object' && 'label' in r && 'value' in r ? [[r.label, r.value]] : Object.entries(r || {}))),
+          ...(bl.parts || []).filter((p) => 'value' in p).map((p) => ['words', p.value]),
+        ];
+        for (const [where, v] of values) {
+          if (odd(v) && !seen.has(where)) { seen.add(where); problems.push(`The print template ${name} prints ${v} for ${where}.`); }
+        }
+      }
+    }
     // A lines column naming a pointing field alone prints the related record's
     // words, but keeps the field's number type unless told, and a page then
     // shows NaN: such a column says type 'text'.
