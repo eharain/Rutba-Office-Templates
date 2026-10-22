@@ -8,6 +8,9 @@ import { TEMPLATES, CATEGORIES, templateById, templateForLegacy, templatesOf } f
 
 export { TEMPLATES, CATEGORIES, templateById, templateForLegacy, templatesOf };
 
+/** A template's page on office.rutba.io, which the gallery links to (D-2026-10-22-03). */
+export const templatePage = (id) => `https://office.rutba.io/templates/${encodeURIComponent(id)}`;
+
 /** The folder the templates are kept in. */
 export const FILES_DIR = fileURLToPath(new URL('../files/', import.meta.url));
 /** The folder their thumbnails are kept in. */

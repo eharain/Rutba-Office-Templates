@@ -13,3 +13,5 @@ export const {
   SAMPLE_IDS, sampleSpec, sampleAbout, sampleModule, sampleNeeds, designOfModule, guideOf, GUIDE_TABLE,
   checkSample, random, calendar,
 } = content;
+/** A set from before the pages were linked has none: the link then made as the site makes it. */
+export const pageOf = content.pageOf || ((id) => `https://office.rutba.io/samples/${String(id)}`);

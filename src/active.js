@@ -10,5 +10,7 @@ const dir = process.env.RUTBA_TEMPLATES_DIR || null;
 const gallery = dir ? await import(pathToFileURL(path.join(dir, 'src', 'index.js')).href) : await import('./index.js');
 
 export const { TEMPLATES, CATEGORIES, templateById, templateForLegacy, templatesOf, templatePath, thumbPath, readTemplate, FILES_DIR, THUMBS_DIR } = gallery;
+/** A set from before the pages were linked has none: the same address, made here. */
+export const templatePage = gallery.templatePage || ((id) => `https://office.rutba.io/templates/${encodeURIComponent(id)}`);
 /** The folder of the set in use, or null for this package's own. */
 export const ACTIVE_DIR = dir;
