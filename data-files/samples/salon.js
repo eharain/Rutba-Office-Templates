@@ -748,7 +748,7 @@ export function fill(base, { r, cal, days = 395, ahead = 42 }) {
     };
     if (prof.patch && initial && r.chance(0.9)) c.patch = -days - r.int(5, 175);
     const values = {
-      'First Name': n.first, 'Last Name': n.last, Phone: phone(), 'E-mail': r.chance(0.85) ? mailFor(n.first, n.last, r.pick(['example.com', 'example.org', 'example.net'])) : null,
+      'First Name': n.first, 'Last Name': n.last, Phone: phone(), 'E-mail': r.chance(0.85) ? mailFor(n.first, n.last, r.pick(['mail.example', 'post.example', 'inbox.example'])) : null,
       'Heard Of Us': r.weighted(sources), 'Client Since': cal.day(since), 'Patch Test Date': c.patch === null ? null : cal.day(c.patch),
       Allergies: r.chance(0.04) ? r.pick(ALLERGIES) : null,
       'Colour Notes': profile === 'colour' ? `${r.int(4, 9)}/${r.pick(['0', '1', '3', '4', '43', '71', '66'])} with ${r.pick([20, 20, 30])} vol, ${r.pick([30, 35, 40])} minutes` : null,

@@ -189,13 +189,13 @@ export const spec = {
     ] },
     'Technician turnaround': { tables: ['Jobs', 'Staff'], columns: [
       { expr: TECHNICIAN, as: 'Technician', total: 'group', sort: 'asc' }, { table: 'Jobs', field: 'ID', as: 'Jobs Repaired', total: 'count' },
-      { expr: 'DateDiff("d", [Booked In], [Finished])', as: 'Average Days', total: 'avg' }, { table: 'Jobs', field: 'Charge', as: 'Charged', total: 'sum' },
+      { expr: 'DateDiff("d", [Booked In], [Finished])', as: 'Average Days', total: 'avg', decimals: 1 }, { table: 'Jobs', field: 'Charge', as: 'Charged', total: 'sum' },
       { table: 'Jobs', field: 'Outcome', total: 'where', criteria: ['Repaired'] },
       { expr: 'DateDiff("d", [Finished], Date())', as: 'Days Ago', total: 'where', criteria: ['Between 0 And 365'] },
     ] },
     'Work by device kind': { tables: ['Jobs', 'Devices'], columns: [
       { table: 'Devices', field: 'Kind', total: 'group' }, { table: 'Jobs', field: 'ID', as: 'Jobs', total: 'count', sort: 'desc' },
-      { table: 'Jobs', field: 'Charge', as: 'Charged', total: 'sum' }, { expr: 'DateDiff("d", [Booked In], [Finished])', as: 'Average Days', total: 'avg' },
+      { table: 'Jobs', field: 'Charge', as: 'Charged', total: 'sum' }, { expr: 'DateDiff("d", [Booked In], [Finished])', as: 'Average Days', total: 'avg', decimals: 1 },
     ] },
     'Warranty returns': { tables: ['Jobs', 'Devices', 'Customers', 'Staff'], columns: [
       { table: 'Jobs', field: 'Number', as: 'Job' }, { table: 'Jobs', field: 'Booked In', sort: 'desc' },

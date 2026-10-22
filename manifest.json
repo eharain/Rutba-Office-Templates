@@ -1,5 +1,5 @@
 {
-  "set": "2.16.0",
+  "set": "2.16.1",
   "minOffice": "2.16.0",
   "parts": {
     "gallery": { "minOffice": "2.12.0", "path": "src/catalogue.js" },

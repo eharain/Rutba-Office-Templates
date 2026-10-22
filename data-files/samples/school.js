@@ -153,7 +153,7 @@ export const spec = {
       { table: 'Students', field: 'School Year', total: 'group' }, { table: 'Families', field: 'Contact', total: 'group' }, { table: 'Families', field: 'Phone', total: 'group' },
       { table: 'Attendance', field: 'ID', as: 'Lessons', total: 'count', criteria: ['>= 4'] },
       { expr: 'IIf([Mark] = "Absent", 1, 0)', as: 'Absences', total: 'sum' },
-      { expr: 'IIf([Mark] = "Absent", 0, 100)', as: 'Attendance %', total: 'avg', criteria: ['< 85'], sort: 'asc' },
+      { expr: 'IIf([Mark] = "Absent", 0, 100)', as: 'Attendance %', total: 'avg', decimals: 1, criteria: ['< 85'], sort: 'asc' },
       { expr: 'DateDiff("d", [Lesson Date], Date())', as: 'Days Ago', total: 'where', criteria: ['Between 1 And 90'] },
     ] },
     'Fees outstanding by family': { tables: ['Fee Invoices', 'Families'], columns: [
@@ -182,7 +182,7 @@ export const spec = {
     'Results by course': { tables: ['Results', 'Assessments', 'Classes', 'Courses'], columns: [
       { table: 'Courses', field: 'Name', as: 'Course', total: 'group', sort: 'asc' }, { table: 'Courses', field: 'Subject', total: 'group' },
       { table: 'Results', field: 'ID', as: 'Results', total: 'count' },
-      { expr: 'Round([Score] * 100 / [Out Of], 0)', as: 'Average %', total: 'avg' },
+      { expr: 'Round([Score] * 100 / [Out Of], 0)', as: 'Average %', total: 'avg', decimals: 1 },
       { expr: 'Round([Score] * 100 / [Out Of], 0)', as: 'Highest %', total: 'max' },
       { expr: 'Round([Score] * 100 / [Out Of], 0)', as: 'Lowest %', total: 'min' },
       { expr: 'DateDiff("d", [Assessment Date], Date())', as: 'Days Ago', total: 'where', criteria: ['Between 0 And 365'] },

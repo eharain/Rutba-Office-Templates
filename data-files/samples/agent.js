@@ -218,7 +218,7 @@ export const spec = {
     'Asking prices by area': { tables: ['Properties', 'Areas'], columns: [
       { table: 'Areas', field: 'Name', as: 'Area', total: 'group', sort: 'asc' }, { table: 'Properties', field: 'Purpose', total: 'group', sort: 'asc' },
       { table: 'Properties', field: 'ID', as: 'On the Market', total: 'count' }, { table: 'Properties', field: 'Price', as: 'Lowest', total: 'min' },
-      { expr: 'Round([Price], 0)', as: 'Average', total: 'avg' }, { table: 'Properties', field: 'Price', as: 'Highest', total: 'max' },
+      { expr: 'Round([Price], 0)', as: 'Average', total: 'avg', decimals: 0 }, { table: 'Properties', field: 'Price', as: 'Highest', total: 'max' },
       { table: 'Properties', field: 'Status', total: 'where', criteria: ['In ("For sale", "To let", "Under offer", "Let agreed")'] },
     ] },
   },

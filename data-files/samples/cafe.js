@@ -138,21 +138,21 @@ export const spec = {
     ] },
     'Sales by hour': { tables: ['Orders'], columns: [
       { expr: 'Mid([When], 12, 2)', as: 'Hour', total: 'group', sort: 'asc' }, { table: 'Orders', field: 'ID', as: 'Orders', total: 'count' },
-      { table: 'Orders', field: 'Total', as: 'Takings', total: 'sum' }, { table: 'Orders', field: 'Total', as: 'Average Spend', total: 'avg' },
+      { table: 'Orders', field: 'Total', as: 'Takings', total: 'sum' }, { table: 'Orders', field: 'Total', as: 'Average Spend', total: 'avg', decimals: 2 },
       { expr: DAYS_AGO, as: 'Days Ago', total: 'where', criteria: ['Between 1 And 56'] },
       { table: 'Orders', field: 'Voided', total: 'where', criteria: ['No'] },
     ] },
     'Sales by day of the week': { tables: ['Orders'], columns: [
       { expr: DAY_NO, as: 'Day No', total: 'group', sort: 'asc', show: false }, { expr: DAY_NAME, as: 'Day', total: 'group' },
       { table: 'Orders', field: 'ID', as: 'Orders', total: 'count' }, { table: 'Orders', field: 'Covers', as: 'Covers', total: 'sum' },
-      { table: 'Orders', field: 'Total', as: 'Takings', total: 'sum' }, { table: 'Orders', field: 'Total', as: 'Average Spend', total: 'avg' },
+      { table: 'Orders', field: 'Total', as: 'Takings', total: 'sum' }, { table: 'Orders', field: 'Total', as: 'Average Spend', total: 'avg', decimals: 2 },
       { expr: DAYS_AGO, as: 'Days Ago', total: 'where', criteria: ['Between 1 And 56'] },
       { table: 'Orders', field: 'Voided', total: 'where', criteria: ['No'] },
     ] },
     'Average spend by service': { tables: ['Orders'], columns: [
       { table: 'Orders', field: 'Service', total: 'group', sort: 'asc' }, { table: 'Orders', field: 'ID', as: 'Orders', total: 'count' },
       { table: 'Orders', field: 'Covers', as: 'Covers', total: 'sum' }, { table: 'Orders', field: 'Total', as: 'Takings', total: 'sum' },
-      { table: 'Orders', field: 'Total', as: 'Average Spend', total: 'avg' },
+      { table: 'Orders', field: 'Total', as: 'Average Spend', total: 'avg', decimals: 2 },
       { expr: DAYS_AGO, as: 'Days Ago', total: 'where', criteria: ['Between 0 And 30'] },
       { table: 'Orders', field: 'Voided', total: 'where', criteria: ['No'] },
     ] },
@@ -173,7 +173,7 @@ export const spec = {
     ] },
     'Takings by weather': { tables: ['Cash Ups'], columns: [
       { table: 'Cash Ups', field: 'Weather', total: 'group' }, { table: 'Cash Ups', field: 'Date', as: 'Days', total: 'count' },
-      { expr: TAKINGS, as: 'Average Takings', total: 'avg', sort: 'desc' }, { table: 'Cash Ups', field: 'Covers', as: 'Average Covers', total: 'avg' },
+      { expr: TAKINGS, as: 'Average Takings', total: 'avg', decimals: 2, sort: 'desc' }, { table: 'Cash Ups', field: 'Covers', as: 'Average Covers', total: 'avg', decimals: 1 },
       { expr: 'Format([Date], "mm")', as: 'Month', total: 'where', criteria: ['In ("05", "06", "07", "08", "09")'] },
     ] },
     'Cash over or short': { tables: ['Cash Ups', 'Staff'], columns: [

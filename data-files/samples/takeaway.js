@@ -133,7 +133,7 @@ export const spec = {
     ] },
     'Delivery times by zone, last 28 days': { tables: ['Orders', 'Delivery Zones'], columns: [
       { table: 'Delivery Zones', field: 'Name', as: 'Zone', total: 'group', sort: 'asc' }, { table: 'Delivery Zones', field: 'Target Minutes', total: 'group' },
-      { table: 'Orders', field: 'ID', as: 'Deliveries', total: 'count' }, { expr: DELIVERY_MINUTES, as: 'Average Minutes', total: 'avg' },
+      { table: 'Orders', field: 'ID', as: 'Deliveries', total: 'count' }, { expr: DELIVERY_MINUTES, as: 'Average Minutes', total: 'avg', decimals: 1 },
       { expr: DELIVERY_MINUTES, as: 'Longest', total: 'max' },
       { expr: `IIf(${DELIVERY_MINUTES} > [Target Minutes], 1, 0)`, as: 'Over Target', total: 'sum' },
       { expr: NIGHTS_AGO, as: 'Nights Ago', total: 'where', criteria: ['Between 1 And 28'] },
@@ -142,7 +142,7 @@ export const spec = {
     'Takings by channel, last 28 days': { tables: ['Orders'], columns: [
       { table: 'Orders', field: 'Channel', total: 'group', sort: 'asc' }, { table: 'Orders', field: 'ID', as: 'Orders', total: 'count' },
       { expr: 'IIf([Method] = "Delivery", 1, 0)', as: 'Deliveries', total: 'sum' }, { table: 'Orders', field: 'Total', as: 'Takings', total: 'sum' },
-      { table: 'Orders', field: 'Total', as: 'Average Order', total: 'avg' }, { table: 'Orders', field: 'Delivery Charge', as: 'Delivery Charges', total: 'sum' },
+      { table: 'Orders', field: 'Total', as: 'Average Order', total: 'avg', decimals: 2 }, { table: 'Orders', field: 'Delivery Charge', as: 'Delivery Charges', total: 'sum' },
       { expr: NIGHTS_AGO, as: 'Nights Ago', total: 'where', criteria: ['Between 1 And 28'] },
       { table: 'Orders', field: 'Status', total: 'where', criteria: ['<> "Cancelled"'] },
     ] },
@@ -156,8 +156,8 @@ export const spec = {
     ] },
     'Busy nights, last 12 weeks': { tables: ['Nights'], columns: [
       { expr: DAY_NO, as: 'Day No', total: 'group', sort: 'asc', show: false }, { expr: DAY_NAME, as: 'Day', total: 'group' },
-      { table: 'Nights', field: 'Date', as: 'Nights', total: 'count' }, { table: 'Nights', field: 'Orders', as: 'Average Orders', total: 'avg' },
-      { table: 'Nights', field: 'Deliveries', as: 'Average Deliveries', total: 'avg' }, { expr: TAKINGS, as: 'Average Takings', total: 'avg' },
+      { table: 'Nights', field: 'Date', as: 'Nights', total: 'count' }, { table: 'Nights', field: 'Orders', as: 'Average Orders', total: 'avg', decimals: 1 },
+      { table: 'Nights', field: 'Deliveries', as: 'Average Deliveries', total: 'avg', decimals: 1 }, { expr: TAKINGS, as: 'Average Takings', total: 'avg', decimals: 2 },
       { expr: 'DateDiff("d", [Date], Date())', as: 'Days Ago', total: 'where', criteria: ['Between 1 And 84'] },
     ] },
     'Best sellers, last 28 days': { tables: ['Order Lines', 'Orders', 'Menu Items', 'Menu Categories'], columns: [
@@ -174,7 +174,7 @@ export const spec = {
     ] },
     'Drops by driver, last 28 days': { tables: ['Orders', 'Staff'], columns: [
       { expr: '[First Name] & " " & [Last Name]', as: 'Driver', total: 'group' }, { table: 'Orders', field: 'ID', as: 'Drops', total: 'count', sort: 'desc' },
-      { table: 'Orders', field: 'Drop Fee', as: 'Drop Fees', total: 'sum' }, { expr: DELIVERY_MINUTES, as: 'Average Minutes', total: 'avg' },
+      { table: 'Orders', field: 'Drop Fee', as: 'Drop Fees', total: 'sum' }, { expr: DELIVERY_MINUTES, as: 'Average Minutes', total: 'avg', decimals: 1 },
       { expr: 'IIf([Payment] = "Cash", [Total], 0)', as: 'Cash Collected', total: 'sum' },
       { expr: NIGHTS_AGO, as: 'Nights Ago', total: 'where', criteria: ['Between 1 And 28'] },
       { table: 'Orders', field: 'Status', total: 'where', criteria: ['Done'] },

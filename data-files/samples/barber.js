@@ -154,14 +154,14 @@ export const spec = {
     ] },
     'Walk-in waits by hour': { tables: ['Visits'], columns: [
       { expr: 'Mid([Arrived], 12, 2)', as: 'Hour', total: 'group', sort: 'asc' }, { table: 'Visits', field: 'ID', as: 'Walk-ins', total: 'count' },
-      { expr: WAIT, as: 'Average Wait', total: 'avg' }, { expr: WAIT, as: 'Longest Wait', total: 'max' },
+      { expr: WAIT, as: 'Average Wait', total: 'avg', decimals: 1 }, { expr: WAIT, as: 'Longest Wait', total: 'max' },
       { expr: 'IIf([Status] = "Walked out", 1, 0)', as: 'Walked Out', total: 'sum' },
       { table: 'Visits', field: 'Kind', total: 'where', criteria: ['Walk-in'] }, { table: 'Visits', field: 'Status', total: 'where', criteria: ['In ("Done", "Walked out")'] },
       { expr: 'DateDiff("d", [Arrived], Date())', as: 'Days Ago', total: 'where', criteria: ['Between 0 And 28'] },
     ] },
     'Walk-in waits by day': { tables: ['Visits'], columns: [
       { expr: 'Format([Arrived], "yyyy-mm-dd")', as: 'Day', total: 'group', sort: 'desc' }, { table: 'Visits', field: 'ID', as: 'Walk-ins', total: 'count' },
-      { expr: WAIT, as: 'Average Wait', total: 'avg' }, { expr: WAIT, as: 'Longest Wait', total: 'max' },
+      { expr: WAIT, as: 'Average Wait', total: 'avg', decimals: 1 }, { expr: WAIT, as: 'Longest Wait', total: 'max' },
       { expr: 'IIf([Status] = "Walked out", 1, 0)', as: 'Walked Out', total: 'sum' },
       { table: 'Visits', field: 'Kind', total: 'where', criteria: ['Walk-in'] }, { table: 'Visits', field: 'Status', total: 'where', criteria: ['In ("Done", "Walked out")'] },
       { expr: 'DateDiff("d", [Arrived], Date())', as: 'Days Ago', total: 'where', criteria: ['Between 0 And 14'] },
