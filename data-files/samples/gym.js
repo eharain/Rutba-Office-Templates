@@ -25,6 +25,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, FIRST, LAST, money, phoneFor } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const NAME = '[First Name] & " " & [Last Name]';
 const AHEAD = (field) => `DateDiff("d", Date(), [${field}])`;
@@ -202,24 +205,26 @@ export const spec = {
     { name: 'PT packs to renew', title: 'Personal training packs running low', query: 'PT packs running low', group: 'Trainer', columns: ['Pack', 'Member', 'Phone', { field: 'Sessions', type: 'integer' }, { field: 'Left', type: 'integer' }, { field: 'Expires', type: 'date' }], totals: [{ field: 'Left', fn: 'sum' }] },
   ],
   documents: [
-    // The agreement a new member signs at the desk.
-    { name: 'Membership agreement', table: 'Members', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // The agreement a member signs at the desk: for memberships still running (active, frozen or in notice), not those cancelled or lapsed.
+    { name: 'Membership agreement', table: 'Members', where: '[Status] <> "Cancelled" And [Status] <> "Lapsed"', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Membership agreement' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Number', label: 'Membership no' }, { field: 'Joined', label: 'Start date' },
-        { field: 'First Name' }, { field: 'Last Name' }, { field: 'Date of Birth' }, { field: 'Phone' },
-        { field: 'Address' }, { field: 'Postcode' }, { field: 'Plan.Name', label: 'Plan' }, { field: 'Monthly Fee' },
-        { field: 'Plan.Joining Fee', label: 'Joining fee' }, { field: 'Payment Day', label: 'Payment day each month' },
-        { field: 'Minimum Term Ends', label: 'Minimum term ends' }, { field: 'Health Declaration', label: 'Health questions done' },
+        { field: 'Number', label: 'Membership no' }, { field: 'Joined', label: 'Start date', format: 'd mmmm yyyy' },
+        { field: 'First Name' }, { field: 'Last Name' }, { field: 'Date of Birth', format: 'd mmmm yyyy' }, { field: 'Phone' },
+        { field: 'Address' }, { field: 'City', label: 'Town' }, { field: 'Postcode' }, { field: 'Plan.Name', label: 'Plan' },
+        { field: 'Monthly Fee', label: 'Monthly fee', format: '#,##0.00' }, { field: 'Plan.Joining Fee', label: 'Joining fee', format: '#,##0.00' },
+        { field: 'Payment Day', label: 'Payment day each month' }, { field: 'Minimum Term Ends', label: 'Minimum term ends', format: 'd mmmm yyyy' },
+        { field: 'Plan.Freeze Fee', label: 'Freeze fee a month', format: '#,##0.00' }, { field: 'Health Declaration', label: 'Health questions done' },
         { field: 'Emergency Contact' }, { field: 'Emergency Phone' },
       ] },
-      { type: 'text', text: '1. The parties. This agreement is between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the gym") and {First Name} {Last Name} of {Address}, {City} {Postcode} ("the member"). It starts on {Joined}.' },
+      { type: 'text', text: '1. The parties. This agreement is between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the gym") and {First Name} {Last Name} of {Address}, {City} {Postcode} ("the member"). It starts on the start date above.' },
       { type: 'text', text: '2. The plan. The member joins on the {Plan.Name} plan: {Plan.Description}. The member may use the gym {Plan.Access Hours}. A family plan covers the people named on it at one address, and the member who signs pays the fees for all of them.' },
-      { type: 'text', text: '3. Fees. The joining fee of {Plan.Joining Fee} and the first month\'s fee are paid on joining. After that the monthly fee of {Monthly Fee} is collected by direct debit on day {Payment Day} of each month. Prices include VAT. If a payment fails, the gym tries again five days later; if that fails too, the member\'s card stops opening the door until the amount is paid at the desk. The gym gives at least a month\'s notice in writing of any change to the fee.' },
-      { type: 'text', text: '4. Minimum term. The plan has a minimum term of {Plan.Minimum Months} months, ending on {Minimum Term Ends}, and the monthly fee is paid for the whole of it. The gym will let a member leave early for a serious illness or injury, or a move of more than 20 miles away, if they show evidence of it.' },
-      { type: 'text', text: '5. Freezing. The member may freeze the membership for one to three months in any twelve, from a payment day, by asking at the desk at least ten days before it. While it is frozen the member pays {Plan.Freeze Fee} a month instead of the monthly fee, and cannot use the gym or book classes.' },
+      { type: 'text', text: '3. Fees. The joining fee and the first month\'s fee, both shown above, are paid on joining. After that the monthly fee is collected by direct debit on day {Payment Day} of each month. Prices include VAT. If a payment fails, the gym tries again five days later; if that fails too, the member\'s card stops opening the door until the amount is paid at the desk. The gym gives at least a month\'s notice in writing of any change to the fee.' },
+      { type: 'text', text: '4. Minimum term. The plan has a minimum term of {Plan.Minimum Months} months, ending on the day shown above, and the monthly fee is paid for the whole of it. The gym will let a member leave early for a serious illness or injury, or a move of more than 20 miles away, if they show evidence of it.' },
+      { type: 'text', text: '5. Freezing. The member may freeze the membership for one to three months in any twelve, from a payment day, by asking at the desk at least ten days before it. While it is frozen the member pays the freeze fee shown above instead of the monthly fee, and cannot use the gym or book classes.' },
       { type: 'text', text: '6. Cancelling. The member may cancel at any time, in person at the desk or in writing, giving {Plan.Notice Months} month\'s notice. The membership then ends the day before the first payment day that is at least that far ahead, or at the end of the minimum term if that is later; fees up to that day are still due. The gym may end a membership at once if the member seriously or repeatedly breaks the rules below.' },
       { type: 'text', text: '7. Health. The member confirms that their answers to the health questions are true, that they will tell staff of any change, and that they will stop and ask for help if they feel unwell while exercising. Anyone with a health condition should ask their doctor before starting a new kind of exercise.' },
+      { type: 'text', text: 'The health questions are not answered yet. The member may not use the gym floor or join a class until they have answered them at the desk.', if: 'Nz([Health Declaration], 0) = 0' },
       { type: 'text', text: '8. The rules. Show your card at the door and do not let anyone in on it. Wipe equipment down after use and put weights back. Wear clean indoor shoes on the gym floor. Classes are booked up to seven days ahead; a place not cancelled at least two hours before counts as a no-show, and three no-shows in a month stop booking for a fortnight. Children aged 14 to 17 on a family plan use the gym floor only with an adult on the same plan. Lockers are emptied each night.' },
       { type: 'text', text: '9. Personal details. The gym keeps the member\'s details to run the membership, collect the fees and contact them about it. It passes them to no one but its bank, for the direct debit. The member may ask to see what is kept about them.' },
       { type: 'text', text: '10. Belongings and injury. The gym is not responsible for belongings left in the building unless it has been careless with them. Nothing here limits the gym\'s responsibility for injury caused by its own negligence.' },
@@ -227,24 +232,26 @@ export const spec = {
       { type: 'signatures', labels: ['Member', 'For the gym'] },
       { type: 'text', text: '{Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}. VAT number {Business.Tax Number}.', small: true },
     ] },
-    // The card a member shows at the door.
-    { name: 'Membership card', table: 'Members', paper: 'receipt-58', letterhead: { table: 'Business', fields: ['Name', 'Phone'] }, blocks: [
+    // The card a member shows at the door: only for members who can come in (active, or frozen and coming back).
+    { name: 'Membership card', table: 'Members', where: '[Status] = "Active" Or [Status] = "Frozen"', paper: 'receipt-58', letterhead: { table: 'Business', fields: ['Name', 'Phone'] }, blocks: [
       { type: 'heading', text: '{First Name} {Last Name}' },
       { type: 'fields', columns: 1, items: [
-        { field: 'Number', label: 'Member no' }, { field: 'Plan.Name', label: 'Plan' }, { field: 'Joined', label: 'Member since' }, { field: 'Plan.Access Hours', label: 'Access' },
+        { field: 'Number', label: 'Member no' }, { field: 'Plan.Name', label: 'Plan' }, { field: 'Joined', label: 'Member since', format: 'mmmm yyyy' }, { field: 'Plan.Access Hours', label: 'Access' },
       ] },
       { type: 'text', text: 'Show this card at the door. It is for the named member only. A lost card is replaced at the desk.', small: true },
     ] },
-    // A letter handed over or posted when someone joins.
-    { name: 'Welcome letter', table: 'Members', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // A letter handed over or posted when someone joins: members who joined in the last 30 days and have not left.
+    { name: 'Welcome letter', table: 'Members', where: 'DateDiff("d", [Joined], Date()) <= 30 And [Status] <> "Cancelled"', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'fields', columns: 2, items: [
-        { field: 'First Name' }, { field: 'Number', label: 'Membership no' }, { field: 'Last Name' }, { field: 'Joined', label: 'Joined on' },
-        { field: 'Address' }, { field: 'Plan.Name', label: 'Plan' }, { field: 'City', label: 'Town' }, { field: 'Postcode' },
+        { field: 'First Name' }, { field: 'Number', label: 'Membership no' }, { field: 'Last Name' }, { field: 'Joined', label: 'Joined on', format: 'd mmmm yyyy' },
+        { field: 'Address' }, { field: 'Plan.Name', label: 'Plan' }, { field: 'City', label: 'Town' }, { field: 'Monthly Fee', label: 'Monthly fee', format: '#,##0.00' },
+        { field: 'Postcode' }, { field: 'Minimum Term Ends', label: 'Minimum term ends', format: 'd mmmm yyyy' },
       ] },
       { type: 'heading', text: 'Welcome to {Business.Name}' },
       { type: 'text', text: 'Dear {First Name},' },
       { type: 'text', text: 'Thank you for joining us, and welcome. Your membership number is {Number}, and it is on your card; show the card at the door each time you come in. On the {Plan.Name} plan you can use the gym {Plan.Access Hours}.' },
-      { type: 'text', text: 'Your monthly fee of {Monthly Fee} will be collected by direct debit on day {Payment Day} of each month, and an invoice comes by e-mail ten days before. Your minimum term ends on {Minimum Term Ends}; after that you can cancel with a month\'s notice, or freeze for up to three months if you are injured or away.' },
+      { type: 'text', text: 'Your monthly fee, shown above, will be collected by direct debit on day {Payment Day} of each month, and an invoice comes by e-mail ten days before. Once your minimum term ends on the date above, you can cancel with a month\'s notice; you can also freeze for up to three months if you are injured or away.' },
+      { type: 'text', text: 'Before your first visit, please answer the health questions at the desk: we cannot let you on the gym floor or into a class until you have.', if: 'Nz([Health Declaration], 0) = 0' },
       { type: 'text', text: 'Your first visit should be a gym induction with one of our instructors, which is free and takes about forty minutes: ask at the desk or call {Business.Phone} to book one. Classes are on the timetable by the door and can be booked up to seven days ahead; please cancel at least two hours before if you cannot come, so someone else can have the place.' },
       { type: 'text', text: 'If you would like a programme of your own, our personal trainers sell sessions in packs of five, ten or twenty, and your first consultation with one is free.' },
       { type: 'text', text: 'We are glad to have you. If anything is not right, tell any of us, or write to {Business.E-mail}.' },
@@ -253,38 +260,43 @@ export const spec = {
       { type: 'signatures', labels: ['Gym manager'] },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    // Each month's invoice, with the VAT within the price.
-    { name: 'Monthly invoice', table: 'Invoices', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] }, blocks: [
+    // Each month's invoice, with the VAT within the price; one written off is not sent again.
+    { name: 'Monthly invoice', table: 'Invoices', where: '[Status] <> "Written off"', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] }, blocks: [
       { type: 'heading', text: 'Invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Member', label: 'Member' }, { field: 'Number', label: 'Invoice no' },
-        { field: 'Member.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Invoice date' },
-        { field: 'Member.City', label: 'Town' }, { field: 'Due Date', label: 'Collected on' },
+        { field: 'Member.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Invoice date', format: 'dd/mm/yyyy' },
+        { field: 'Member.City', label: 'Town' }, { field: 'Due Date', label: 'Collected on', format: 'dd/mm/yyyy' },
         { field: 'Member.Postcode', label: 'Postcode' }, { field: 'Member.Number', label: 'Member no' },
-        { field: 'Period From', label: 'Period from' }, { field: 'Period To', label: 'Period to' },
-        { field: 'Status' }, { field: 'Paid On', label: 'Paid on' },
+        { field: 'Period From', label: 'Period from', format: 'dd/mm/yyyy' }, { field: 'Period To', label: 'Period to', format: 'dd/mm/yyyy' },
+        { field: 'Status' }, { field: 'Paid On', label: 'Paid on', format: 'dd/mm/yyyy', if: '[Paid On]' },
       ] },
       { type: 'lines', table: 'Invoice Lines', link: 'Invoice', columns: [
         { field: 'Description' }, { field: 'Quantity', type: 'integer' }, { field: 'Unit Price', type: 'currency' },
-        { expr: LINE, as: 'Amount', type: 'currency' }, { expr: VAT_IN, as: 'VAT Included', label: 'VAT included', type: 'currency' },
+        { expr: LINE, as: 'Amount', type: 'currency' }, { expr: '[Tax Rate] * 100', as: 'VAT %', format: '0' }, { expr: VAT_IN, as: 'VAT Included', label: 'VAT included', type: 'currency' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Price before VAT', expr: '[Amount] - [VAT Included]' }, { label: 'VAT at 20%', expr: '[VAT Included]' },
+        { label: 'Price before VAT', expr: '[Amount] - [VAT Included]' }, { label: 'VAT included', expr: '[VAT Included]' },
         { label: 'Total', expr: '[Amount]', strong: true },
       ] },
-      { type: 'text', text: '{Business.Payment Terms}', small: true },
+      // What the member is asked to do, by where the payment stands.
+      { type: 'text', text: '{Business.Payment Terms}', small: true, if: '[Status] = "Due"' },
+      { type: 'text', text: 'Paid, with thanks.', small: true, if: '[Status] = "Paid"' },
+      { type: 'text', text: 'The direct debit on the collection day did not go through. We will try again five days later: please make sure the money is in your account.', small: true, if: '[Status] = "Retry due"' },
+      { type: 'text', text: 'Both tries at the direct debit failed. Please pay this invoice at the desk or call {Business.Phone}; until it is paid your card will not open the door.', small: true, if: '[Status] = "Failed"' },
       { type: 'text', text: 'Prices include VAT. VAT number {Business.Tax Number}. {Business.Document Footer}', small: true },
     ] },
     // The till receipt for a pack of personal training.
     { name: 'PT pack receipt', table: 'PT Packs', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Tax Number'] }, blocks: [
       { type: 'heading', text: 'Receipt {Number}' },
       { type: 'fields', columns: 1, items: [
-        { field: 'Bought On', label: 'Date' }, { field: 'Member', label: 'Member' }, { field: 'Member.Number', label: 'Member no' },
-        { field: 'Trainer', label: 'Trainer' }, { field: 'Sessions', label: 'Personal training sessions' }, { field: 'Expires', label: 'Use by' },
+        { field: 'Bought On', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Member', label: 'Member' }, { field: 'Member.Number', label: 'Member no' },
+        { field: 'Trainer', label: 'Trainer' }, { field: 'Sessions', label: 'Personal training sessions' }, { field: 'Expires', label: 'Use by', format: 'dd/mm/yyyy' },
         { field: 'Paid By', label: 'Paid by' },
       ] },
       { type: 'totals', rows: [
         { label: 'Price per session', expr: 'Round([Price] / [Sessions], 2)' },
+        { label: 'VAT rate, %', expr: '[Tax Rate] * 100', format: '0' },
         { label: 'VAT included', expr: 'Round([Price] - [Price] / (1 + [Tax Rate]), 2)' },
         { label: 'Total paid', expr: '[Price]', strong: true },
       ] },
@@ -436,10 +448,10 @@ export const about = {
     'PT packs to renew': 'Packs with three sessions or fewer left, a page for each trainer.',
   },
   documents: {
-    'Membership agreement': 'The agreement a new member signs: their plan, fee, payment day and minimum term, then numbered clauses on fees, freezing, cancelling with notice, health and the gym\'s rules, and two signatures. Written for this sample; have it checked for your own country before you use it.',
-    'Membership card': 'A small card with the member\'s name, membership number, plan and the times they may come in, printed when they join.',
-    'Welcome letter': 'Handed over or posted when someone joins: their membership number, fee and payment day, minimum term, how to book an induction and classes, and personal training.',
-    'Monthly invoice': 'Each month\'s invoice, sent ten days before the payment day: the period it covers, each line with the VAT in its price, and the total collected. The first one has the joining fee on it. A failed payment shows Retry due or Failed.',
+    'Membership agreement': 'The agreement a member signs, for every membership still running (Active, Frozen, or in notice; not Cancelled or Lapsed): their plan, fees, payment day, minimum term and freeze fee, then numbered clauses on fees, freezing, cancelling with notice, health and the gym\'s rules, and two signatures. A member who has not answered the health questions gets a line saying they cannot train until they do. Written for this sample; have it checked for your own country before you use it.',
+    'Membership card': 'A small card with the member\'s name, membership number, plan, the month they joined and the times they may come in, for members who are Active or Frozen.',
+    'Welcome letter': 'Handed over or posted when someone joins, for members who joined in the last 30 days and have not cancelled: their membership number, fee and payment day, minimum term, how to book an induction and classes, and personal training, with a reminder to answer the health questions when they have not yet.',
+    'Monthly invoice': 'Each month\'s invoice, sent ten days before the payment day: the period it covers, each line with the VAT in its price, and the total collected. The first one has the joining fee on it. Its last words follow the Status: when it will be collected, paid with thanks, a failed payment to be tried again (Retry due), or one to pay at the desk (Failed). Written-off invoices are not printed unless you choose one.',
     'PT pack receipt': 'The till receipt for a pack of personal training: the trainer, the sessions in it, the use-by date, the price per session and the VAT within the price.',
   },
   empty: 'Start with Business: the gym\'s name, address and VAT number, which every document prints. Then Plans (your prices and terms), Staff, and Classes. Enter Members as they join, each with a plan, fee and payment day, and raise their first invoice. Then each week put the timetable into Class Sessions and take Bookings, and each month raise the invoices and record each collection in Payments. Visits come from your door reader, or can be typed at the desk.',
@@ -502,7 +514,7 @@ export const about = {
     'A member who has given notice stays Active until their Ends day has passed, so they still show in Plan mix and still pay. Cancel Requested and Ends tell them apart.',
     'A member whose payment failed twice cannot get in until they pay at the desk. If they never do, their invoice is set to Written off and their Status to Lapsed about a month later.',
     'Every visit comes from the door reader, including members coming for a class, so a member who only comes to classes is not missed by Not seen for 30 days.',
-    'A print template prints every record of its table unless you choose some, so choose the new member, invoice or pack you mean before pressing Print.',
+    'Print templates print only the records they are for: the Membership agreement for memberships still running, the Membership card for Active and Frozen members, the Welcome letter for members who joined in the last 30 days, and the Monthly invoice for every invoice not written off. A record you choose from its form always prints, whatever its status.',
     'The gym is closed on Christmas Day and New Year\'s Day, so those days have no visits, classes or training sessions. Fees are still collected on them.',
   ],
   faq: [
@@ -591,6 +603,8 @@ export function fill(base, { r, cal, days = 370 }) {
   const packNo = numbers('PT');
   const dayCache = new Map();
   const dayOf = (d) => { let v = dayCache.get(d); if (v === undefined) { v = cal.day(d); dayCache.set(d, v); } return v; };
+  // A day as an invoice line says it: 01/11/2026.
+  const ukDay = (d) => dayOf(d).split('-').reverse().join('/');
   const two = (n) => (n < 10 ? `0${n}` : String(n));
   const at = (d, hour, minute) => `${dayOf(d)}T${two(hour)}:${two(minute)}:00`;
 
@@ -674,8 +688,8 @@ export function fill(base, { r, cal, days = 370 }) {
     const lines = [];
     if (joining && m.plan.joining) lines.push(['Joining fee', 'Joining fee', m.plan.joining]);
     lines.push(frozenOn(m, due)
-      ? [`Membership frozen, ${dayOf(due)} to ${dayOf(next - 1)}`, 'Freeze fee', FREEZE_FEE]
-      : [`${m.plan.name} membership, ${dayOf(due)} to ${dayOf(next - 1)}`, 'Membership', m.fee]);
+      ? [`Membership frozen, ${ukDay(due)} to ${ukDay(next - 1)}`, 'Freeze fee', FREEZE_FEE]
+      : [`${m.plan.name} membership, ${ukDay(due)} to ${ukDay(next - 1)}`, 'Membership', m.fee]);
     let total = 0;
     let tax = 0;
     for (const [, , price] of lines) { total += price; tax += money(price - price / 1.2); }

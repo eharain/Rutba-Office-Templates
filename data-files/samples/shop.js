@@ -15,8 +15,11 @@
 
 import { address, BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, money, person, phoneFor, PLACES } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
-const LINE = 'Round([Quantity] * [Unit Price] * (1 - Nz([Discount])), 2)';
+const LINE ='Round([Quantity] * [Unit Price] * (1 - Nz([Discount])), 2)';
 // The VAT inside a price that includes it, as the till works it out for each line.
 const LINE_VAT = `Round(${LINE} - ${LINE} / (1 + [Sale Lines].[Tax Rate]), 2)`;
 const DAYS_AGO = 'DateDiff("d", Format([When], "yyyy-mm-dd"), Date())';
@@ -171,11 +174,12 @@ export const spec = {
     { name: 'VAT on sales', title: 'VAT on sales, by month', query: 'VAT on sales by month', columns: ['Month', { field: 'Takings', type: 'currency' }, { field: 'At 20%', type: 'currency' }, { field: 'VAT', type: 'currency' }, { field: 'At 0% or Exempt', type: 'currency' }], totals: [{ field: 'Takings', fn: 'sum' }, { field: 'VAT', fn: 'sum' }] },
   ],
   documents: [
-    { name: 'Sale receipt', table: 'Sales', paper: 'receipt-80', letterhead: LETTERHEAD, blocks: [
+    // A receipt for each sale not refunded; a refunded one still prints when it is chosen, and says so.
+    { name: 'Sale receipt', table: 'Sales', paper: 'receipt-80', letterhead: LETTERHEAD, where: 'Nz([Refunded], 0) = 0', blocks: [
       { type: 'heading', text: 'Receipt {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'When', label: 'Date and time' }, { field: 'Staff.First Name', label: 'Served by' },
-        { field: 'Payment', label: 'Paid by' }, { field: 'Customer', label: 'Loyalty card' },
+        { field: 'When', label: 'Date and time', format: 'dd/mm/yyyy hh:nn' }, { field: 'Staff.First Name', label: 'Served by' },
+        { field: 'Payment', label: 'Paid by' }, { field: 'Customer', label: 'Loyalty card', if: '[Customer]' },
       ] },
       { type: 'lines', table: 'Sale Lines', columns: [
         { field: 'Product.Name', label: 'Item' }, { field: 'Quantity', label: 'Qty', type: 'integer' },
@@ -184,31 +188,33 @@ export const spec = {
       ] },
       { type: 'totals', rows: [
         { label: 'Total', expr: '[Total]', strong: true },
-        { label: 'You saved', expr: '[Saved]' },
-        { label: 'Cash tendered', expr: '[Tendered]' }, { label: 'Change', expr: '[Change]' },
-        { label: 'S: sales at 20% VAT', expr: '[Standard Rated]' }, { label: 'VAT at 20% included', expr: '[VAT]' },
-        { label: 'Z, E, O: sales at 0% or exempt', expr: 'Round([Total] - [Standard Rated], 2)' },
-        { label: 'Loyalty points earned', expr: '[Points Earned]', type: 'integer' },
+        { label: 'You saved', expr: '[Saved]', if: '[Saved] > 0' },
+        { label: 'Cash tendered', expr: '[Tendered]', if: '[Payment] = "Cash"' }, { label: 'Change', expr: '[Change]', if: '[Payment] = "Cash"' },
+        { label: 'S: sales at 20% VAT', expr: '[Standard Rated]', if: '[Standard Rated] > 0' }, { label: 'VAT at 20% included', expr: '[VAT]', if: '[VAT] > 0' },
+        { label: 'Z, E, O: sales at 0% or exempt', expr: 'Round([Total] - [Standard Rated], 2)', if: 'Round([Total] - [Standard Rated], 2) > 0' },
+        { label: 'Loyalty points earned', expr: '[Points Earned]', type: 'integer', if: '[Customer]' },
       ] },
+      { type: 'text', text: 'This sale was refunded in full.', if: '[Refunded]' },
       { type: 'text', text: 'VAT codes: S standard rate 20%, Z zero rate, E exempt, O outside the scope of VAT. VAT number {Business.Tax Number}.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
+    // Every order prints: each was sent, and a delivered one is reprinted to check what came against it.
     { name: 'Supplier order', table: 'Supplier Orders', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] }, blocks: [
       { type: 'heading', text: 'Order {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Supplier.Name', label: 'To' }, { field: 'Number', label: 'Order number' },
-        { field: 'Supplier.Contact', label: 'For the attention of' }, { field: 'Ordered On', label: 'Date' },
-        { field: 'Supplier.Address', label: 'Address' }, { field: 'Delivery Due', label: 'Deliver on' },
+        { field: 'Supplier.Contact', label: 'For the attention of' }, { field: 'Ordered On', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Supplier.Address', label: 'Address' }, { field: 'Delivery Due', label: 'Deliver on', format: 'dddd dd/mm/yyyy' },
         { field: 'Supplier.City', label: 'City' }, { field: 'Supplier.Account Number', label: 'Our account' },
-        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Staff', label: 'Ordered by' },
+        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Staff', label: 'Ordered by', if: '[Staff]' },
       ] },
       { type: 'lines', table: 'Supplier Order Lines', link: 'Order', columns: [
         { field: 'Product.Barcode', label: 'Barcode' }, { field: 'Product.Name', label: 'Product' },
         { field: 'Quantity', type: 'integer' }, { field: 'Unit Cost', type: 'currency' },
         { expr: 'Round([Quantity] * [Unit Cost], 2)', as: 'Line Total', label: 'Total', type: 'currency' },
       ] },
-      { type: 'totals', rows: [{ label: 'Items', expr: '[Quantity]', type: 'integer' }, { label: 'Total before VAT', expr: '[Line Total]', strong: true }] },
-      { type: 'text', text: 'Please deliver on {Delivery Due} to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your invoice. If a line is out of stock, please tell us on the day rather than send a substitute.', small: true },
+      { type: 'totals', rows: [{ label: 'Lines', expr: '[Supplier Order Lines count]', type: 'integer' }, { label: 'Items', expr: '[Quantity]', type: 'integer' }, { label: 'Total before VAT', expr: '[Line Total]', strong: true }] },
+      { type: 'text', text: 'Please deliver on the day above to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your invoice. If a line is out of stock, please tell us on the day rather than send a substitute.', small: true },
       { type: 'text', text: 'Chilled and fresh lines are checked on arrival and will be refused with less than three days left on their date.', small: true },
     ] },
   ],
@@ -312,8 +318,8 @@ export const about = {
     'VAT on sales': 'The VAT on sales month by month, for the accountant or the VAT return.',
   },
   documents: {
-    'Sale receipt': 'The till receipt on an 80 mm roll: the shop\'s name, address and VAT number, the receipt number, date, time and who served, each item with its price and VAT code, the total, the VAT included by rate, the cash tendered and change for cash sales, loyalty points earned, and the returns policy from the Business record. Print it from the Sales form for the sale on screen.',
-    'Supplier order': 'The order sent to a supplier: its number, the shop\'s account with them, the delivery day, each product with its barcode, quantity and cost, and the total before VAT. Print it from the Supplier Orders form for the order on screen, or e-mail it as a PDF.',
+    'Sale receipt': 'The till receipt on an 80 mm roll: the shop\'s name, address and VAT number, the receipt number, date, time and who served, each item with its price and VAT code, the total, the VAT included by rate, and the returns policy from the Business record. The saving shows only when there was one, the cash tendered and change only for a cash sale, and the loyalty card and its points only when a card was shown. It is for the sales that were not refunded; a refunded sale chosen on the Sales form still prints, marked as refunded. Print it from the Sales form for the sale on screen.',
+    'Supplier order': 'The order sent to a supplier: its number, the shop\'s account with them, the delivery day, each product with its barcode, quantity and cost, how many lines and items, and the total before VAT. Every order prints, delivered ones too, so a delivery can be checked against what was asked for. Print it from the Supplier Orders form for the order on screen, or e-mail it as a PDF.',
   },
   tutorial: [
     { title: 'Ring up a sale and print its receipt', steps: [
@@ -357,7 +363,7 @@ export const about = {
     'A sale\'s Total, VAT, Standard Rated and Saved are what the till worked out and printed when the sale was made, each line\'s VAT rounded to the penny and then added up. They are stored, not worked out again, so the receipt reprints exactly as it was; the query Receipt totals works them out from the lines when you enter a sale by hand.',
     'Only one VAT rate other than nought is used: twenty percent. The receipt\'s VAT summary and the VAT queries count everything with a rate above nought as standard rated. If you sell goods at a reduced rate, see the ways to adapt it.',
     'In Stock goes down as the till sells and up as deliveries come in, in the sample\'s records. Entering a sale or a delivery by hand does not change it by itself: change In Stock in the Products form, or count it at a stock take.',
-    'The print templates print every record of their table unless you choose one or a few: print a receipt from the Sales form for the sale on screen, and an order from the Supplier Orders form.',
+    'The print template Sale receipt prints the sales that were not refunded, and Supplier order prints every order. Print one from its form for the record on screen: a refunded sale chosen there still prints its receipt, marked as refunded.',
     'Refunded sales stay in the Sales table with their receipt numbers, so no number is missing; they are left out of the takings, the VAT and the best sellers.',
   ],
   faq: [

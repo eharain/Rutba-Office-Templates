@@ -18,6 +18,9 @@
 
 import { address, BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, person, phoneFor, PLACES } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const LINE = 'Round([Quantity] * [Unit Price] * (1 - Nz([Discount])), 2)';
 // The VAT inside a price that includes it, as the till works it out for each line.
@@ -91,7 +94,7 @@ export const spec = {
       { name: 'Quantity', type: 'integer' }, { name: 'Reason', type: 'text' }, { name: 'Cost', type: 'currency' }, { name: 'Staff', ...ref('Staff') },
     ] },
     { name: 'Refusal Registers', fields: [
-      { name: 'Month', type: 'text', required: true, unique: true }, { name: 'Refusals Logged', type: 'integer', default: 0 },
+      { name: 'Month', type: 'text', required: true, unique: true },
       { name: 'Reviewed By', ...ref('Staff') }, { name: 'Reviewed On', type: 'date' },
     ] },
     { name: 'Refusals', fields: [
@@ -198,8 +201,9 @@ export const spec = {
     { name: 'Till receipt', table: 'Sales', paper: 'receipt-80', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Receipt {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'When', label: 'Date and time' }, { field: 'Staff.First Name', label: 'Served by' },
-        { field: 'Payment', label: 'Paid by' }, { field: 'Age Check', label: 'Age check' },
+        { field: 'When', label: 'Date and time', format: 'dd/mm/yyyy hh:nn' }, { field: 'Staff.First Name', label: 'Served by' },
+        { field: 'Payment', label: 'Paid by' }, { field: 'Age Check', label: 'Age check', if: '[Age Check] <> "Not needed"' },
+        { field: 'ID Seen', label: 'ID seen', if: '[ID Seen]' },
       ] },
       { type: 'lines', table: 'Sale Lines', link: 'Sale', columns: [
         { field: 'Product.Name', label: 'Item' }, { field: 'Quantity', label: 'Qty', type: 'integer' },
@@ -208,51 +212,55 @@ export const spec = {
       ] },
       { type: 'totals', rows: [
         { label: 'Total', expr: '[Total]', strong: true },
-        { label: 'You saved', expr: '[Saved]' },
-        { label: 'Cash tendered', expr: '[Tendered]' }, { label: 'Change', expr: '[Change]' },
-        { label: 'S: sales at 20% VAT', expr: '[Standard Rated]' }, { label: 'VAT at 20% included', expr: '[VAT]' },
-        { label: 'Z: sales at 0% VAT', expr: 'Round([Total] - [Standard Rated], 2)' },
+        { label: 'You saved', expr: '[Saved]', if: '[Saved] > 0' },
+        { label: 'Cash tendered', expr: '[Tendered]', if: '[Payment] = "Cash"' }, { label: 'Change', expr: '[Change]', if: '[Payment] = "Cash"' },
+        { label: 'S: sales at 20% VAT', expr: '[Standard Rated]', if: '[Standard Rated] > 0' }, { label: 'VAT at 20% included', expr: '[VAT]', if: '[VAT] > 0' },
+        { label: 'Z: sales at 0% VAT', expr: 'Round([Total] - [Standard Rated], 2)', if: 'Round([Total] - [Standard Rated], 2) > 0' },
       ] },
       { type: 'text', text: 'Mixed cases: 10% off six or more bottles of wine, and 10% off twelve or more beers and ciders. Reduced items are sold as seen. VAT number {Business.Tax Number}.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Purchase order', table: 'Purchase Orders', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] }, blocks: [
+    // For the orders still to come: a received one prints when it is chosen on its form, to check an invoice against.
+    { name: 'Purchase order', table: 'Purchase Orders', paper: 'a4', where: '[Status] = "Submitted"', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] }, blocks: [
       { type: 'heading', text: 'Purchase order {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Supplier.Name', label: 'To' }, { field: 'Number', label: 'Order number' },
-        { field: 'Supplier.Contact', label: 'For the attention of' }, { field: 'Ordered On', label: 'Date' },
-        { field: 'Supplier.Address', label: 'Address' }, { field: 'Expected', label: 'Deliver on' },
+        { field: 'Supplier.Contact', label: 'For the attention of' }, { field: 'Ordered On', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Supplier.Address', label: 'Address' }, { field: 'Expected', label: 'Deliver on', format: 'dddd dd/mm/yyyy' },
         { field: 'Supplier.City', label: 'City' }, { field: 'Supplier.Account Number', label: 'Our account' },
-        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Staff', label: 'Ordered by', type: 'text' },
+        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Staff', label: 'Ordered by', type: 'text', if: '[Staff]' },
       ] },
       { type: 'lines', table: 'Purchase Lines', link: 'Purchase Order', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Product' }, { field: 'Product.Unit', label: 'Unit' },
         { field: 'Quantity', type: 'integer' }, { field: 'Unit Cost', type: 'currency' },
         { expr: 'Round([Quantity] * [Unit Cost], 2)', as: 'Line Total', label: 'Total', type: 'currency' },
       ] },
-      { type: 'totals', rows: [{ label: 'Units', expr: '[Quantity]', type: 'integer' }, { label: 'Total before VAT', expr: '[Line Total]', strong: true }] },
-      { type: 'text', text: 'Please deliver on {Expected} to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your delivery note and invoice.', small: true },
+      { type: 'totals', rows: [{ label: 'Lines', expr: '[Purchase Lines count]', type: 'integer' }, { label: 'Units', expr: '[Quantity]', type: 'integer' }, { label: 'Total before VAT', expr: '[Line Total]', strong: true }] },
+      { type: 'text', text: 'Please deliver on the day above to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your delivery note and invoice.', small: true },
       { type: 'text', text: 'Every case and pack must carry its batch code and its use-by or best-before date. Chilled and deli lines must arrive with at least two thirds of their life left, or they will be refused at the door. All alcohol must be duty paid.', small: true },
     ] },
     { name: 'Markdown label sheet', table: 'Date Checks', paper: 'a4', letterhead: { table: 'Business', fields: ['Name'] }, blocks: [
       { type: 'heading', text: 'Date check {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Date', label: 'Date' }, { field: 'Staff', label: 'Checked by', type: 'text' }, { field: 'Fridge Temperatures', label: 'Fridges' },
+        { field: 'Date', label: 'Date', format: 'dddd dd/mm/yyyy' }, { field: 'Staff', label: 'Checked by', type: 'text' }, { field: 'Fridge Temperatures', label: 'Fridges', if: '[Fridge Temperatures]' },
       ] },
       { type: 'text', text: 'Reduce to clear: print a label for each, stick it over the shelf price on the pack, and put the packs at the front.' },
       { type: 'lines', table: 'Markdowns', link: 'Check', columns: [
         { field: 'Number', label: 'Label' }, { field: 'Batch.Product.Name', label: 'Product' }, { field: 'Batch.Batch Code', label: 'Batch' },
-        { field: 'Batch.Product.Date Kind', label: 'Date kind' }, { field: 'Batch.Expiry Date', label: 'Date', type: 'date' },
+        { field: 'Batch.Product.Date Kind', label: 'Date kind' }, { field: 'Batch.Expiry Date', label: 'Date', format: 'dd/mm/yyyy' },
         { field: 'Was', type: 'currency' }, { field: 'Now', type: 'currency' }, { field: 'Labels', type: 'integer' },
       ] },
+      { type: 'text', text: 'Nothing to reduce today.', if: '[Markdowns count] = 0' },
       { type: 'text', text: 'Taken off sale: past their date, broken or damaged. Put them in the waste bin, not back on the shelf.' },
       { type: 'lines', table: 'Write-offs', link: 'Check', columns: [
-        { field: 'Batch.Product.Name', label: 'Product' }, { field: 'Batch.Batch Code', label: 'Batch' }, { field: 'Batch.Expiry Date', label: 'Date', type: 'date' },
+        { field: 'Batch.Product.Name', label: 'Product' }, { field: 'Batch.Batch Code', label: 'Batch' }, { field: 'Batch.Expiry Date', label: 'Date', format: 'dd/mm/yyyy' },
         { field: 'Reason' }, { field: 'Quantity', label: 'Units', type: 'integer' }, { field: 'Cost', type: 'currency' },
       ] },
+      { type: 'text', text: 'Nothing taken off sale today.', if: '[Write-offs count] = 0' },
       { type: 'totals', rows: [
-        { label: 'Labels to print', expr: '[Labels]', type: 'integer' }, { label: 'Units taken off sale', expr: '[Quantity]', type: 'integer' },
-        { label: 'Cost written off', expr: '[Cost]', strong: true },
+        { label: 'Labels to print', expr: '[Labels]', type: 'integer', if: '[Markdowns count] > 0' },
+        { label: 'Units taken off sale', expr: '[Quantity]', type: 'integer', if: '[Write-offs count] > 0' },
+        { label: 'Cost written off', expr: '[Cost]', strong: true, if: '[Write-offs count] > 0' },
       ] },
       { type: 'signatures', labels: ['Checked by', 'Manager'] },
     ] },
@@ -260,24 +268,26 @@ export const spec = {
       { type: 'heading', text: 'REDUCED' },
       { type: 'fields', columns: 1, items: [
         { field: 'Batch.Product.Name', label: 'Product' }, { field: 'Batch.Product.Date Kind', label: 'Date kind' },
-        { field: 'Batch.Expiry Date', label: 'Date' }, { field: 'Batch.Batch Code', label: 'Batch' },
+        { field: 'Batch.Expiry Date', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Batch.Batch Code', label: 'Batch' },
       ] },
       { type: 'totals', rows: [{ label: 'Was', expr: '[Was]' }, { label: 'Now', expr: '[Now]', strong: true }] },
-      { type: 'text', text: 'Label {Number}, reduced on {Date}.', small: true },
+      { type: 'fields', columns: 1, items: [{ field: 'Number', label: 'Label' }, { field: 'Date', label: 'Reduced on', format: 'dd/mm/yyyy' }] },
     ] },
     { name: 'Refusals register', table: 'Refusal Registers', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, blocks: [
       { type: 'heading', text: 'Refusals register {Month}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Month', label: 'Month' }, { field: 'Refusals Logged', label: 'Refusals' },
-        { field: 'Reviewed By', label: 'Reviewed by' }, { field: 'Reviewed On', label: 'Reviewed on' },
+        { field: 'Month', label: 'Month' },
+        { field: 'Reviewed By', label: 'Reviewed by', if: '[Reviewed On]' }, { field: 'Reviewed On', label: 'Reviewed on', format: 'dd/mm/yyyy', if: '[Reviewed On]' },
       ] },
       { type: 'text', text: 'The shop asks anyone who looks under 25 to show photo ID with a date of birth: a photo driving licence, a passport or a proof-of-age card. When none is shown, when the ID does not fit the person, when the drink seems to be bought for someone under 18, or when the customer is drunk, the sale is refused and written down here at the time.' },
       { type: 'lines', table: 'Refusals', link: 'Register', sort: 'When', columns: [
-        { field: 'Number', label: 'No' }, { field: 'When', label: 'Date and time' }, { field: 'Product.Name', label: 'Asked for' },
+        { field: 'Number', label: 'No' }, { field: 'When', label: 'Date and time', format: 'dd/mm/yyyy hh:nn' }, { field: 'Product.Name', label: 'Asked for' },
         { field: 'Reason' }, { field: 'Approx Age', label: 'Age (about)', type: 'text' }, { field: 'ID Shown', label: 'ID shown' },
         { field: 'Description', label: 'What happened' }, { field: 'Staff', label: 'Refused by', type: 'text' },
       ] },
-      { type: 'totals', rows: [{ label: 'Refusals this month', expr: '[Refusals Logged]', type: 'integer', strong: true }] },
+      { type: 'text', text: 'No sales were refused this month.', if: '[Refusals count] = 0' },
+      { type: 'totals', rows: [{ label: 'Refusals this month', expr: '[Refusals count]', type: 'integer', strong: true }] },
+      { type: 'text', text: 'Not reviewed yet: the personal licence holder reviews and signs the register once the month is over.', if: 'Nz([Reviewed On], "") = ""' },
       { type: 'text', text: 'Kept on the premises for the licensing authority, trading standards and the police to see on request.', small: true },
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['Reviewed by the personal licence holder', 'Date'] },
@@ -374,7 +384,7 @@ export const about = {
       Staff: 'Who wrote it off.',
     } },
     'Refusal Registers': { about: 'The refusals register, one record a month, reviewed and signed by the personal licence holder when the month ends.', fields: {
-      Month: 'The month the register covers, as 2026-10. Each month is used once.', 'Refusals Logged': 'How many refusals the month has.',
+      Month: 'The month the register covers, as 2026-10. Each month is used once.',
       'Reviewed By': 'Who reviewed it: a personal licence holder.', 'Reviewed On': 'The day it was reviewed; empty for the month still running.',
     } },
     Refusals: { about: 'Each sale of alcohol refused, written down at the time, as a licensed shop keeps them.', fields: {
@@ -413,11 +423,11 @@ export const about = {
     'VAT on sales': 'The VAT on sales month by month, for the accountant or the VAT return.',
   },
   documents: {
-    'Till receipt': 'The receipt on an 80 mm till roll: the shop\'s name, address and VAT number, the receipt number, time and who served, each item with its price and VAT code, the total, what was saved, the cash tendered and change, the VAT included by rate, the age check, and the returns policy. Print it from the Sales form for the sale on screen.',
-    'Purchase order': 'The order sent to a supplier: the shop\'s account with them, the delivery day, each product with its code, unit, quantity and cost, the total before VAT, and the shop\'s rules for dates and batch codes on what arrives. Print it from the Purchase Orders form for the order on screen.',
-    'Markdown label sheet': 'The sheet from each morning\'s date check: what to reduce, with the label number, batch, date, the old and new price and how many labels to print, then what was taken off sale and what it cost, signed by whoever did the check. Print it from the Date Checks form for the day on screen.',
-    'Reduced label': 'The yellow-sticker label for one markdown, on a 58 mm label roll: the product, its date and batch, the old price and the reduced price. Print it from the Markdowns form, once for each pack.',
-    'Refusals register': 'The month\'s refusals register, kept for the licensing authority: every refusal with its time, what was asked for, why, the ID shown and who refused, and the review signature of the personal licence holder. Print it from the Refusal Registers form for the month on screen.',
+    'Till receipt': 'The receipt on an 80 mm till roll: the shop\'s name, address and VAT number, the receipt number, time and who served, each item with its price and VAT code, the total, the VAT included by rate, and the returns policy. What was saved shows only when something was, the cash tendered and change only for cash, and the age check and the ID seen only for a sale with alcohol. Print it from the Sales form for the sale on screen.',
+    'Purchase order': 'The order sent to a supplier: the shop\'s account with them, the delivery day, each product with its code, unit, quantity and cost, the number of lines, the total before VAT, and the shop\'s rules for dates and batch codes on what arrives. It is for the orders still to come, Status Submitted; a received order prints when you choose it on the Purchase Orders form.',
+    'Markdown label sheet': 'The sheet from each morning\'s date check: what to reduce, with the label number, batch, date, the old and new price and how many labels to print, then what was taken off sale and what it cost, signed by whoever did the check. A day with nothing to reduce or nothing taken off says so, and leaves out the totals that do not apply. Print it from the Date Checks form for the day on screen.',
+    'Reduced label': 'The yellow-sticker label for one markdown, on a 58 mm label roll: the product, its date and batch, the old price and the reduced price, and the label number and the day it was reduced. Print it from the Markdowns form, once for each pack.',
+    'Refusals register': 'The month\'s refusals register, kept for the licensing authority: every refusal with its time, what was asked for, why, the ID shown and who refused, the number of refusals counted from them, and the review signature of the personal licence holder. A month not reviewed yet says so. Print it from the Refusal Registers form for the month on screen.',
   },
   tutorial: [
     { title: 'Do the morning date check', steps: [
@@ -439,7 +449,7 @@ export const about = {
       'When you refuse to sell alcohol, open the Refusals form straight away and press New. Type the next number in Number and the date and time in When.',
       'Choose this month\'s register in Register (if the month has none yet, add it in the Refusal Registers form first, with the month as 2026-10), yourself in Staff and what was asked for in Product.',
       'Type the Reason, how old the customer looked in Approx Age, the ID shown, and a few words in Description. No names.',
-      'At the month end the licence holder runs the query Refusals, last 30 days, types the month\'s count in Refusals Logged and their name and the day in Reviewed By and Reviewed On, then prints the print template Refusals register for the month and signs it.',
+      'At the month end the licence holder runs the query Refusals, last 30 days to read the month through, types their name and the day in Reviewed By and Reviewed On, then prints the print template Refusals register for the month and signs it.',
     ] },
     { title: 'Order from your suppliers', steps: [
       'Run the report Stock to reorder. It shows, on a page for each supplier, what is at or below its reorder level and the pack size it comes in.',
@@ -467,7 +477,8 @@ export const about = {
     'A sale\'s Total, VAT, Standard Rated and Saved are what the till worked out and printed: each line\'s VAT rounded to the penny, then added up. They are stored so a receipt reprints exactly as it was. The query Receipt totals works them out from the lines.',
     'Prices include VAT. Cost Price, Unit Cost and purchase orders are before VAT, as suppliers invoice them. The margin queries take the VAT off the takings before they take off the cost.',
     'The refusals register keeps no names, only what is needed to recognise someone: an age, what they looked like, what happened. Keep it on the premises and show it when the licensing authority or the police ask.',
-    'The print templates print every record of their table unless you choose some: print a receipt from the Sales form, a day\'s sheet from the Date Checks form, a month\'s register from the Refusal Registers form.',
+    'The print template Purchase order prints the orders still to come (Status Submitted); the others print every record of their table. Print one from its form for the record on screen: a receipt from the Sales form, a received order from the Purchase Orders form, a day\'s sheet from the Date Checks form, a month\'s register from the Refusal Registers form.',
+    'The refusals register counts its own refusals as it prints, and says when a month has none or is not reviewed yet; nobody types the count.',
   ],
   faq: [
     { q: 'How do I see what is going out of date?', a: 'Run the query Expiring in the next 7 days, or print the report Date check list, which puts it on a page for each category. Days Left 0 means the date is today.' },
@@ -946,7 +957,7 @@ export function fill(base, { r, cal, days = 365 }) {
     let end = reg.first;
     while (dayOf(end + 1).iso.slice(0, 7) === dayOf(reg.first).iso.slice(0, 7)) end++;
     const reviewed = end + 1 + (dayOf(end + 1).closed ? 1 : 0) + r.int(0, 2);
-    base.update('Refusal Registers', reg.id, { 'Refusals Logged': reg.n, ...(reviewed <= 0 ? { 'Reviewed By': owner, 'Reviewed On': dayOf(reviewed).iso } : {}) });
+    if (reviewed <= 0) base.update('Refusal Registers', reg.id, { 'Reviewed By': owner, 'Reviewed On': dayOf(reviewed).iso });
   }
   for (const b of allBatches) if (b.left !== b.n || b.price != null) base.update('Batches', b.id, { Remaining: b.left, 'Marked Down To': b.price });
   for (const p of products) base.update('Products', p.id, { 'In Stock': p.stock });

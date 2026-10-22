@@ -11,7 +11,7 @@ ready for your own: on the Data Files start screen, choose a business and then *
 The samples are made by `packages/database/src/samples` (one file each), checked by `check.js` and
 `tests/database-samples.test.js`, and written as files by `node tools/make-samples.mjs`. This page is made by
 `node tools/make-samples.mjs --docs` from each database's own description and its design, so it says what the
-files hold. It was made on 2026-10-21.
+files hold. It was made on 2026-10-22.
 
 With each release, the downloads on office.rutba.io are made again so their dates are current: in the
 management repository, `npm run import:samples` in `portal/apps/office` builds every sample from this
@@ -76,7 +76,7 @@ It suits, with small changes: A convenience store or minimarket; A farm shop; A 
 - A sale's Total, VAT, Standard Rated and Saved are what the till worked out and printed when the sale was made, each line's VAT rounded to the penny and then added up. They are stored, not worked out again, so the receipt reprints exactly as it was; the query Receipt totals works them out from the lines when you enter a sale by hand.
 - Only one VAT rate other than nought is used: twenty percent. The receipt's VAT summary and the VAT queries count everything with a rate above nought as standard rated. If you sell goods at a reduced rate, see the ways to adapt it.
 - In Stock goes down as the till sells and up as deliveries come in, in the sample's records. Entering a sale or a delivery by hand does not change it by itself: change In Stock in the Products form, or count it at a stock take.
-- The print templates print every record of their table unless you choose one or a few: print a receipt from the Sales form for the sale on screen, and an order from the Supplier Orders form.
+- The print template Sale receipt prints the sales that were not refunded, and Supplier order prints every order. Print one from its form for the record on screen: a refunded sale chosen there still prints its receipt, marked as refunded.
 - Refunded sales stay in the Sales table with their receipt numbers, so no number is missing; they are left out of the takings, the VAT and the best sellers.
 
 ### Tutorial
@@ -233,7 +233,7 @@ Regulars who signed up for the loyalty card. The sample has 60 records.
 
 #### Sales
 
-Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 21,558 records.
+Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 21,581 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -254,7 +254,7 @@ Each time the till is rung up: one record per receipt, with the totals the recei
 
 #### Sale Lines
 
-The items on each receipt. The sample has 56,665 records.
+The items on each receipt. The sample has 56,691 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -268,7 +268,7 @@ The items on each receipt. The sample has 56,665 records.
 
 #### Supplier Orders
 
-The orders the shop sends its suppliers, one record each, made from the shopping list the evening before the supplier's delivery day. The sample has 854 records.
+The orders the shop sends its suppliers, one record each, made from the shopping list the evening before the supplier's delivery day. The sample has 856 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -282,7 +282,7 @@ The orders the shop sends its suppliers, one record each, made from the shopping
 
 #### Supplier Order Lines
 
-The products on each supplier order. The sample has 4,183 records.
+The products on each supplier order. The sample has 4,191 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -294,7 +294,7 @@ The products on each supplier order. The sample has 4,183 records.
 
 #### Deliveries
 
-Each delivery from a supplier, with its invoice. The sample has 851 records.
+Each delivery from a supplier, with its invoice. The sample has 854 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -307,7 +307,7 @@ Each delivery from a supplier, with its invoice. The sample has 851 records.
 
 #### Delivery Lines
 
-What came in each delivery. The sample has 4,152 records.
+What came in each delivery. The sample has 4,168 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -528,24 +528,25 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Sale receipt
 
-The till receipt on an 80 mm roll: the shop's name, address and VAT number, the receipt number, date, time and who served, each item with its price and VAT code, the total, the VAT included by rate, the cash tendered and change for cash sales, loyalty points earned, and the returns policy from the Business record. Print it from the Sales form for the sale on screen. One for each record of Sales, on receipt-80 paper, with the Business record at the head.
+The till receipt on an 80 mm roll: the shop's name, address and VAT number, the receipt number, date, time and who served, each item with its price and VAT code, the total, the VAT included by rate, and the returns policy from the Business record. The saving shows only when there was one, the cash tendered and change only for a cash sale, and the loyalty card and its points only when a card was shown. It is for the sales that were not refunded; a refunded sale chosen on the Sales form still prints, marked as refunded. Print it from the Sales form for the sale on screen. One for each record of Sales, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
 - Fields: Date and time, Served by, Paid by, Loyalty card
 - Lines from Sale Lines: Item, Qty, Price, Amount, VAT
 - Totals: Total, You saved, Cash tendered, Change, S: sales at 20% VAT, VAT at 20% included, Z, E, O: sales at 0% or exempt, Loyalty points earned
+- Words: This sale was refunded in full.
 - Words: VAT codes: S standard rate 20%, Z zero rate, E exempt, O outside the scope of VAT. VAT number {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Supplier order
 
-The order sent to a supplier: its number, the shop's account with them, the delivery day, each product with its barcode, quantity and cost, and the total before VAT. Print it from the Supplier Orders form for the order on screen, or e-mail it as a PDF. One for each record of Supplier Orders, on a4 paper, with the Business record at the head.
+The order sent to a supplier: its number, the shop's account with them, the delivery day, each product with its barcode, quantity and cost, how many lines and items, and the total before VAT. Every order prints, delivered ones too, so a delivery can be checked against what was asked for. Print it from the Supplier Orders form for the order on screen, or e-mail it as a PDF. One for each record of Supplier Orders, on a4 paper, with the Business record at the head.
 
 - Heading: Order {Number}
 - Fields: To, Order number, For the attention of, Date, Address, Deliver on, City, Our account, Postcode, Ordered by
 - Lines from Supplier Order Lines: Barcode, Product, Quantity, Unit Cost, Total
-- Totals: Items, Total before VAT
-- Words: Please deliver on {Delivery Due} to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your invoice. If a line is out of stock, please tell us on the day rather than send a substitute.
+- Totals: Lines, Items, Total before VAT
+- Words: Please deliver on the day above to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your invoice. If a line is out of stock, please tell us on the day rather than send a substitute.
 - Words: Chilled and fresh lines are checked on arrival and will be refused with less than three days left on their date.
 
 ### Starting empty
@@ -618,7 +619,8 @@ It suits, with small changes: An off-licence or liquor store; A delicatessen; A 
 - A sale's Total, VAT, Standard Rated and Saved are what the till worked out and printed: each line's VAT rounded to the penny, then added up. They are stored so a receipt reprints exactly as it was. The query Receipt totals works them out from the lines.
 - Prices include VAT. Cost Price, Unit Cost and purchase orders are before VAT, as suppliers invoice them. The margin queries take the VAT off the takings before they take off the cost.
 - The refusals register keeps no names, only what is needed to recognise someone: an age, what they looked like, what happened. Keep it on the premises and show it when the licensing authority or the police ask.
-- The print templates print every record of their table unless you choose some: print a receipt from the Sales form, a day's sheet from the Date Checks form, a month's register from the Refusal Registers form.
+- The print template Purchase order prints the orders still to come (Status Submitted); the others print every record of their table. Print one from its form for the record on screen: a receipt from the Sales form, a received order from the Purchase Orders form, a day's sheet from the Date Checks form, a month's register from the Refusal Registers form.
+- The refusals register counts its own refusals as it prints, and says when a month has none or is not reviewed yet; nobody types the count.
 
 ### Tutorial
 
@@ -644,7 +646,7 @@ It suits, with small changes: An off-licence or liquor store; A delicatessen; A 
 1. When you refuse to sell alcohol, open the Refusals form straight away and press New. Type the next number in Number and the date and time in When.
 2. Choose this month's register in Register (if the month has none yet, add it in the Refusal Registers form first, with the month as 2026-10), yourself in Staff and what was asked for in Product.
 3. Type the Reason, how old the customer looked in Approx Age, the ID shown, and a few words in Description. No names.
-4. At the month end the licence holder runs the query Refusals, last 30 days, types the month's count in Refusals Logged and their name and the day in Reviewed By and Reviewed On, then prints the print template Refusals register for the month and signs it.
+4. At the month end the licence holder runs the query Refusals, last 30 days to read the month through, types their name and the day in Reviewed By and Reviewed On, then prints the print template Refusals register for the month and signs it.
 
 #### Order from your suppliers
 
@@ -774,7 +776,7 @@ Everything the shop sells, one record for each line. The sample has 65 records.
 
 #### Purchase Orders
 
-The orders sent to suppliers, and the delivery that answers each. The sample has 612 records.
+The orders sent to suppliers, and the delivery that answers each. The sample has 614 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -791,7 +793,7 @@ The orders sent to suppliers, and the delivery that answers each. The sample has
 
 #### Purchase Lines
 
-The products on each purchase order. The sample has 3,965 records.
+The products on each purchase order. The sample has 3,989 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -803,7 +805,7 @@ The products on each purchase order. The sample has 3,965 records.
 
 #### Batches
 
-Stock as it really sits on the shelf: each delivery of each product is a batch with its own code and date. Stock by batch is what tells you what to sell first. The sample has 3,956 records.
+Stock as it really sits on the shelf: each delivery of each product is a batch with its own code and date. Stock by batch is what tells you what to sell first. The sample has 3,973 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -820,7 +822,7 @@ Stock as it really sits on the shelf: each delivery of each product is a batch w
 
 #### Sales
 
-Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 9,364 records.
+Each time the till is rung up: one record per receipt, with the totals the receipt prints. The sample has 9,412 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -840,7 +842,7 @@ Each time the till is rung up: one record per receipt, with the totals the recei
 
 #### Sale Lines
 
-The items on each receipt, each taken from one batch. The sample has 19,988 records.
+The items on each receipt, each taken from one batch. The sample has 20,129 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -857,7 +859,7 @@ The items on each receipt, each taken from one batch. The sample has 19,988 reco
 
 #### Date Checks
 
-The check made each morning before opening: what is near its date is marked down, what has passed it is taken off sale, and the fridges are read. The sample has 353 records.
+The check made each morning before opening: what is near its date is marked down, what has passed it is taken off sale, and the fridges are read. The sample has 354 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -869,7 +871,7 @@ The check made each morning before opening: what is near its date is marked down
 
 #### Markdowns
 
-Each time a batch is reduced: the yellow-sticker price and the labels printed for it. The sample has 1,076 records.
+Each time a batch is reduced: the yellow-sticker price and the labels printed for it. The sample has 1,084 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -885,7 +887,7 @@ Each time a batch is reduced: the yellow-sticker price and the labels printed fo
 
 #### Write-offs
 
-Stock taken off sale and thrown away or returned, with what it cost. The sample has 320 records.
+Stock taken off sale and thrown away or returned, with what it cost. The sample has 324 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -906,13 +908,12 @@ The refusals register, one record a month, reviewed and signed by the personal l
 |---|---|---|
 | ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
 | Month | Short text, required, unique | The month the register covers, as 2026-10. Each month is used once. |
-| Refusals Logged | Whole number | How many refusals the month has. |
 | Reviewed By | Points at Staff | Who reviewed it: a personal licence holder. |
 | Reviewed On | Date | The day it was reviewed; empty for the month still running. |
 
 #### Refusals
 
-Each sale of alcohol refused, written down at the time, as a licensed shop keeps them. The sample has 96 records.
+Each sale of alcohol refused, written down at the time, as a licensed shop keeps them. The sample has 99 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1132,10 +1133,10 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Till receipt
 
-The receipt on an 80 mm till roll: the shop's name, address and VAT number, the receipt number, time and who served, each item with its price and VAT code, the total, what was saved, the cash tendered and change, the VAT included by rate, the age check, and the returns policy. Print it from the Sales form for the sale on screen. One for each record of Sales, on receipt-80 paper, with the Business record at the head.
+The receipt on an 80 mm till roll: the shop's name, address and VAT number, the receipt number, time and who served, each item with its price and VAT code, the total, the VAT included by rate, and the returns policy. What was saved shows only when something was, the cash tendered and change only for cash, and the age check and the ID seen only for a sale with alcohol. Print it from the Sales form for the sale on screen. One for each record of Sales, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
-- Fields: Date and time, Served by, Paid by, Age check
+- Fields: Date and time, Served by, Paid by, Age check, ID seen
 - Lines from Sale Lines: Item, Qty, Price, Amount, VAT
 - Totals: Total, You saved, Cash tendered, Change, S: sales at 20% VAT, VAT at 20% included, Z: sales at 0% VAT
 - Words: Mixed cases: 10% off six or more bottles of wine, and 10% off twelve or more beers and ciders. Reduced items are sold as seen. VAT number {Business.Tax Number}.
@@ -1143,46 +1144,50 @@ The receipt on an 80 mm till roll: the shop's name, address and VAT number, the 
 
 #### Purchase order
 
-The order sent to a supplier: the shop's account with them, the delivery day, each product with its code, unit, quantity and cost, the total before VAT, and the shop's rules for dates and batch codes on what arrives. Print it from the Purchase Orders form for the order on screen. One for each record of Purchase Orders, on a4 paper, with the Business record at the head.
+The order sent to a supplier: the shop's account with them, the delivery day, each product with its code, unit, quantity and cost, the number of lines, the total before VAT, and the shop's rules for dates and batch codes on what arrives. It is for the orders still to come, Status Submitted; a received order prints when you choose it on the Purchase Orders form. One for each record of Purchase Orders, on a4 paper, with the Business record at the head.
 
 - Heading: Purchase order {Number}
 - Fields: To, Order number, For the attention of, Date, Address, Deliver on, City, Our account, Postcode, Ordered by
 - Lines from Purchase Lines: Code, Product, Unit, Quantity, Unit Cost, Total
-- Totals: Units, Total before VAT
-- Words: Please deliver on {Expected} to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your delivery note and invoice.
+- Totals: Lines, Units, Total before VAT
+- Words: Please deliver on the day above to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, and quote {Number} on your delivery note and invoice.
 - Words: Every case and pack must carry its batch code and its use-by or best-before date. Chilled and deli lines must arrive with at least two thirds of their life left, or they will be refused at the door. All alcohol must be duty paid.
 
 #### Markdown label sheet
 
-The sheet from each morning's date check: what to reduce, with the label number, batch, date, the old and new price and how many labels to print, then what was taken off sale and what it cost, signed by whoever did the check. Print it from the Date Checks form for the day on screen. One for each record of Date Checks, on a4 paper, with the Business record at the head.
+The sheet from each morning's date check: what to reduce, with the label number, batch, date, the old and new price and how many labels to print, then what was taken off sale and what it cost, signed by whoever did the check. A day with nothing to reduce or nothing taken off says so, and leaves out the totals that do not apply. Print it from the Date Checks form for the day on screen. One for each record of Date Checks, on a4 paper, with the Business record at the head.
 
 - Heading: Date check {Number}
 - Fields: Date, Checked by, Fridges
 - Words: Reduce to clear: print a label for each, stick it over the shelf price on the pack, and put the packs at the front.
 - Lines from Markdowns: Label, Product, Batch, Date kind, Date, Was, Now, Labels
+- Words: Nothing to reduce today.
 - Words: Taken off sale: past their date, broken or damaged. Put them in the waste bin, not back on the shelf.
 - Lines from Write-offs: Product, Batch, Date, Reason, Units, Cost
+- Words: Nothing taken off sale today.
 - Totals: Labels to print, Units taken off sale, Cost written off
 - Signed by: Checked by, Manager
 
 #### Reduced label
 
-The yellow-sticker label for one markdown, on a 58 mm label roll: the product, its date and batch, the old price and the reduced price. Print it from the Markdowns form, once for each pack. One for each record of Markdowns, on receipt-58 paper, with the Business record at the head.
+The yellow-sticker label for one markdown, on a 58 mm label roll: the product, its date and batch, the old price and the reduced price, and the label number and the day it was reduced. Print it from the Markdowns form, once for each pack. One for each record of Markdowns, on receipt-58 paper, with the Business record at the head.
 
 - Heading: REDUCED
 - Fields: Product, Date kind, Date, Batch
 - Totals: Was, Now
-- Words: Label {Number}, reduced on {Date}.
+- Fields: Label, Reduced on
 
 #### Refusals register
 
-The month's refusals register, kept for the licensing authority: every refusal with its time, what was asked for, why, the ID shown and who refused, and the review signature of the personal licence holder. Print it from the Refusal Registers form for the month on screen. One for each record of Refusal Registers, on a4 paper, with the Business record at the head.
+The month's refusals register, kept for the licensing authority: every refusal with its time, what was asked for, why, the ID shown and who refused, the number of refusals counted from them, and the review signature of the personal licence holder. A month not reviewed yet says so. Print it from the Refusal Registers form for the month on screen. One for each record of Refusal Registers, on a4 paper, with the Business record at the head.
 
 - Heading: Refusals register {Month}
-- Fields: Month, Refusals, Reviewed by, Reviewed on
+- Fields: Month, Reviewed by, Reviewed on
 - Words: The shop asks anyone who looks under 25 to show photo ID with a date of birth: a photo driving licence, a passport or a proof-of-age card. When none is shown, when the ID does not fit the person, when the drink seems to be bought for someone under 18, or when the customer is drunk, the sale is refused and written down here at the time.
 - Lines from Refusals: No, Date and time, Asked for, Reason, Age (about), ID shown, What happened, Refused by
+- Words: No sales were refused this month.
 - Totals: Refusals this month
+- Words: Not reviewed yet: the personal licence holder reviews and signs the register once the month is over.
 - Words: Kept on the premises for the licensing authority, trading standards and the police to see on request.
 - Signed by: Reviewed by the personal licence holder, Date
 
@@ -1244,7 +1249,7 @@ Every dish has a recipe in its ingredients' own units, so its food cost comes fr
 
 The menu prices include VAT, as a cafe's prices to the public do. The sample keeps the VAT simple and says so: everything eaten in, every drink and any hot food taken away carries the standard rate of 20%, and cold food taken away (the cakes and bakes, the cold bagel and rolls) carries none. The real rules have more cases than that, such as hot food kept warm, cold drinks and snacks, so set each dish's Takeaway VAT Rate to what applies to you. Each line of a bill keeps the rate it was sold at, each bill keeps its VAT, and each day's cash-up keeps the day's VAT for the return.
 
-It prints three documents: a till receipt for every bill, numbered RCP-2026-00042; a purchase order for every order to a supplier, numbered PO-2026-0042, made each morning from the order list; and a weekly payslip for each person, numbered PAY-2026-0042, from the shifts on the rota. The payslip shows hours, rate and gross pay only: tax, National Insurance, pension and other deductions are left for the payroll to work out.
+It prints three documents: a till receipt for every bill that was not voided, numbered RCP-2026-00042, with its items under each VAT rate; a purchase order for each order to a supplier not yet delivered, numbered PO-2026-0042, made each morning from the order list; and a weekly payslip for each person, numbered PAY-2026-0042, from the shifts on the rota. The payslip shows hours, rate and gross pay only: tax, National Insurance, pension and other deductions are left for the payroll to work out.
 
 It suits, with small changes: A coffee shop or kiosk; A small restaurant or bistro; A bakery with a few tables; A food truck or market stall; A sandwich bar or takeaway; A tea room or farm shop cafe.
 
@@ -1259,7 +1264,7 @@ It suits, with small changes: A coffee shop or kiosk; A small restaurant or bist
 - Nothing here takes sales off the stock by itself. In Stock is what the last count, the deliveries and the waste sheet say, so count the stock now and then and correct it.
 - A bill's Total, Net and Tax, and a payslip's Hours and Gross Pay, are stored figures, typed when the record is made, not added up from the lines by the form. The sample's own are exactly the sums of their lines, rounded line by line as a till rounds them.
 - The VAT is kept simple: 20% on everything eaten in, on drinks and on hot food taken away; nought on cold food taken away. Set each dish's Takeaway VAT Rate to what the rules say for you, and have your VAT checked by an accountant.
-- A print template prints every record of its table unless you choose some: Receipt prints every bill (voided ones too), Purchase order every purchase, Payslip every payslip. Choose the ones you want before pressing Print.
+- Each print template prints the records it is for: Receipt the bills not voided, Purchase order the purchases not delivered yet, Payslip every payslip. Choose some to print fewer; a voided bill or a delivered purchase prints when you choose it.
 - The records stop at the start of today: this morning's deliveries are not booked in and this morning's orders not yet placed, so the order list shows what to ask for today. The rota runs two weeks ahead, and the week now running has no payslips yet.
 - The VAT number, company number and bank details on the Business record are placeholders of noughts and Xs. Put in your own before printing anything for real.
 
@@ -1279,7 +1284,7 @@ It suits, with small changes: A coffee shop or kiosk; A small restaurant or bist
 2. For each supplier on the list, open the Purchases form and press New. Type the next number in Number (PO-2026-0042), choose the Supplier, type today in Ordered On and the next delivery day in Due On.
 3. In the Purchase Lines below, choose each Ingredient and type the Quantity in its unit and the Unit Cost from the last bill.
 4. Open the Ingredients form and type the same amount in On Order for each ingredient ordered, so it leaves the order list.
-5. Open the print template Purchase order from Print templates, choose today's purchases, and print them or press Save as PDF and e-mail each to the address on its Suppliers record.
+5. Open the print template Purchase order from Print templates: it shows the purchases not yet delivered, which are this morning's. Print them or press Save as PDF and e-mail each to the address on its Suppliers record.
 
 #### Book in a delivery and pay the bill
 
@@ -1446,7 +1451,7 @@ One record per person on the payroll. The sample has 8 records.
 
 #### Payslips
 
-One payslip per person per week, Monday to Sunday, made once the week has been worked. Its lines are the week's shifts. The sample has 488 records.
+One payslip per person per week, Monday to Sunday, made once the week has been worked. Its lines are the week's shifts. The sample has 485 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1462,7 +1467,7 @@ One payslip per person per week, Monday to Sunday, made once the week has been w
 
 #### Shifts
 
-The rota: one record per person per shift, planned ahead and kept once worked. The sample has 2,146 records.
+The rota: one record per person per shift, planned ahead and kept once worked. The sample has 2,145 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1478,7 +1483,7 @@ The rota: one record per person per shift, planned ahead and kept once worked. T
 
 #### Orders
 
-One record per bill rung up on the till: a table's meal or a takeaway. Each prints as a receipt. The sample has 6,335 records.
+One record per bill rung up on the till: a table's meal or a takeaway. Each prints as a receipt. The sample has 6,083 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1497,7 +1502,7 @@ One record per bill rung up on the till: a table's meal or a takeaway. Each prin
 
 #### Order Lines
 
-What was on each bill: one line per dish, with how many. The sample has 16,841 records.
+What was on each bill: one line per dish, with how many. The sample has 15,847 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1510,7 +1515,7 @@ What was on each bill: one line per dish, with how many. The sample has 16,841 r
 
 #### Purchases
 
-One record per order to a supplier, from the day it was placed to the day its bill was paid. Each prints as a purchase order. The sample has 1,125 records.
+One record per order to a supplier, from the day it was placed to the day its bill was paid. Each prints as a purchase order. The sample has 1,122 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1525,7 +1530,7 @@ One record per order to a supplier, from the day it was placed to the day its bi
 
 #### Purchase Lines
 
-What was ordered on each purchase: one line per ingredient. The sample has 2,914 records.
+What was ordered on each purchase: one line per ingredient. The sample has 2,929 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1537,7 +1542,7 @@ What was ordered on each purchase: one line per ingredient. The sample has 2,914
 
 #### Waste
 
-Everything thrown away, as the kitchen notes it on the waste sheet. The sample has 625 records.
+Everything thrown away, as the kitchen notes it on the waste sheet. The sample has 636 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -1813,35 +1818,36 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Receipt
 
-The till receipt for a bill, on an 80 mm roll: the cafe's name, address and VAT number, the receipt number, time, eat in or take away and the table, each item with its price and VAT rate, then the total, the net and the VAT within it, and how it was paid. Numbered RCP-2026-00042. Every bill on record prints, voided ones too, so choose the bill to print. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
+The till receipt for a bill, on an 80 mm roll: the cafe's name, address and VAT number, the receipt number, time, eat in or take away and the table, the items under each VAT rate with what that rate comes to and the VAT within it, then the total, the net and the VAT within it, and how it was paid. The table and covers show only for a table's bill. Numbered RCP-2026-00042. It is for the bills that were not voided; a voided bill chosen on the Orders form still prints, marked void. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
-- Fields: Date and time, Service, Table, Paid by
-- Lines from Order Lines: Qty, Item, Each, Price, VAT %, VAT
+- Fields: Date and time, Service, Table, Covers, Paid by
+- Lines from Order Lines: Qty, Item, Each, Price, Rate, VAT
 - Totals: Total, Net of VAT, VAT included
+- Words: Void: this bill was cancelled before it was paid and is not a receipt.
 - Words: You were served by {Staff.First Name}. Please keep this receipt as your proof of purchase.
 - Words: VAT number {Business.Tax Number}. {Business.Document Footer}
 
 #### Purchase order
 
-The order sent to a supplier each morning from the order list: what to send, how much, at the last price paid, and the day to deliver, with the cafe's address to deliver to. Numbered PO-2026-0042, which the supplier quotes on the delivery note and the bill. Every purchase prints, delivered ones too, so choose the ones placed today. One for each record of Purchases, on a4 paper, with the Business record at the head.
+The order sent to a supplier each morning from the order list: what to send, how much, at the last price paid, and the day to deliver, with the cafe's address to deliver to. Numbered PO-2026-0042, which the supplier quotes on the delivery note and the bill. It is for the purchases not delivered yet (no Received On), which are the ones placed this morning; a delivered one prints when you choose it on the Purchases form. One for each record of Purchases, on a4 paper, with the Business record at the head.
 
 - Heading: Purchase order {Number}
 - Fields: To, Order number, Address, Order date, City, Deliver on, Postcode, For the attention of
 - Lines from Purchase Lines: Ingredient, Comes as, Quantity, Unit, Price per unit, Amount
-- Totals: Order total
-- Words: Please deliver to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode} on {Due On}, before 7 in the morning if you can. Quote {Number} on your delivery note and your invoice. Prices are those we last paid; tell us before delivery if any has changed.
+- Totals: Lines, Order total
+- Words: Please deliver to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode} on the day above, before 7 in the morning if you can. Quote {Number} on your delivery note and your invoice. Prices are those we last paid; tell us before delivery if any has changed.
 - Words: Questions about this order: {Business.Phone} or {Business.E-mail}.
 - Signed by: Ordered by, Received by
 
 #### Payslip
 
-The weekly payslip for one person: the week, the hourly rate, each shift worked or on holiday with its hours and pay, and the gross pay. Numbered PAY-2026-0042. It shows gross pay only; tax, National Insurance, pension and other deductions are for the payroll to work out, and its statement of net pay goes with this one. One for each record of Payslips, on a4 paper, with the Business record at the head.
+The weekly payslip for one person: the week, the hourly rate, each shift worked or on holiday with its day, times, hours and pay at that rate, the number of shifts, and the gross pay. Numbered PAY-2026-0042. It shows gross pay only; tax, National Insurance, pension and other deductions are for the payroll to work out, and its statement of net pay goes with this one. One for each record of Payslips, on a4 paper, with the Business record at the head.
 
 - Heading: Payslip {Number}
 - Fields: Employee, Week beginning, Role, Week ending, Hourly rate, Paid on
-- Lines from Shifts: Date, Day, From, To, Break (min), Station, Status, Hours, Rate, Pay
-- Totals: Hours paid, Gross pay
+- Lines from Shifts: Date, Day, From, To, Break (min), Station, Status, Hours, Pay
+- Totals: Shifts, Hours paid, Gross pay
 - Words: Gross pay for the hours on the rota, holiday included at the usual rate and sick days unpaid here. Tax, National Insurance, pension and any other deductions are worked out by the payroll and shown on the payroll's own statement of net pay.
 
 ### Starting empty
@@ -1914,7 +1920,7 @@ It suits, with small changes: A pizza shop or kebab house; A fish and chip shop 
 - Goods, Total, Tax and Net on an order, and Drops and Drop Pay on a pay sheet, are stored figures typed when the record is made, not added up by the form. The sample's own are exactly the sums of their lines.
 - A meal deal is a line at the deal's price followed by each thing chosen at nought, so best sellers count the pizzas and curries in deals as sold, and the money stays with the deal.
 - Recipes are written for one item, and for the smallest pizza; the Portion on each order line scales them for the size. Extras have recipes of their own. Ingredient use is worked out from these, not counted, so check it against a stock count now and then.
-- Every order prints from each of the three order templates. A collection has a delivery slip with no address, and a cancelled order still has a receipt, so choose the orders you mean before pressing Print.
+- The three order templates leave cancelled orders out, and the Delivery slip prints for deliveries only. Choose the orders you mean before pressing Print; an order chosen on the Orders form always prints, a cancelled one marked as cancelled.
 - Time is kept to the minute in Placed, Due, Ready, Out and Handed Over, and the delivery times are worked out from them. Leave Handed Over empty until the customer has the food.
 - The VAT is kept simple: 20% on hot food, drinks, ice cream and delivery, nought on the cold desserts and coleslaw. Have yours checked by an accountant for your own country.
 - A few orders are booked ahead for tonight and the next two nights, so Tonight's orders and Orders still to go out have something on them whenever the sample is made. Orders taken today before the time it was made are there too, with their status at that time.
@@ -2032,7 +2038,7 @@ The areas the takeaway delivers to, each with its charges and the driver's fee f
 
 #### Customers
 
-Everyone who has ordered by phone or online, and the regulars who come in, with where to deliver to. The sample has 1,119 records.
+Everyone who has ordered by phone or online, and the regulars who come in, with where to deliver to. The sample has 1,127 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2146,7 +2152,7 @@ A pay sheet for each driver for each week, Monday to Sunday. Its lines are the o
 
 #### Orders
 
-One record per order, from the moment it is taken to the moment it is handed over. Each prints as a customer receipt, a kitchen ticket and a delivery slip. The sample has 3,760 records.
+One record per order, from the moment it is taken to the moment it is handed over. Each prints as a customer receipt, a kitchen ticket and a delivery slip. The sample has 3,752 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2178,7 +2184,7 @@ One record per order, from the moment it is taken to the moment it is handed ove
 
 #### Order Lines
 
-What is on each order, one line per item. A meal deal is a line at the deal's price followed by what the customer chose, at nought; an extra is a line of its own under the dish it goes on. The sample has 19,225 records.
+What is on each order, one line per item. A meal deal is a line at the deal's price followed by what the customer chose, at nought; an extra is a line of its own under the dish it goes on. The sample has 19,057 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2427,41 +2433,45 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Customer receipt
 
-Goes in the bag or to the customer at the counter, on an 80 mm roll: the order number, when it was ordered and is due, each item with its size, notes and price, the food and drink, the delivery charge, the total and the VAT within it, and how it was paid. Every order prints, so choose the one you want. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
+Goes in the bag or to the customer at the counter, on an 80 mm roll: the order number, when it was ordered and is due, each item with its size, notes and price, the food and drink, the delivery charge when there is one, the total and the VAT within it, how it is paid, and the cash to pay when it is not paid yet. It is for every order not cancelled; a cancelled one chosen on the Orders form still prints, marked cancelled. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Order {Number}
 - Fields: Ordered, Ordered by, Collection or delivery, Due, Name, Payment
 - Lines from Order Lines: Qty, Item, Size, Notes, Price
-- Totals: Food and drink, Delivery, Total, VAT included
+- Totals: Food and drink, Delivery, Total, VAT included, Cash to pay
+- Words: Free delivery: your order is over the zone's amount for free delivery.
+- Words: Cancelled: this order was cancelled and nothing is owed for it.
 - Words: Payment: {Payment}. VAT number {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Kitchen ticket
 
-Printed on the kitchen printer as the order is taken: the order number, the time due, collection or delivery, and each item with its size and notes, with no prices. Meal deals show what was chosen. Every order prints, so choose the new ones. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
+Printed on the kitchen printer as the order is taken: the order number, the time due, collection or delivery, and each item with its size and notes in the order taken, an extra under the dish it goes on, with no prices. Meal deals show what was chosen. It is for every order not cancelled; choose the new ones to print. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Kitchen {Number}
 - Fields: Due, Collection or delivery, Taken, Came by
 - Lines from Order Lines: Qty, Item, Size, Notes
 - Totals: Items
+- Words: CANCELLED: do not cook.
 
 #### Delivery slip
 
-Taped to the bag for the driver: the customer's name, address, postcode, phone and delivery notes, the zone, the time due, what is in the bag, and whether it is paid or how much cash to collect. Collections print one too, with no address, so choose the deliveries. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
+Taped to the bag for the driver: the customer's name, address, postcode, phone and delivery notes, the zone, the time due, what is in the bag, and either the cash to collect or a line saying it is paid already. It is only for deliveries that are not cancelled: a collection has no slip. One for each record of Orders, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Delivery {Number}
 - Fields: Deliver to, Address, Postcode, Phone, Notes, Zone, Due by, Driver
 - Lines from Order Lines: Qty, Item, Size
 - Totals: Order total, Cash to collect
-- Words: Payment: {Payment}. Card and online orders are paid already; for cash, collect the amount above and hand it in at the end of the night.
+- Words: Cash: collect the amount above and hand it in at the end of the night.
+- Words: Paid already ({Payment}): nothing to collect.
 
 #### Driver pay sheet
 
-Given to each driver with their pay each week: every drop they made with its zone and fee, the cash they collected and handed in, and the pay for the drops. Numbered DRV-2026-0042. Tax and deductions are left for the payroll. One for each record of Driver Pay, on a4 paper, with the Business record at the head.
+Given to each driver with their pay each week: every drop they made, night by night, with its time, zone and fee and each night's fees and cash handed in, the number of drops, the cash they collected, and the pay for the drops. Numbered DRV-2026-0042. Tax and deductions are left for the payroll. One for each record of Driver Pay, on a4 paper, with the Business record at the head.
 
 - Heading: Driver pay sheet {Number}
-- Fields: Driver, Week beginning, Phone, Week ending, Drops, Paid on
-- Lines from Orders: Order, Delivered, Zone, Postcode, Drop Fee, Cash Taken
+- Fields: Driver, Week beginning, Phone, Week ending, Paid on
+- Lines from Orders: Night, Order, Delivered, Zone, Postcode, Drop Fee, Cash Taken
 - Totals: Drops, Pay for the drops, Cash collected, handed in each night
 - Words: Paid per drop at the zone's fee, which covers the driver's own fuel and car. Tax, National Insurance and any other deduction are worked out by the payroll, not on this sheet.
 - Signed by: Driver, Manager
@@ -2537,7 +2547,7 @@ It suits, with small changes: A florist with a shop or a studio; A flower stall 
 - A product's recipe is what the margin and the stems to buy are worked out from. Keep it close to what the florists really use; when a bouquet changes, change its recipe lines.
 - The margin query counts each product's price once, on its recipe's line 1, and takes the cost of every line from it. Every recipe needs a line 1.
 - Prices include VAT. The VAT within a price is the price less the price divided by 1.2; each line's is worked out to the penny and added up, as the receipt and invoice print it.
-- Every order prints from the print templates, whatever its Status: the Gift card message for a standing order with no card prints an empty card, and a cancelled order still has its confirmation. Choose the orders to print, or print the one on screen.
+- Each print template prints only the orders it is for: no confirmation for a standing order, no card where none is wanted, no delivery note for a collection, and nothing for a cancelled order. The Wedding invoice prints for booked weddings only. Choose the orders to print, or print the one on screen, which always prints.
 - Weddings are separate from orders, with their own lines, because they are quoted and paid differently. A quote not yet booked prints a Wedding invoice with no number; print the invoice only once the wedding is booked.
 - Walk-in sales are in Till Sales and are not given an occasion, so the query Takings by occasion counts orders only.
 
@@ -2708,7 +2718,7 @@ What goes into each product: the stems, foliage and sundries, and how many of ea
 
 #### Purchases
 
-Each buy at the market, from the grower or from the sundries wholesaler. The sample has 335 records.
+Each buy at the market, from the grower or from the sundries wholesaler. The sample has 336 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2720,7 +2730,7 @@ Each buy at the market, from the grower or from the sundries wholesaler. The sam
 
 #### Purchase Lines
 
-What was bought on each buy. Each line is a batch of stems with its own use-by day. The sample has 2,507 records.
+What was bought on each buy. Each line is a batch of stems with its own use-by day. The sample has 2,467 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2734,7 +2744,7 @@ What was bought on each buy. Each line is a batch of stems with its own use-by d
 
 #### Waste
 
-Stems thrown away, past their best or damaged, logged at the morning check. The sample has 388 records.
+Stems thrown away, past their best or damaged, logged at the morning check. The sample has 379 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2771,7 +2781,7 @@ Each morning or afternoon run of the van, with its driver. The sample has 582 re
 
 #### Customers
 
-Everyone who orders: people sending flowers, the couples and families who book weddings, and businesses with a standing order. The sample has 1,013 records.
+Everyone who orders: people sending flowers, the couples and families who book weddings, and businesses with a standing order. The sample has 977 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2789,7 +2799,7 @@ Everyone who orders: people sending flowers, the couples and families who book w
 
 #### Orders
 
-Every order taken by phone, online or in the shop, for delivery, collection or a funeral, and the weekly standing orders for businesses. The sample has 1,706 records.
+Every order taken by phone, online or in the shop, for delivery, collection or a funeral, and the weekly standing orders for businesses. The sample has 1,707 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2823,7 +2833,7 @@ Every order taken by phone, online or in the shop, for delivery, collection or a
 
 #### Order Lines
 
-What is on each order. The sample has 1,853 records.
+What is on each order. The sample has 1,855 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2836,7 +2846,7 @@ What is on each order. The sample has 1,853 records.
 
 #### Till Sales
 
-Every sale over the counter, one record per receipt. The sample has 2,346 records.
+Every sale over the counter, one record per receipt. The sample has 2,438 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2851,7 +2861,7 @@ Every sale over the counter, one record per receipt. The sample has 2,346 record
 
 #### Till Lines
 
-What was sold on each receipt. The sample has 2,629 records.
+What was sold on each receipt. The sample has 2,717 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2864,7 +2874,7 @@ What was sold on each receipt. The sample has 2,629 records.
 
 #### Weddings
 
-Every wedding quoted, with its booking, deposit, invoice and balance. The sample has 42 records.
+Every wedding quoted, with its booking, deposit, invoice and balance. The sample has 35 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -2892,7 +2902,7 @@ Every wedding quoted, with its booking, deposit, invoice and balance. The sample
 
 #### Wedding Lines
 
-What is quoted and made for each wedding. The sample has 311 records.
+What is quoted and made for each wedding. The sample has 253 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3086,7 +3096,7 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Order confirmation
 
-The letter or e-mail sent when an order is taken: what will be made, for whom, where and when, the card's words, what was paid, and how to change or cancel. One for each record of Orders, on a4 paper, with the Business record at the head.
+The letter or e-mail sent when an order is taken: what will be made, for whom, where and when, the card's words, what was paid and when, and how to change or cancel. The delivery charge shows only when there is one. It is for the orders customers place, not the weekly standing orders, and not cancelled ones; any order chosen on the Orders form still prints. One for each record of Orders, on a4 paper, with the Business record at the head.
 
 - Fields: To, Order, Address, Taken, Town, Postcode
 - Heading: Your order {Number}
@@ -3094,53 +3104,61 @@ The letter or e-mail sent when an order is taken: what will be made, for whom, w
 - Words: Thank you for your order. This is what we have written down. If anything is not right, call us on {Business.Phone} and we will put it right.
 - Lines from Order Lines: Flowers, Quantity, Price, Amount
 - Totals: Flowers, Delivery, Total, VAT included
-- Fields: Delivery or collection, On, For, Time, Address, Town, Postcode, What we will make
+- Fields: Delivery or collection, On, For, Time, Address, Town, Postcode, What we will make, Paid by, Paid on
 - Words: The card will read: {Card Message} {Card From}
-- Words: Paid on {Paid On}: {Payment}.
+- Words: No card goes with the flowers. If you would like one, call us and tell us what to write.
+- Words: Payment: {Payment}. We take it before the flowers are made.
 - Words: Flowers are made fresh on the day from what is best at the market, so a stem may differ a little from the picture; the colours and the size will not. If you need to change or cancel the order, tell us by 5pm the day before and we refund you in full. Once the flowers are made we can change the delivery but cannot refund them.
+- Words: This order was cancelled. If you have paid for it, the money is refunded to the card you paid with.
 - Words: With best wishes,
 - Words: {Taken By}, {Business.Name}
 - Words: {Business.Document Footer}
 
 #### Gift card message
 
-The small card that goes with the flowers: the message and who it is from, nothing else. One for each record of Orders, on a5 paper, with the Business record at the head.
+The small card that goes with the flowers: the message and who it is from, nothing else. It is only for the orders with Card Included ticked, so a standing order with no card has none. One for each record of Orders, on a5 paper, with the Business record at the head.
 
 - Words: {Card Message}
 - Words: {Card From}
 
 #### Delivery note
 
-Goes with the driver: the recipient, the address, the time, whether a card is enclosed and what is being delivered, with no prices, and a line for whoever takes them in to sign. One for each record of Orders, on a5 paper, with the Business record at the head.
+Goes with the driver: the recipient, the address, the time, that a card is enclosed when there is one, and what is being delivered, with no prices, a line of care for the flowers (or for a funeral tribute, or the weekly arrangement), and a line for whoever takes them in to sign. It is for the orders that go out in the van, not collections or cancelled orders. One for each record of Orders, on a5 paper, with the Business record at the head.
 
 - Heading: Delivery note {Number}
 - Fields: For, Delivery date, Address, Time, Town, Area, Postcode, Driver, Phone, Card enclosed
 - Lines from Order Lines: Flowers, Quantity
 - Totals: Items
 - Words: Someone has sent you flowers from {Business.Name}. To keep them fresh, cut the stems at an angle, put them in clean water and keep them out of direct sun. Change the water every two days.
+- Words: A funeral tribute from {Business.Name}, made to order. Please keep it flat and out of the sun until the service.
+- Words: Your weekly flowers from {Business.Name}. We take away last week's arrangement when we bring the new one.
 - Signed by: Received by, Time
 
 #### Wedding quote
 
-Sent after the consultation: the couple, the date and venues, each piece with its price, the total with its VAT, and the deposit to book. One for each record of Weddings, on a4 paper, with the Business record at the head.
+Sent after the consultation: the couple, the date and venues, each piece with its price, the total with its VAT, and the deposit to book. Once the wedding is booked the quote shows the deposit paid instead, and a declined quote says it was not taken up. One for each record of Weddings, on a4 paper, with the Business record at the head.
 
 - Heading: Wedding flowers: quote {Quote No}
 - Fields: For, Quote, Address, Date, Postcode, Prices hold until, The couple, Wedding date, Ceremony, Reception, Colours
 - Lines from Wedding Lines: Description, Quantity, Each, Amount, VAT within
-- Totals: Total for the flowers, VAT included, Deposit to book (a quarter)
+- Totals: Total for the flowers, VAT included, Deposit to book (a quarter), Deposit paid
 - Words: To book, pay the deposit above: we then hold the date for you and send an invoice. The balance is due four weeks before the wedding. Flowers are seasonal: if a flower is not at its best that week we use the closest we can find, and we tell you first.
+- Words: Booked: thank you for your deposit. We hold the date for you, and the balance is on your invoice, due four weeks before the wedding. Flowers are seasonal: if a flower is not at its best that week we use the closest we can find, and we tell you first.
+- Words: The flowers for this wedding have been made and delivered. Thank you for choosing us.
+- Words: This quote was not taken up. If your plans change, call us and we will quote again at the prices of the day.
 - Words: The price includes making everything, delivery on the morning of the wedding, and setting up at the ceremony and the reception. Vases and stands we bring are collected the next working day.
 - Words: {Business.Document Footer}
 
 #### Wedding invoice
 
-Sent when a wedding is booked: the same lines, the deposit paid and the balance due four weeks before the day. A wedding not yet booked prints with no invoice number. One for each record of Weddings, on a4 paper, with the Business record at the head.
+Sent when a wedding is booked: the same lines, the deposit paid and the balance due four weeks before the day, or the balance paid and a thank you once it has come in. It is for the weddings with an invoice number, the booked ones. One for each record of Weddings, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Invoice No}
-- Fields: Invoice to, Invoice, Address, Date, Town, Your quote, Postcode, Wedding date, The couple, Balance due by, Deposit paid on, Balance paid on
+- Fields: Invoice to, Invoice, Address, Date, Town, Your quote, Postcode, Wedding date, The couple, Deposit paid on, Balance due by, Balance paid on
 - Lines from Wedding Lines: Description, Quantity, Each, Amount, VAT within
-- Totals: Total for the flowers, VAT included, Deposit paid, Balance due
-- Words: Please pay the balance by {Balance Due On} to {Business.Bank Details}, quoting {Invoice No}. If you have paid it since this invoice was sent, thank you.
+- Totals: Total for the flowers, VAT included, Deposit paid, Balance paid, Balance due
+- Words: Please pay the balance by the date above to {Business.Bank Details}, quoting {Invoice No}. If you have paid it since this invoice was sent, thank you.
+- Words: Paid in full. Thank you, and we hope the day was everything you wished for.
 - Words: {Business.Payment Terms}
 
 #### Till receipt
@@ -3151,6 +3169,7 @@ The receipt from the till, on an 80 mm roll: what was bought, the total and the 
 - Fields: Date, Served by, Paid by
 - Lines from Till Lines: Item, Qty, Amount
 - Totals: Total, VAT at 20% included
+- Words: VAT number {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 ### Starting empty
@@ -3223,7 +3242,7 @@ It suits, with small changes: A pharmacy's counter and shop; A health food or vi
 - Prices in Products and Sale Lines include VAT, as shelf prices do. The VAT on a receipt is worked out within each line, rounded to the penny, and added up. Period products carry no VAT and stop smoking products 5 percent in the UK; check the rates where you are.
 - The Prescriptions table is a collection log, not a dispensary record. Keep it to initials, a reference and a count of items, and keep anything clinical out of this file.
 - Which lines need a pharmacist's check, and any limit on packs in one sale, are set on each product. The sample's choices are examples only; follow the rules where you work.
-- Each print template prints every record of its table: every sale has a receipt and every round a sheet. Print the one on screen from its form, or choose the records to print.
+- Each print template prints only the records it is for: every sale has a receipt, but purchase orders print while they are Submitted and round sheets while the round is Planned. Any record prints from its own form, whatever it is.
 - The dispensary's own income, from prescriptions, is not in this file: the takings are the counter's.
 
 ### Tutorial
@@ -3268,7 +3287,7 @@ It suits, with small changes: A pharmacy's counter and shop; A health food or vi
 
 1. Open the Delivery Customers form to see who is due: each customer's Round Day, Area and how often (Every Weeks).
 2. Open the Delivery Rounds form and press New for each driver's round: the next RND number, the Delivery Date, the Driver and the Area. Add each stop in Deliveries with the Stop number, the Customer, the Prescription Ref and the Bags. Mark those prescriptions For Delivery.
-3. Print the Delivery round sheet template for each round, or the Delivery list report for both days at once.
+3. Print the Delivery round sheet template: it prints a sheet for each round still Planned. Or print the Delivery list report for both days at once.
 4. When the driver is back, set each stop's Status to Delivered with Delivered At and Received By, or to Not in, card left and add it to the next day's round. Set the round's Status to Done, and the delivered prescriptions to Delivered.
 
 #### Cash up and look at the month
@@ -3377,7 +3396,7 @@ The orders sent to suppliers, one record each, with their lines in Supplier Orde
 
 #### Supplier Returns
 
-Out-of-date stock sent back to a wholesaler for credit, one record for each expiry return note. Its lines are the Waste records that point at it. The sample has 19 records.
+Out-of-date stock sent back to a wholesaler for credit, one record for each expiry return note. Its lines are the Waste records that point at it. The sample has 17 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3414,7 +3433,7 @@ Everything on the shelves, one record for each line, under its generic name. Wha
 
 #### Supplier Order Lines
 
-The products on each supplier order. The sample has 1,129 records.
+The products on each supplier order. The sample has 1,114 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3426,7 +3445,7 @@ The products on each supplier order. The sample has 1,129 records.
 
 #### Batches
 
-Stock as it arrived: one record for each delivery of a product, with its batch number and expiry date, and how much of it is left. The sample has 1,235 records.
+Stock as it arrived: one record for each delivery of a product, with its batch number and expiry date, and how much of it is left. The sample has 1,219 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3440,7 +3459,7 @@ Stock as it arrived: one record for each delivery of a product, with its batch n
 
 #### Waste
 
-Stock written off: out of date, or damaged. Out-of-date stock from a supplier that takes returns points at the return note it went back on. The sample has 62 records.
+Stock written off: out of date, or damaged. Out-of-date stock from a supplier that takes returns points at the return note it went back on. The sample has 61 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3454,7 +3473,7 @@ Stock written off: out of date, or damaged. Out-of-date stock from a supplier th
 
 #### Sales
 
-The till: one record for each sale, with its lines in Sale Lines. Each prints as a till receipt. The sample has 5,231 records.
+The till: one record for each sale, with its lines in Sale Lines. Each prints as a till receipt. The sample has 5,214 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3471,7 +3490,7 @@ The till: one record for each sale, with its lines in Sale Lines. Each prints as
 
 #### Sale Lines
 
-The products on each sale. The sample has 7,942 records.
+The products on each sale. The sample has 7,879 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3486,7 +3505,7 @@ The products on each sale. The sample has 7,942 records.
 
 #### Pharmacist Checks
 
-A record of every request for a pharmacy-only line: the pharmacist spoke to the customer and decided whether to sell. The words are short and practical, never clinical. The sample has 833 records.
+A record of every request for a pharmacy-only line: the pharmacist spoke to the customer and decided whether to sell. The words are short and practical, never clinical. The sample has 818 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3502,7 +3521,7 @@ A record of every request for a pharmacy-only line: the pharmacist spoke to the 
 
 #### Prescriptions
 
-A minimal log of prescriptions waiting to be collected or delivered: initials, a reference and a count of items. It holds nothing clinical; the dispensary keeps its own records. The sample has 3,198 records.
+A minimal log of prescriptions waiting to be collected or delivered: initials, a reference and a count of items. It holds nothing clinical; the dispensary keeps its own records. The sample has 3,244 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3540,7 +3559,7 @@ Customers who cannot get to the pharmacy and have their prescriptions delivered,
 
 #### Delivery Rounds
 
-One record for each driver's round on each day, with its stops in Deliveries. Each prints as a round sheet. The sample has 540 records.
+One record for each driver's round on each day, with its stops in Deliveries. Each prints as a round sheet. The sample has 546 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3555,7 +3574,7 @@ One record for each driver's round on each day, with its stops in Deliveries. Ea
 
 #### Deliveries
 
-Each stop on a round: who, which prescription bag, and what happened. The sample has 1,241 records.
+Each stop on a round: who, which prescription bag, and what happened. The sample has 1,270 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -3785,21 +3804,21 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Till receipt
 
-The receipt the till prints for each sale, on an 80 mm roll: each item with its price, the total, what was paid and the change, and the VAT included. Pharmacy-only lines are marked P. Numbered RCP-2026-00042. One for each record of Sales, on receipt-80 paper, with the Business record at the head.
+The receipt the till prints for each sale, on an 80 mm roll: the date and time, each item with its price, the total, the cash handed over and the change for a cash sale, and the VAT included. Pharmacy-only lines are marked P. Numbered RCP-2026-00042. One for each record of Sales, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
 - Fields: Date, Till, Served by, Paid by
 - Lines from Sale Lines: Item, Qty, Price, Amount,  
-- Totals: Total, Paid, Change, VAT included
+- Totals: Total, Cash, Change, VAT included
 - Words: P: a pharmacy medicine, sold after a word with the pharmacist.
 - Words: {Business.Document Footer}
 
 #### Purchase order
 
-Sent to a supplier: the lines to send, the pack, quantity and cost, and the day they are wanted, with the pharmacy's account number. Numbered PO-2026-0042. Every order prints, received ones too; print the one on screen from the Supplier Orders form. One for each record of Supplier Orders, on a4 paper, with the Business record at the head.
+Sent to a supplier: the lines to send, the pack, quantity and cost, and the day they are wanted, with the pharmacy's account number. Numbered PO-2026-0042. It prints for orders still Submitted; one already received prints from the Supplier Orders form, with the day it came in. One for each record of Supplier Orders, on a4 paper, with the Business record at the head.
 
 - Heading: Purchase order {Number}
-- Fields: To, Order number, Address, Date, Town, Deliver by, Postcode, Our account, Ordered by, Status
+- Fields: To, Order number, Address, Date, Town, Deliver by, Postcode, Our account, Ordered by, Received
 - Lines from Supplier Order Lines: Code, Product, Pack, Quantity, Unit Cost, Total
 - Totals: Units, Order total before VAT
 - Words: Please quote {Number} and our account number on your delivery note and invoice. Medicines with less than six months before their expiry date by agreement only.
@@ -3807,7 +3826,7 @@ Sent to a supplier: the lines to send, the pack, quantity and cost, and the day 
 
 #### Delivery round sheet
 
-The sheet a driver takes out: one for each driver on each day, with each stop in order, the address, the phone, what to know at the door, the bag reference, and a column for the customer to sign. One for each record of Delivery Rounds, on a4 paper, with the Business record at the head.
+The sheet a driver takes out: one for each driver on each day still to come, with each stop in order, the address, the phone, what to know at the door, the bag reference, and a column for the customer to sign. It prints for Planned rounds only; a round already done prints from the Delivery Rounds form. One for each record of Delivery Rounds, on a4 paper, with the Business record at the head.
 
 - Heading: Delivery round {Number}
 - Fields: Date, Driver, Area, Stops, Status
@@ -3818,13 +3837,13 @@ The sheet a driver takes out: one for each driver on each day, with each stop in
 
 #### Expiry return note
 
-Goes in the box of out-of-date stock sent back to a wholesaler: each product, batch, expiry date and quantity, and the credit claimed at cost. It is the statement the supplier's credit note is checked against. Numbered RTN-2026-0007. One for each record of Supplier Returns, on a4 paper, with the Business record at the head.
+Goes in the box of out-of-date stock sent back to a wholesaler: each product, batch, expiry date and quantity, the number of lines, and the credit claimed at cost. It is the statement the supplier's credit note is checked against. Numbered RTN-2026-0007. One for each record of Supplier Returns, on a4 paper, with the Business record at the head.
 
 - Heading: Expiry return {Number}
-- Fields: To, Return number, Address, Date, Town, Our account, Postcode, Status
+- Fields: To, Return number, Address, Date, Town, Our account, Postcode, Collected
 - Words: The goods below have reached, or are about to reach, their expiry date, or arrived damaged. They are unopened and are returned for credit under your returns terms.
 - Lines from Waste: Code, Product, Batch, Expiry, Quantity, Unit Cost, Value
-- Totals: Units, Credit claimed
+- Totals: Lines, Units, Credit claimed
 - Words: Please send a credit note quoting {Number} and our account number.
 - Signed by: Packed by, Collected by
 
@@ -3891,7 +3910,8 @@ It suits, with small changes: A distributor or importer; A cash and carry; A bui
 - Your records live in one file on your computer. Keep copies: File, Save As makes one, and a copy on another drive or in your own cloud storage keeps it safe if this computer is lost. Close the database before copying the file by hand.
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
 - Units in Stock on a product is the sum of its Stock Movements: received above nought, sold and corrected below. When you change one, change the other, or count the stock and add an Adjusted movement to put it right.
-- An order line keeps its own Unit Price, Discount and Tax Rate, so a later price change never alters an order already taken or invoiced.
+- An order line keeps its own Unit Price, Discount and Tax Rate, so a later price change never alters an order already taken or invoiced. An invoice prints the lines of its order, so there is nothing to mark on the lines when you invoice.
+- Each print template prints only the records it is for: delivery notes for shipped orders, statements for customers. One you print from its form always prints.
 - Invoice and purchase order numbers are typed by you, a new run each year. Number them in date order and never use one twice; Data Files refuses a number already used.
 - Customers, suppliers and carriers share the Companies table. Kind says which a company is, and most queries choose by it.
 - VAT is a rate on each order line, taken from the product's group in Categories: food at 0, kitchen and cleaning supplies at 0.2. Delivery is charged at the standard rate. Check the rates for your own country and goods.
@@ -3909,29 +3929,28 @@ It suits, with small changes: A distributor or importer; A cash and carry; A bui
 
 1. Pick the goods, then open the Orders form, find the order and type the Shipped Date. Change Status to Shipped.
 2. For each product sent, open the Stock Movements form and add a Sold movement with the quantity below nought (-12 for twelve sent) and Order and its number in Reference; then lower Units in Stock on the Products form by the same.
-3. Open Print templates, choose Delivery note, choose the order and press Print. It goes in the box for the customer to check and sign.
+3. Open Print templates, choose Delivery note, choose the order and press Print. It goes in the box for the customer to check and sign. Only orders with a Shipped Date are listed there.
 
 #### Invoice it
 
 1. Open the Invoices form and press New. Type the next number in Number (INV-2026-0301 after INV-2026-0300), choose the Order and the Customer, and type today in Invoice Date.
 2. Type the Due Date: the invoice date plus the customer's Payment Days from the Companies form.
 3. Type Net (the goods after discounts, with the delivery charge), Tax (the VAT on them) and Amount (the two together). The query Order totals shows the goods for the order.
-4. Open the Order Lines form and choose the new invoice in Invoice on each of the order's lines, so the invoice lists them.
-5. Open Print templates, choose Invoice, choose the new invoice and press Save as PDF to e-mail it, or Print.
+4. Open Print templates, choose Invoice, choose the new invoice and press Save as PDF to e-mail it, or Print. It lists the lines of the order you chose in Order.
 
 #### Record a payment and see who owes what
 
 1. When a customer pays, open the Invoices form, find the invoice and type the day in Paid On. Then open the Orders form and change the order's Status to Closed.
 2. Run the query Unpaid invoices for every invoice not yet paid, by due date, with how many days each is overdue.
 3. Open the report Invoices due for the same list a page a customer, with what each owes in total.
-4. At the month's end, open Print templates, choose Statement and print it for each customer who owes money.
+4. At the month's end, open Print templates and choose Statement: it prints for each customer, listing their unpaid invoices and the balance owing. Send it to those who owe money.
 
 #### Reorder stock
 
 1. Run the query Products to reorder: products at or below their Reorder Level, by supplier, with how many to order.
 2. Open the Purchase Orders form and press New: type the next number (PO-2026-0120), choose the Supplier and yourself, today in Ordered On and the day it should come in Expected. Status is Submitted.
 3. Open the Purchase Lines form and add a line for each product to order, with the Quantity and the Unit Cost.
-4. Open Print templates, choose Purchase order and send it to the supplier as a PDF.
+4. Open Print templates, choose Purchase order and send it to the supplier as a PDF. Only purchase orders still Submitted are listed there.
 5. When the goods come, type the day in Received On and change Status to Received; add a Received movement in Stock Movements for each line and raise Units in Stock by the same.
 
 #### See how the business is doing
@@ -3944,7 +3963,7 @@ It suits, with small changes: A distributor or importer; A cash and carry; A bui
 
 #### Start Here
 
-The guide to this database: the everyday tasks a step at a time, each step saying which table, form, query, report or print template to open. Open its report, Start Here, to read or print it. Delete the table when you no longer need it; nothing else uses it. The sample has 28 records.
+The guide to this database: the everyday tasks a step at a time, each step saying which table, form, query, report or print template to open. Open its report, Start Here, to read or print it. Delete the table when you no longer need it; nothing else uses it. The sample has 27 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4026,7 +4045,7 @@ Your own staff: sales, buying, the warehouse and accounts. The sample has 9 reco
 
 #### Orders
 
-Customers' orders, one record each. The sample has 635 records.
+Customers' orders, one record each. The sample has 637 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4043,7 +4062,7 @@ Customers' orders, one record each. The sample has 635 records.
 
 #### Order Lines
 
-The products on each order. The sample has 1,883 records.
+The products on each order. The sample has 1,887 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4054,7 +4073,6 @@ The products on each order. The sample has 1,883 records.
 | Unit Price | Currency | The price of one unit on this order, kept so a later price change does not alter it. |
 | Discount | Number | The discount as a fraction: 0.05 is five percent. |
 | Tax Rate | Number | The VAT rate of the line, taken from its product's group when the order was taken. |
-| Invoice | Points at Invoices | The invoice the line went on, once the order shipped and was invoiced. |
 
 #### Categories
 
@@ -4088,7 +4106,7 @@ What you sell, one record for each line in the catalogue. The sample has 55 reco
 
 #### Purchase Orders
 
-Orders you place with your suppliers. The sample has 208 records.
+Orders you place with your suppliers. The sample has 209 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4103,7 +4121,7 @@ Orders you place with your suppliers. The sample has 208 records.
 
 #### Purchase Lines
 
-The products on each purchase order. The sample has 270 records.
+The products on each purchase order. The sample has 271 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4115,7 +4133,7 @@ The products on each purchase order. The sample has 270 records.
 
 #### Stock Movements
 
-Every change to stock: goods received, goods sold and corrections from a stock count. Added up, they give what is on the shelf. The sample has 2,077 records.
+Every change to stock: goods received, goods sold and corrections from a stock count. Added up, they give what is on the shelf. The sample has 2,083 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4128,7 +4146,7 @@ Every change to stock: goods received, goods sold and corrections from a stock c
 
 #### Invoices
 
-An invoice for each shipped order. The sample has 608 records.
+An invoice for each shipped order. The sample has 610 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4151,7 +4169,6 @@ An invoice for each shipped order. The sample has 608 records.
 - Orders.Shipper points at a record in Companies
 - Order Lines.Order points at a record in Orders
 - Order Lines.Product points at a record in Products
-- Order Lines.Invoice points at a record in Invoices
 - Products.Category points at a record in Categories
 - Products.Supplier points at a record in Companies
 - Purchase Orders.Supplier points at a record in Companies
@@ -4293,45 +4310,47 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Invoice
 
-The tax invoice sent when an order ships: the business's details at the head, the customer's address, each line with its VAT rate, and the goods, delivery, VAT and total due. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
+The tax invoice sent when an order ships: the business's details at the head, the customer's address, the order's lines with their VAT rates, and the goods, delivery (when charged), VAT and total due. While it is owed it says how to pay; once paid, the day it was paid. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Number}
 - Fields: Invoice to, Invoice number, Address, Date, City, Payment due, Postcode, Your order, Country, Shipped
 - Lines from Order Lines: Code, Product, Unit, Quantity, Unit Price, Discount %, Net, VAT %, VAT
 - Totals: Goods, Delivery, VAT, Total due
 - Words: {Business.Payment Terms} Please pay to {Business.Bank Details}, quoting {Number}.
+- Words: Paid in full on {Paid On}. Thank you.
 - Words: {Business.Document Footer}
 
 #### Delivery note
 
-Goes in the box with a shipped order: what was sent and how many, without prices, for the customer to check and sign. One for each record of Orders, on a4 paper, with the Business record at the head.
+Goes in the box with a shipped order: what was sent and how many, without prices, for the customer to check and sign. It prints for orders with a Shipped Date only. One for each record of Orders, on a4 paper, with the Business record at the head.
 
 - Heading: Delivery note DN-{ID}
 - Fields: Deliver to, Order, Address, Ordered, City, Shipped, Postcode, Carrier, Country, Instructions
 - Lines from Order Lines: Code, Product, Unit, Quantity
-- Totals: Units
+- Totals: Lines, Units
 - Words: Please check the goods against this note. Shortages or damage to be reported within 48 hours of delivery.
 - Signed by: Received in good order by, Date
 
 #### Purchase order
 
-Sent to a supplier: what to send, at what cost, and when it is expected. Numbered PO-2026-0042. One for each record of Purchase Orders, on a4 paper, with the Business record at the head.
+Sent to a supplier: what to send, at what cost, and when it is expected. Numbered PO-2026-0042. It prints for purchase orders still Submitted; one already received prints from the Purchase Orders form, with the day it came in. One for each record of Purchase Orders, on a4 paper, with the Business record at the head.
 
 - Heading: Purchase order {Number}
-- Fields: To, Order number, Address, Date, City, Deliver by, Country, Ordered by
+- Fields: To, Order number, Address, Date, City, Deliver by, Country, Ordered by, Received
 - Lines from Purchase Lines: Code, Product, Unit, Quantity, Unit Cost, Total
 - Totals: Order total
 - Words: Please quote {Number} on your delivery note and invoice. Deliver to {Business.Address}, {Business.City} {Business.Postcode}.
 
 #### Statement
 
-Sent to a customer each month: their invoices, which are paid and when, and the balance owing. It prints for every company; print it for a customer from the Companies form. One for each record of Companies, on a4 paper, with the Business record at the head.
+Sent to a customer each month: the invoices they have not paid yet, oldest first, with the days each is overdue and the balance as it builds up to what they owe. It prints for customers only, not suppliers or carriers. One for each record of Companies, on a4 paper, with the Business record at the head.
 
 - Heading: Statement of account
 - Fields: Account, Terms (days), Address, City, Postcode, Country
-- Lines from Invoices: Invoice, Date, Due, Amount, Paid, Owing
-- Totals: Invoiced, Balance owing
+- Lines from Invoices: Invoice, Date, Due, Days overdue, Amount, Balance
+- Totals: Statement date, Invoices unpaid, Balance owing
 - Words: Please pay the balance owing to {Business.Bank Details}. If you have paid since this statement was made, thank you.
+- Words: Nothing is owed on your account today. Thank you for your custom.
 
 ### Starting empty
 
@@ -4398,11 +4417,11 @@ It suits, with small changes: A cabinet maker or joiner; A bakery's production s
 - Your records live in one file on your computer. Keep copies: File, Save As makes one, and a copy on another drive or in your own cloud storage keeps it safe if this computer is lost. Close the database before copying the file by hand.
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
 - Prices in Products, quotes and orders are before VAT. Everything the workshop sells is at the standard rate, 0.2, and delivery carries VAT too. A shop that shows prices with VAT in its showroom adds a fifth to these.
-- An invoice is the sales order itself once it is delivered: its Invoice No, Invoice Date, Net, VAT and Invoice Amount are filled in on the day. So the Invoice print template prints from Sales Orders, and an order not yet delivered prints with no number. Print the one on screen, or choose those to print.
+- An invoice is the sales order itself once it is delivered: its Invoice No, Invoice Date, Net, VAT and Invoice Amount are filled in on the day. So the Invoice print template prints from Sales Orders, for the orders that have an Invoice No.
 - Net and VAT are worked out the way the invoice shows them: each line rounded to the penny, its VAT rounded to the penny, then added up, and the VAT on delivery added. Work them out the same way when you type them, or the invoice and the record will differ by a penny.
 - Stock and materials are not counted by the database on its own. In Stock, On Order and Allocated are typed figures, kept right by the Material Movements and Stock Movements records you add. Count once a month and correct them with a Counted or Adjusted movement.
 - A work order's materials are copied into Work Order Materials when it is planned. Changing a product's bill of materials afterwards changes new work orders, not ones already planned.
-- The Statement print template prints one for every customer, including members of the public who paid on delivery. Choose the trade accounts you want before printing.
+- Each print template prints only the records it is for: quotes waiting for an answer, invoices for delivered orders, delivery notes for open orders, purchase orders not yet received, statements for trade accounts and works orders for the bench. Any record prints from its own form, whatever it is.
 - Document numbers run in date order with a new run each year. When you type a new one, look at the last number used in that table and add one.
 
 ### Tutorial
@@ -4452,7 +4471,7 @@ It suits, with small changes: A cabinet maker or joiner; A bakery's production s
 
 1. When money comes in, open the order in the Sales Orders form and type Paid On.
 2. At the start of each month open the Invoices due report: every unpaid invoice by customer, with days overdue.
-3. Open Print templates, choose Statement, choose the trade customers who owe something and press Print or Save as PDF. Send each its statement.
+3. Open Print templates and choose Statement: it prints for each shop and designer, listing what they have not paid. Press Print or Save as PDF and send each its statement.
 4. Ring anyone more than a fortnight overdue. The Unpaid invoices query shows the oldest first.
 
 #### Chase quotes and see how many are won
@@ -4519,7 +4538,7 @@ The merchants the workshop buys its materials from. The sample has 6 records.
 
 #### Material Purchases
 
-Each order placed with a supplier. The Purchase order print template prints one, with its lines. The sample has 251 records.
+Each order placed with a supplier. The Purchase order print template prints one, with its lines. The sample has 263 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4552,7 +4571,7 @@ Everything that goes into a product: timber, sheet materials, fittings, fixings,
 
 #### Purchase Lines
 
-What was ordered on each purchase. The sample has 409 records.
+What was ordered on each purchase. The sample has 428 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4564,7 +4583,7 @@ What was ordered on each purchase. The sample has 409 records.
 
 #### Material Movements
 
-Every change to a material's stock, so the In Stock figure can be traced. The sample has 3,646 records.
+Every change to a material's stock, so the In Stock figure can be traced. The sample has 3,673 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4623,7 +4642,7 @@ The people in the workshop who make things and book their hours. The sample has 
 
 #### Customers
 
-The shops, designers and people who buy from the workshop. The sample has 247 records.
+The shops, designers and people who buy from the workshop. The sample has 246 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4641,7 +4660,7 @@ The shops, designers and people who buy from the workshop. The sample has 247 re
 
 #### Sales Orders
 
-Each order a customer places. The sample has 432 records.
+Each order a customer places. The sample has 441 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4663,7 +4682,7 @@ Each order a customer places. The sample has 432 records.
 
 #### Sales Lines
 
-The products on each order. The sample has 925 records.
+The products on each order. The sample has 980 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4677,7 +4696,7 @@ The products on each order. The sample has 925 records.
 
 #### Quotes
 
-A price given before an order, for made-to-order work: kitchens, tables, bookcases and worktops. When the customer accepts, the order is taken and the quote points at it. The Quote print template prints one. The sample has 238 records.
+A price given before an order, for made-to-order work: kitchens, tables, bookcases and worktops. When the customer accepts, the order is taken and the quote points at it. The Quote print template prints one. The sample has 248 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4696,7 +4715,7 @@ A price given before an order, for made-to-order work: kitchens, tables, bookcas
 
 #### Quote Lines
 
-The products on each quote. The sample has 375 records.
+The products on each quote. The sample has 395 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4710,7 +4729,7 @@ The products on each quote. The sample has 375 records.
 
 #### Time Sheets
 
-The hours each maker booked to each work order, one record per maker, work order and day. The sample has 1,437 records.
+The hours each maker booked to each work order, one record per maker, work order and day. The sample has 1,491 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4722,7 +4741,7 @@ The hours each maker booked to each work order, one record per maker, work order
 
 #### Work Orders
 
-A job to make a quantity of one product, either for a customer's order or to fill the shelf. The Works order print template prints its sheet for the bench. The sample has 559 records.
+A job to make a quantity of one product, either for a customer's order or to fill the shelf. The Works order print template prints its sheet for the bench. The sample has 574 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4742,7 +4761,7 @@ A job to make a quantity of one product, either for a customer's order or to fil
 
 #### Work Order Materials
 
-The materials a work order takes, copied from the product's bill of materials when the work order is planned, so a later change to the bill does not alter a job already planned. The works order sheet lists them. The sample has 3,340 records.
+The materials a work order takes, copied from the product's bill of materials when the work order is planned, so a later change to the bill does not alter a job already planned. The works order sheet lists them. The sample has 3,384 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -4753,7 +4772,7 @@ The materials a work order takes, copied from the product's bill of materials wh
 
 #### Stock Movements
 
-Every change to the stock of finished goods. The sample has 1,440 records.
+Every change to the stock of finished goods. The sample has 1,502 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5017,11 +5036,12 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Quote
 
-The quotation sent for made-to-order work: the customer's name and address, each piece with its price, trade discount and VAT, the delivery, the total, how long the prices hold, and a place to sign to accept. One prints for each record in Quotes. One for each record of Quotes, on a4 paper, with the Business record at the head.
+The quotation sent for made-to-order work: the customer's name and address, each piece with its price, trade discount and VAT, the delivery, the total, how long the prices hold, and a place to sign to accept. It prints for quotes still Sent, waiting for an answer; any other prints from the Quotes form. One for each record of Quotes, on a4 paper, with the Business record at the head.
 
 - Heading: Quotation {Number}
 - Fields: Prepared for, Quote number, For the attention of, Date, Address, Prices held until, Town, Postcode
-- Words: Thank you for asking us to quote. Notes: {Notes}
+- Words: Thank you for asking us to quote.
+- Words: Thank you for asking us to quote. What you asked for: {Notes}
 - Lines from Quote Lines: Code, Description, Qty, Each, Discount %, Net, VAT %, VAT
 - Totals: Goods, Delivery, Net total, VAT, Total
 - Words: Each piece is made to order in our workshop from solid timber, so no two are quite alike. The price includes finishing and, where shown, delivery and carrying in; it holds until {Valid Until}. To go ahead, sign below and send this back, or reply to us by e-mail quoting {Number}, and we will confirm a delivery date. Made-to-order pieces are made for you and are not returnable unless faulty.
@@ -5030,18 +5050,19 @@ The quotation sent for made-to-order work: the customer's name and address, each
 
 #### Invoice
 
-The VAT invoice that goes with a delivery: the invoice number and tax point, each line with its discount and VAT rate, the goods, delivery, VAT and total due, and how to pay. It prints from Sales Orders, so an order not yet delivered prints without a number: print the one on screen, or those chosen. One for each record of Sales Orders, on a4 paper, with the Business record at the head.
+The VAT invoice that goes with a delivery: the invoice number and tax point, each line with its discount and VAT rate, the goods, delivery, VAT and total due, and how to pay while it is owed, or the day it was paid. It prints from Sales Orders, for the orders delivered and given an invoice number only. One for each record of Sales Orders, on a4 paper, with the Business record at the head.
 
 - Heading: VAT invoice {Invoice No}
 - Fields: Invoice to, Invoice number, For the attention of, Invoice date (tax point), Address, Our order, Town, Delivered, Postcode, Payment due
 - Lines from Sales Lines: Code, Description, Qty, Each, Trade discount %, Net, VAT %, VAT
 - Totals: Goods, Delivery, Net total, VAT, Total due
 - Words: {Business.Payment Terms} Please quote {Invoice No} with your payment. By bank transfer to {Business.Bank Details}. VAT number {Business.Tax Number}.
+- Words: Paid in full on {Paid On}. Thank you. VAT number {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Delivery note
 
-Goes in the van with an order: what is being delivered, without prices, where to, a phone number for the driver, and two places to sign. Print it the day before the delivery. One for each record of Sales Orders, on a4 paper, with the Business record at the head.
+Goes in the van with an order: what is being delivered, without prices, where to, a phone number for the driver, and two places to sign. It prints for open orders, those still to go out: print it the day before the delivery. One for each record of Sales Orders, on a4 paper, with the Business record at the head.
 
 - Heading: Delivery note DN-{ID}
 - Fields: Deliver to, Our order, Contact, Ordered, Address, Due, Town, Delivered, Postcode, Phone
@@ -5053,10 +5074,10 @@ Goes in the van with an order: what is being delivered, without prices, where to
 
 #### Purchase order
 
-Sent to a timber merchant or a fittings supplier: what to send, at what price, and when it is wanted, with the workshop's delivery address. One for each record of Material Purchases, on a4 paper, with the Business record at the head.
+Sent to a timber merchant or a fittings supplier: what to send, at what price, and when it is wanted, with the workshop's delivery address. It prints for orders still Ordered; one received prints from the Material Purchases form. One for each record of Material Purchases, on a4 paper, with the Business record at the head.
 
 - Heading: Purchase order {Number}
-- Fields: To, Order number, For the attention of, Date, Address, Deliver by, Town, Postcode
+- Fields: To, Order number, For the attention of, Date, Address, Deliver by, Town, Postcode, Received
 - Lines from Purchase Lines: Our code, Description, Unit, Quantity, Price, Amount
 - Totals: Total before VAT
 - Words: Please deliver to {Business.Address}, {Business.City} {Business.Postcode}, on a weekday between 8 and 4. Timber to be dry, straight and free of shakes; we may refuse boards that are not. Quote {Number} on your delivery note and your invoice.
@@ -5064,17 +5085,18 @@ Sent to a timber merchant or a fittings supplier: what to send, at what price, a
 
 #### Statement
 
-Sent to each trade account at the start of the month: every invoice with what was paid and when, and the balance owing. It prints one for every customer, so choose the trade accounts with something owing. One for each record of Customers, on a4 paper, with the Business record at the head.
+Sent to each trade account at the start of the month: the invoices not yet paid, oldest first, with the days each is overdue and the balance as it builds up to what is owed. It prints for shops and designers only, not the public, who pay on delivery. One for each record of Customers, on a4 paper, with the Business record at the head.
 
 - Heading: Statement of account
 - Fields: Account, Account type, For the attention of, Days to pay, Address, Town, Postcode
-- Lines from Sales Orders: Invoice, Date, Due, Amount, Paid, Owing
-- Totals: Statement date, Balance owing
-- Words: An invoice with no date paid is still owed. {Business.Payment Terms} If you have paid in the last few days, thank you, and please ignore this. Bank transfer to {Business.Bank Details}.
+- Lines from Sales Orders: Invoice, Date, Due, Days overdue, Amount, Balance
+- Totals: Statement date, Invoices unpaid, Balance owing
+- Words: {Business.Payment Terms} If you have paid in the last few days, thank you, and please ignore this. Bank transfer to {Business.Bank Details}.
+- Words: Nothing is owed on your account today. Thank you.
 
 #### Works order
 
-The sheet for the bench: what to make and how many, for whom, when to start and finish, the standard hours, the customer's wishes, and the list of materials to take from stock, with places to sign when it is made and checked. One for each record of Work Orders, on a4 paper, with the Business record at the head.
+The sheet for the bench: what to make and how many, for whom, when to start and finish, the standard hours, the customer's wishes, and the list of materials to take from stock, with places to sign when it is made and checked. It prints for work orders Planned or In progress; the order and customer show only for made-to-order work. One for each record of Work Orders, on a4 paper, with the Business record at the head.
 
 - Heading: Works order {Number}
 - Fields: Code, Make, How many, Given to, Start, Finish by, For order, Customer, Standard hours, Status, Started, Finished
@@ -5101,7 +5123,7 @@ Start with Business: your own name, address, VAT number and bank details, which 
 
 **How do I print an invoice I sent last month?**
 
-Open Print templates, choose Invoice, and pick the order by its number or customer. Every order prints, whatever its date. To find the order, look the invoice number up in the Unpaid invoices query or the Sales Orders table.
+Open Print templates, choose Invoice, and pick the order by its number or customer. Every invoiced order prints, whatever its date. To find the order, look the invoice number up in the Unpaid invoices query or the Sales Orders table.
 
 **Why is there no Invoices table?**
 
@@ -5154,7 +5176,7 @@ It suits, with small changes: An extension and loft conversion builder; A kitche
 - The Job Ledger holds a job's value as well as its costs, so that the Job profit query can add them up in one go. Contract, Variation and Contingency entries are value; Labour, Materials, Plant and Subcontract are costs.
 - Labour is costed once a week, on Friday, from who was on site; this week's labour is not in the ledger until then. Office staff are not costed to jobs.
 - Stage amounts are worked out when the contract is signed and must add up to the contract sum. Variations do not change them: they are charged on their own lines.
-- Every record of a print template's table prints, so the Statement prints for every client and the Contract for every job. Choose the ones you want, or print the one on screen.
+- Each print template prints only the records it is for: quotes still Sent, contracts for jobs not yet Closed, variations still Proposed. Invoices and statements print for all. Any record prints from its own form, whatever it is.
 - Document numbers run in date order with a new run each year. When you type a new one, look at the last number in that table and add one.
 
 ### Tutorial
@@ -5219,7 +5241,7 @@ It suits, with small changes: An extension and loft conversion builder; A kitche
 
 1. Open the Invoices due report: every unpaid invoice by client, with days overdue.
 2. When money comes in, open the invoice in the Invoices form and type Paid On.
-3. At the month end open Print templates, choose Statement, choose the clients who owe something and press Print or Save as PDF.
+3. At the month end open Print templates and choose Statement: each lists the client's unpaid invoices and what they owe. Choose the clients who owe something and press Print or Save as PDF.
 4. The Contract account report shows each job's contract sum, invoiced, retention held, paid and owing.
 
 ### Tables
@@ -5349,7 +5371,7 @@ A price for the work, written after the site visit. The Quotation print template
 
 #### Quote Lines
 
-The lines of each quote, in sections. The sample has 3,223 records.
+The lines of each quote, in sections. The sample has 3,240 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5366,7 +5388,7 @@ The lines of each quote, in sections. The sample has 3,223 records.
 
 #### Jobs
 
-An accepted quote, now a contract. The Contract print template prints it with its stage payments. The sample has 103 records.
+An accepted quote, now a contract. The Contract print template prints it with its stage payments. The sample has 99 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5393,7 +5415,7 @@ An accepted quote, now a contract. The Contract print template prints it with it
 
 #### Job Stages
 
-The stage payments of each contract: what is paid when, from the deposit to completion. The sample has 273 records.
+The stage payments of each contract: what is paid when, from the deposit to completion. The sample has 263 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5426,7 +5448,7 @@ Changes to a contract once it is signed: extra work the client asks for, work fo
 
 #### Invoices
 
-Every invoice to a client: the deposit, each stage, completion, and the release of retention. The Stage invoice print template prints one. The sample has 267 records.
+Every invoice to a client: the deposit, each stage, completion, and the release of retention. The Stage invoice print template prints one. The sample has 255 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5447,7 +5469,7 @@ Every invoice to a client: the deposit, each stage, completion, and the release 
 
 #### Invoice Lines
 
-The lines of each invoice: the stage payment, each variation, the contingency credit, and the retention taken off. The sample has 504 records.
+The lines of each invoice: the stage payment, each variation, the contingency credit, and the retention taken off. The sample has 485 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5460,7 +5482,7 @@ The lines of each invoice: the stage payment, each variation, the contingency cr
 
 #### Job Ledger
 
-Every amount that goes to a job's account. Its value: the contract sum when signed, each variation when agreed, and the contingency credited back. Its costs: each week's labour of each person on the crew, every merchant's invoice, every subcontractor's invoice and the skips. Added up, it gives the job's profit. The sample has 1,504 records.
+Every amount that goes to a job's account. Its value: the contract sum when signed, each variation when agreed, and the contingency credited back. Its costs: each week's labour of each person on the crew, every merchant's invoice, every subcontractor's invoice and the skips. Added up, it gives the job's profit. The sample has 1,464 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5480,7 +5502,7 @@ Every amount that goes to a job's account. Its value: the contract sum when sign
 
 #### Site Diary
 
-One entry per job for each working day on site, written by the crew lead. The sample has 1,273 records.
+One entry per job for each working day on site, written by the crew lead. The sample has 1,259 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -5737,10 +5759,11 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Quotation
 
-The quote sent after a site visit: the work in sections with each line's quantity, rate and amount, the price before and with VAT, how long it holds, what it leaves out, and a place for the client to sign. One prints for each quote. One for each record of Quotes, on a4 paper, with the Business record at the head.
+The quote sent after a site visit: the work in sections with each line's quantity, rate and amount, the price before and with VAT, how long it holds, what it leaves out, and a place for the client to sign. The lines come in their sections, each with its subtotal. It prints for quotes still Sent; any other prints from the Quotes form. One for each record of Quotes, on a4 paper, with the Business record at the head.
 
 - Heading: Quotation {Number}
 - Fields: Prepared for, Quote number, Address of the work, Date, Town, Price holds until, Postcode, Weeks on site, about, The work
+- Words: Thank you for having us round. This is our price for the work below, as we discussed on site.
 - Words: Thank you for having us round. This is our price for the work below, as we discussed on site. {Notes}
 - Lines from Quote Lines: Section, Description, Qty, Unit, Rate, Amount, VAT
 - Totals: Price before VAT, VAT, Price with VAT
@@ -5750,19 +5773,21 @@ The quote sent after a site visit: the work in sections with each line's quantit
 
 #### Contract
 
-The building contract for a job, in plain words: the parties, the works, the price and the contingency, the stage payments as a table, start and finish, variations, retention, defects, the site, insurance, ending the contract and the right to cancel, with signatures. It prints for every job, repairs included. It is a starting point: have it checked by someone who knows the law where you work. One for each record of Jobs, on a4 paper, with the Business record at the head.
+The building contract for a job, in plain words: the parties, the works, the price and the contingency, the stage payments as a table, start and finish, variations, retention, defects, the site, insurance, ending the contract and the right to cancel, with signatures. The contingency and retention clauses are worded for what the contract holds. It prints for live contracts (every job not yet Closed), repairs included. It is a starting point: have it checked by someone who knows the law where you work. One for each record of Jobs, on a4 paper, with the Business record at the head.
 
 - Heading: Building contract {Number}
 - Fields: The client, Contract number, Address of the works, Date of this contract, Town, Our quotation, Postcode, Contract sum, before VAT, Start, Finish, about
 - Words: THIS CONTRACT is made on {Signed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Builder") and {Client.Name} of {Client.Address}, {Client.City} {Client.Postcode} ("the Client").
 - Words: 1. The works. The Builder will carry out the works described in quotation {Quote.Number}, {Title}, at the Client's property above. The work will be done with care and skill, with materials of the kind described in the quotation, and to meet the building regulations and any planning permission for it.
 - Words: 2. The price. The contract sum is {Contract Sum} plus VAT at the rate in force when each invoice is raised. It includes a contingency of {Contingency} for work that cannot be seen before the works start. The contingency is not spent by the Builder on its own account: work it was meant for is agreed as a variation under clause 5, and the whole contingency is credited to the Client on the final invoice.
+- Words: 2. The price. The contract sum is {Contract Sum} plus VAT at the rate in force when each invoice is raised. It holds no contingency: any work found once the works start is agreed as a variation under clause 5.
 - Words: 3. Stage payments. The Builder will invoice the payments below as each stage is reached. Each invoice after the deposit carries any variations agreed since the last one, less the retention in clause 6. The Client will pay each invoice within {Client.Payment Days} days of its date. If a payment is late the Builder may stop work, after giving seven days' notice in writing, until it is paid.
 - Lines from Job Stages: Stage, Payment due when, Percent, Amount before VAT, Expected
 - Totals: Contract sum, before VAT
 - Words: 4. Start and finish. The Builder will start on {Start Date} and expects to finish by {Finish Date}. The Builder will tell the Client as soon as anything will hold the work up, such as bad weather, a change asked for by the Client, a problem found once work has started, or materials that cannot be had. The finish date moves by the time lost.
 - Words: 5. Variations. Any change to the works, whether the Client asks for it or it is found to be needed once work has started, is written on a variation order with its price and any change to the finish date, and signed by both before the work is done. Only work needed at once to keep the building safe or dry may be done first, and it is then written up within two working days.
-- Words: 6. Retention. The Client may hold back {Retention Percent} percent of each invoice after the deposit (none when that figure is nought). The amount held is released {Defects Months} months after the works are finished, once any defects reported in that time have been put right.
+- Words: 6. Retention. The Client may hold back {Retention Percent} percent of each invoice after the deposit. The amount held is released {Defects Months} months after the works are finished, once any defects reported in that time have been put right.
+- Words: 6. Retention. Nothing is held back from the invoices under this contract.
 - Words: 7. Defects. For {Defects Months} months after the works are finished the Builder will come back and put right, free of charge, any fault in the work or in materials the Builder supplied, when the Client reports it in writing. This does not cover fair wear and tear, damage done by others, or the hairline cracks of new plaster and timber drying out, which are filled at the end of the period.
 - Words: 8. The site. The Client will give access during working hours, 8 until 5 on weekdays, and the use of water and electricity. The Builder will protect the parts of the house not being worked on, keep the site tidy and safe, and take away the waste.
 - Words: 9. Insurance and permissions. The Builder holds public liability insurance and insures the works until they are handed over. The Client will tell their home insurer about the works before they start, and is responsible for planning permission and any party wall notices unless the quotation says otherwise.
@@ -5772,37 +5797,43 @@ The building contract for a job, in plain words: the parties, the works, the pri
 
 #### Stage invoice
 
-The VAT invoice for a deposit, a stage, completion or the retention release: the stage payment, the variations agreed since the last invoice, the contingency credited at the end, the retention taken off, the VAT and the total due. One for each record of Invoices, on a4 paper, with the Business record at the head.
+The VAT invoice for a deposit, a stage, completion or the retention release: the stage payment, the variations agreed since the last invoice, the contingency credited at the end, the retention taken off, the VAT and the total due, with how to pay while it is owed or the day it was paid. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: VAT invoice {Number}
 - Fields: Invoice to, Invoice number, Address, Invoice date (tax point), Town, Payment due, Postcode, Invoice for, Contract, Contract sum, The works
 - Lines from Invoice Lines: No, Description, Amount, VAT %, VAT
 - Totals: Amount before VAT, VAT, Total due
-- Words: Retention held on this invoice: {Retention}. {Business.Payment Terms} Please quote {Number} with your payment, by bank transfer to {Business.Bank Details}. VAT number {Business.Tax Number}.
+- Words: Retention held on this invoice: {Retention}, released after the defects period.
+- Words: {Business.Payment Terms} Please quote {Number} with your payment, by bank transfer to {Business.Bank Details}. VAT number {Business.Tax Number}.
+- Words: Paid in full on {Paid On}. Thank you. VAT number {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Variation order
 
-A change to a contract for the client to sign before the work is done: what changes, why, what it adds to or takes off the price, and the extra working days. One for each record of Variations, on a4 paper, with the Business record at the head.
+A change to a contract for the client to sign before the work is done: what changes, why, what it adds to or takes off the price, and the extra working days when there are any. It prints for variations still Proposed; one agreed prints from the Variations form. One for each record of Variations, on a4 paper, with the Business record at the head.
 
 - Heading: Variation order {Number}
-- Fields: Client, Variation number, Address of the works, Date raised, Contract, Reason, The works, Status
+- Fields: Client, Variation number, Address of the works, Date raised, Contract, Reason, The works, Status, Agreed
 - Words: Under clause 5 of contract {Job.Number}, the works are changed as follows:
 - Words: {Description}
 - Totals: Change to the contract sum, before VAT, VAT, Change with VAT, Extra working days
-- Words: An amount below nought is work taken out, and comes off the contract sum. The finish date moves by the extra working days shown. Once both sides have signed, the work goes ahead and the amount is added to the next stage invoice. Everything else in the contract stays as it was.
+- Words: Once both sides have signed, the work goes ahead and the amount is added to the next stage invoice.
+- Words: This takes work out of the contract: once both sides have signed, the amount comes off the next stage invoice.
+- Words: The finish date moves by the extra working days shown. Everything else in the contract stays as it was.
+- Words: The finish date does not change. Everything else in the contract stays as it was.
 - Signed by: Agreed by the Client, For the Builder
 
 #### Statement
 
-Each client's invoices with what has been paid and the balance owing. It prints one for every client; choose those with something owing. One for each record of Clients, on a4 paper, with the Business record at the head.
+Each client's unpaid invoices, oldest first, with the balance as it builds up to what is owed. A client who owes nothing gets a statement that says so. One for each record of Clients, on a4 paper, with the Business record at the head.
 
 - Heading: Statement of account
 - Fields: Client, Days to pay, Address, Town, Postcode
-- Lines from Invoices: Invoice, Date, Contract, For, Amount, Paid, Owing
-- Totals: Statement date, Balance owing
-- Words: An invoice with no date paid is still owed. Retention held under your contract is not shown as owing until it is invoiced at the end of the defects period. If you have paid in the last few days, thank you, and please ignore this.
+- Lines from Invoices: Invoice, Date, Due, Contract, For, Amount, Balance
+- Totals: Statement date, Invoices unpaid, Balance owing
+- Words: Retention held under your contract is not shown as owing until it is invoiced at the end of the defects period. If you have paid in the last few days, thank you, and please ignore this.
 - Words: Bank transfer to {Business.Bank Details}.
+- Words: Nothing is owed on your account today. Retention held under a contract is invoiced at the end of its defects period. Thank you.
 
 ### Starting empty
 
@@ -5870,8 +5901,7 @@ It suits, with small changes: A used car or van dealer; A motorcycle dealer; A c
 - The margin in the queries is the car's own: what it sold for, less what it cost, the buying fee, its preparation and the VAT on the margin. Warranty profit and finance commission are counted in their own queries, and overheads (wages, rent, advertising) are not in this database.
 - VAT on used cars: most are sold under the margin scheme, where VAT is a sixth of the margin, paid by the dealer and not shown on the invoice. A VAT-qualifying car shows its VAT on the invoice, but because the dealer reclaims the VAT it paid when buying, what it owes comes to the same sixth of the margin, so the margin query treats both alike. Check the rules for your own country with your accountant.
 - Prep Cost on a car is kept by hand: add each job's cost when you enter it in Preparation. The query Preparation by vehicle puts the two side by side.
-- Every sale is printed by the print templates, whatever its Status: a reserved sale's invoice has no number yet, and a cancelled sale still has its agreement. Choose the record to print, or print the one on screen.
-- The Window card prints every car on file, sold ones too. Choose the cars on sale (the query Stock by days in stock lists them) and print those.
+- Each print template prints only the records it is for: invoices for sales handed over, agreements for sales not cancelled, valuation letters for offers still open, certificates for warranties still running, and window cards for cars For sale. Any record prints from its own form, whatever its Status.
 - A part-exchange comes into stock as a new record in Vehicles, with its allowance as the purchase price and no supplier. Its valuation points at the sale it was taken against and at the new stock record.
 - Numbers (orders, invoices, certificates, valuations, stock numbers) are typed in date order, a new run each year: look at the last one in the form and add one.
 
@@ -5997,7 +6027,7 @@ Where cars are bought: the auctions and the trade sellers. Part-exchanges come f
 
 #### Customers
 
-Everyone who has test driven, bought or had a car valued, one record each. The sample has 1,522 records.
+Everyone who has test driven, bought or had a car valued, one record each. The sample has 1,527 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6015,7 +6045,7 @@ Everyone who has test driven, bought or had a car valued, one record each. The s
 
 #### Vehicles
 
-Every car the dealer has bought, one record each, in stock or sold. The sample has 487 records.
+Every car the dealer has bought, one record each, in stock or sold. The sample has 489 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6050,7 +6080,7 @@ Every car the dealer has bought, one record each, in stock or sold. The sample h
 
 #### Vehicle Features
 
-The features listed on a car's window card and advert, one record each. The sample has 2,982 records.
+The features listed on a car's window card and advert, one record each. The sample has 2,993 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6060,7 +6090,7 @@ The features listed on a car's window card and advert, one record each. The samp
 
 #### Preparation
 
-Every job done to get a car ready for sale, with what it cost. The sample has 1,420 records.
+Every job done to get a car ready for sale, with what it cost. The sample has 1,422 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6074,7 +6104,7 @@ Every job done to get a car ready for sale, with what it cost. The sample has 1,
 
 #### Test Drives
 
-Every test drive, taken or booked, and how it ended. The sample has 1,564 records.
+Every test drive, taken or booked, and how it ended. The sample has 1,569 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6176,7 +6206,7 @@ The warranties offered: three months included with every car, and longer plans t
 
 #### Warranties
 
-The warranty each car left with, and when it runs out. The sample has 447 records.
+The warranty each car left with, and when it runs out. The sample has 448 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6428,20 +6458,21 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Vehicle sales invoice
 
-The invoice given at handover: the car with its registration, mileage and first registration date, the warranty and extras, the total, the part-exchange allowance, the deposit and finance taken off, and the balance paid. It says whether the car is sold under the margin scheme or is VAT qualifying. A reserved car prints without an invoice number until it is handed over. One for each record of Sales, on a4 paper, with the Business record at the head.
+The invoice given at handover: the car with its registration, mileage and first registration date, the warranty and extras, the total, the part-exchange allowance, the deposit and finance taken off, and the balance paid. It says whether the car is sold under the margin scheme or is VAT qualifying, in words for that scheme, and leaves out a part-exchange, deposit or finance the sale did not have. It prints for sales with an invoice number, those handed over. One for each record of Sales, on a4 paper, with the Business record at the head.
 
 - Heading: Sales invoice {Invoice No}
 - Fields: Sold to, Invoice number, Address, Date of sale, Town, Order, Postcode, Sold by
 - Fields: Registration, Make, Model, First registered, Recorded mileage, Colour, Fuel, Stock number, VAT
 - Lines from Sale Lines: Description, VAT %, VAT included, Amount
 - Totals: Total price, Of which VAT, Less part-exchange allowance, Less deposit paid, Paid by finance, Balance paid at handover
-- Words: VAT: {VAT Scheme}. A used car bought from a private seller or under the margin scheme is sold under the margin scheme: the VAT is within the price, paid by us on our margin, and is not shown or reclaimable. On a VAT-qualifying car the VAT within the price is shown above and a VAT-registered buyer may reclaim it. Warranties are exempt from VAT.
+- Words: VAT: Margin scheme. This car is sold under the margin scheme: the VAT is within the price, paid by us on our margin, and is not shown or reclaimable. Warranties are exempt from VAT; VAT on any extras is shown above.
+- Words: VAT: VAT qualifying. The VAT within the price of this car is shown above, and a VAT-registered buyer may reclaim it. Warranties are exempt from VAT.
 - Words: {Business.Payment Terms} Bank: {Business.Bank Details}.
 - Words: {Business.Document Footer}
 
 #### Sales agreement
 
-The order the customer signs when the deal is agreed and the deposit paid: the parties, the car, what is bought, the deposit, finance and balance, and plainly worded terms on payment, part-exchange, finance, cancelling, handover and warranty. Have it checked against the law of your own country before you use it. One for each record of Sales, on a4 paper, with the Business record at the head.
+The order the customer signs when the deal is agreed and the deposit paid: the parties, the car, what is bought, the deposit, finance and balance, and plainly worded terms on payment, part-exchange, finance, cancelling, handover and warranty, the deposit, part-exchange and finance clauses worded for what the sale has. It prints for every sale not cancelled. Have it checked against the law of your own country before you use it. One for each record of Sales, on a4 paper, with the Business record at the head.
 
 - Heading: Vehicle order and sales agreement {Order No}
 - Fields: Buyer, Order number, Address, Date of order, Town, Handover on or about, Postcode, Phone
@@ -6451,9 +6482,12 @@ The order the customer signs when the deal is agreed and the deposit paid: the p
 - Words: This agreement is made on {Agreed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Seller") and {Customer} of {Customer.Address}, {Customer.City} {Customer.Postcode} ("the Buyer").
 - Words: 1. The vehicle. The Seller agrees to sell and the Buyer agrees to buy the vehicle described above, registration {Vehicle.Registration}, with the extras listed, for the total price above. The mileage shown is the reading on the day of this order; the Seller is not aware of anything suggesting it is wrong.
 - Words: 2. Deposit. The Buyer has paid a deposit of {Deposit} today, and the Seller holds the vehicle for the Buyer until the handover date. The deposit is part of the price.
+- Words: 2. Deposit. No deposit has been paid. The Seller holds the vehicle for the Buyer until the handover date.
 - Words: 3. Payment. The balance due at handover is paid by bank transfer or debit card before the vehicle is driven away. The vehicle remains the Seller's property until the whole price has been paid.
+- Words: 4. Part-exchange. No vehicle is taken in part-exchange on this sale.
 - Words: 4. Part-exchange. Where a vehicle is taken in part-exchange, the allowance above is given on the understanding that it is the Buyer's to sell, that it is handed over in the condition and with no more than 500 miles more than when it was valued, with its keys and registration document, and that any finance owing on it has been declared. The Seller settles declared finance with the lender and takes the amount settled from the allowance.
-- Words: 5. Finance. Where part of the price is paid by finance, the finance agreement is between the Buyer and the lender, not the Seller. This sale depends on the lender accepting the Buyer; if it does not, either party may cancel this agreement and the deposit is returned in full.
+- Words: 5. Finance. Part of the price is paid by finance. The finance agreement is between the Buyer and the lender, not the Seller. This sale depends on the lender accepting the Buyer; if it does not, either party may cancel this agreement and the deposit is returned in full.
+- Words: 5. Finance. No part of the price is paid by finance.
 - Words: 6. Cancelling. If the Buyer cancels for any other reason before handover, the Seller may keep from the deposit the reasonable costs it has already met for this sale, such as work done to the vehicle at the Buyer's request, and returns the rest within 14 days.
 - Words: 7. Handover. The vehicle will be ready on or about {Handover}, valeted, with its keys, service records and registration document, and an MOT certificate running until {Vehicle.MOT Expiry}.
 - Words: 8. Warranty. The warranty shown above starts on the day of handover. What it covers is set out on its certificate, given at handover.
@@ -6463,11 +6497,12 @@ The order the customer signs when the deal is agreed and the deposit paid: the p
 
 #### Part-exchange valuation
 
-The letter sent after valuing a customer's car: the car, what was noted, the allowance offered, and how long the offer stands. One for each record of Part Exchanges, on a4 paper, with the Business record at the head.
+The letter sent after valuing a customer's car: the car, what was noted, the allowance offered, and how long the offer stands. It prints for valuations still Open. One for each record of Part Exchanges, on a4 paper, with the Business record at the head.
 
 - Fields: To, Our reference, Address, Date, Town, Postcode
 - Heading: Your part-exchange valuation
 - Words: Dear {Customer.First Name},
+- Words: Thank you for letting us look at your {Year} {Make} {Model}, registration {Registration}, when you visited us on {Valued On}. We have checked it over and driven it, and taken account of its {Mileage} recorded miles and its {Condition} condition.
 - Words: Thank you for letting us look at your {Year} {Make} {Model}, registration {Registration}, when you visited us on {Valued On}. We have checked it over and driven it, and taken account of its {Mileage} recorded miles and its {Condition} condition. What we noted: {Notes}
 - Words: We can offer you {Offered} for it as a part-exchange against any car from our stock.
 - Words: This offer stands until {Valid Until}, as long as the car is in the same condition when you bring it in, with no more than 500 miles more on it, both keys if it came with two, its registration document and its service records. If there is finance owing on the car, please tell us how much: we settle it with your lender and take what we pay from the allowance.
@@ -6477,7 +6512,7 @@ The letter sent after valuing a customer's car: the car, what was noted, the all
 
 #### Warranty certificate
 
-Given at handover with every car: the holder, the car, the plan, when it starts and ends, the claim limit, what is covered and how to claim. One for each record of Warranties, on a4 paper, with the Business record at the head.
+Given at handover with every car: the holder, the car, the plan, when it starts and ends, the claim limit, what is covered and how to claim. It prints for warranties still running. One for each record of Warranties, on a4 paper, with the Business record at the head.
 
 - Heading: Warranty certificate {Certificate No}
 - Fields: Warranty holder, Certificate, Address, Plan, Postcode, Cover starts, Registration, Cover ends, Make, Mileage at start, Model, Most paid on one claim
@@ -6489,7 +6524,7 @@ Given at handover with every car: the holder, the car, the plan, when it starts 
 
 #### Window card
 
-The card in the car's window on the forecourt: the year, make and model, its mileage and details, its key features and the price. Print it again after a price change. One for each record of Vehicles, on a5 paper, with the Business record at the head.
+The card in the car's window on the forecourt: the year, make and model, its mileage and details, its key features and the price. It prints for cars For sale only. Print it again after a price change. One for each record of Vehicles, on a5 paper, with the Business record at the head.
 
 - Heading: {Year} {Make} {Model}
 - Fields: Miles, Fuel, Gearbox, Colour, Body, Doors, Owners, Service history, MOT until
@@ -6564,7 +6599,7 @@ It suits, with small changes: A barber shop; A nail bar; A beauty or brow and la
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
 - Prices are VAT inclusive. A receipt shows the VAT within each line, worked out as the price less the price divided by one plus the rate, rounded to the penny; the receipt's VAT is those added up. Change the 0.2 in Services and Products if your rate is different, or make it 0 if you are not registered for VAT.
 - The services of a visit are kept twice on purpose: in Booking Services, as booked, and in Receipt Lines, as charged and printed. A receipt should not change after it is handed over, so the till keeps its own copy.
-- Every booking, past or to come, can print an Appointment confirmation. Choose the booking you want before printing; printing them all gives thousands of letters.
+- The Appointment confirmation template prints only bookings still to come that are not cancelled, a few hundred at most, and the Gift voucher template only vouchers not yet used and still in date. Print one from the Bookings or Gift Vouchers form to get it whatever its state.
 - Commission is worked out on takings with VAT in them, as many salons pay it. To pay it on takings before VAT, divide the price by 1.2 in the commission queries.
 - The owner takes no commission, so she has no statements. Staff who have left keep their records with Active set to No.
 - Stock is not counted by Data Files on its own: In Stock goes down as products are sold or used at the basin and up as deliveries arrive. In the sample this was worked out while the records were made; in your own salon, change In Stock when you add a sale or a delivery, or count the shelf each week.
@@ -6704,7 +6739,7 @@ The service menu: every treatment the salon offers, how long it takes and what i
 
 #### Clients
 
-One record per client, with what the salon needs to know before they sit down. The sample has 1,296 records.
+One record per client, with what the salon needs to know before they sit down. The sample has 1,309 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6723,7 +6758,7 @@ One record per client, with what the salon needs to know before they sit down. T
 
 #### Bookings
 
-The appointment book: one record per appointment, past and to come. The sample has 6,816 records.
+The appointment book: one record per appointment, past and to come. The sample has 6,635 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6743,7 +6778,7 @@ The appointment book: one record per appointment, past and to come. The sample h
 
 #### Booking Services
 
-The services in each booking, with the price charged for each. The sample has 9,360 records.
+The services in each booking, with the price charged for each. The sample has 9,173 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6774,7 +6809,7 @@ Everything the salon stocks: retail products sold to clients and back-bar produc
 
 #### Product Sales
 
-Retail sold at the desk, one record per product per sale. The sample has 1,120 records.
+Retail sold at the desk, one record per product per sale. The sample has 1,047 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6789,7 +6824,7 @@ Retail sold at the desk, one record per product per sale. The sample has 1,120 r
 
 #### Stock Deliveries
 
-What came in from suppliers, one record per product per delivery. The sample has 286 records.
+What came in from suppliers, one record per product per delivery. The sample has 282 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6803,7 +6838,7 @@ What came in from suppliers, one record per product per delivery. The sample has
 
 #### Gift Vouchers
 
-Vouchers sold, and when and where each was used. The sample has 142 records.
+Vouchers sold, and when and where each was used. The sample has 130 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6819,7 +6854,7 @@ Vouchers sold, and when and where each was used. The sample has 142 records.
 
 #### Receipts
 
-The till's record of each visit paid for at the desk, one per completed appointment. It keeps what was charged as it was printed, so a receipt printed again later says what the client was given on the day. The sample has 6,070 records.
+The till's record of each visit paid for at the desk, one per completed appointment. It keeps what was charged as it was printed, so a receipt printed again later says what the client was given on the day. The sample has 5,895 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6838,7 +6873,7 @@ The till's record of each visit paid for at the desk, one per completed appointm
 
 #### Receipt Lines
 
-What is on each receipt: a line for each service done and each product bought at the visit. The sample has 9,475 records.
+What is on each receipt: a line for each service done and each product bought at the visit. The sample has 9,193 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -6866,7 +6901,7 @@ A statement for each person on commission for each month, made on the first of t
 
 #### Commission Lines
 
-The lines of each commission statement: the services done by kind, and the retail sold. The sample has 222 records.
+The lines of each commission statement: the services done by kind, and the retail sold. The sample has 216 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7101,21 +7136,23 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Receipt
 
-The till receipt for a visit, on an 80 mm roll: the salon's name, address and VAT number, the client and stylist, each service and product with the VAT within it, the total, the deposit and any voucher taken off, and what was paid today. Numbered RCP-2026-00042. One for each record of Receipts, on receipt-80 paper, with the Business record at the head.
+The till receipt for a visit, on an 80 mm roll: the salon's name, address and VAT number, the client and stylist, each service and product with the VAT within it, the total, and what was paid today after the deposit and any gift voucher came off. The deposit and voucher lines print only when there was one. Numbered RCP-2026-00042. One for each record of Receipts, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
 - Fields: Date, Client, Stylist
 - Lines from Receipt Lines: Item, Qty, Price, Amount, VAT %, VAT
 - Totals: Total, Of which VAT, Less deposit paid, Less gift voucher, Paid today
+- Words: Gift voucher {Voucher Code} taken in full.
 - Words: Paid by {Paid By}. VAT number {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Gift voucher
 
-The voucher a buyer takes away, on A5 card: who it is for and from, what it is worth, its number and use-by date, and the terms. One for each record of Gift Vouchers, on a5 paper, with the Business record at the head.
+The voucher a buyer takes away, on A5 card: who it is for and from, what it is worth, its number and use-by date, and the terms. It prints for vouchers not yet used and still in date; to print one already used or expired, print it from the Gift Vouchers form. One for each record of Gift Vouchers, on a5 paper, with the Business record at the head.
 
 - Heading: Gift voucher
 - Words: For {For}, from {Bought By}.
+- Words: For {For}.
 - Fields: Worth, Voucher number, Issued, Use by
 - Words: To spend on any service or product at {Business.Name}. Call {Business.Phone} or book at {Business.Website}, and give the voucher number when you book.
 - Words: Terms. Valid until the use-by date shown, twelve months from the day it was bought. To be used in full at one visit; it cannot be exchanged for cash and no change is given. Please bring the voucher with you. A lost voucher can be replaced only if we can find its number in our records.
@@ -7128,20 +7165,21 @@ Given to each stylist and therapist on commission with their pay: the month's se
 - Fields: For, Month, Role, Prepared, Level, Paid with wages on
 - Lines from Commission Lines: Work, Done, Takings, Rate %, Commission
 - Totals: Takings, Commission due
+- Words: To be paid with your wages on the 7th.
 - Words: Commission is worked out on what clients paid, VAT included, for completed appointments and retail you sold in the month. It is paid with your wages and taxed with them. If anything here looks wrong, please speak to the owner within 14 days.
 
 #### Appointment confirmation
 
-A letter or e-mail confirming an appointment: the day and time, who with, the services and their prices, the deposit, and the skin test and cancellation policy. Every booking has one; print or send the one on screen, or choose the week's new bookings. Have the cancellation words checked against the consumer rules of your own country. One for each record of Bookings, on a4 paper, with the Business record at the head.
+A letter or e-mail confirming an appointment: the day and time, who with, the services and their prices, the deposit, and the skin test and cancellation policy. It prints for bookings still to come that are not cancelled, and a past one prints from the Bookings form. The paragraph about skin tests prints only when a service in the booking needs one, and the deposit only when one was taken. Have the cancellation words checked against the consumer rules of your own country. One for each record of Bookings, on a4 paper, with the Business record at the head.
 
 - Heading: Your appointment
 - Words: Dear {Client.First Name},
 - Words: Thank you for booking with us. This is to confirm your appointment, booked on {Booked On}.
-- Fields: Date and time, With, Time set aside (minutes), Deposit paid
-- Lines from Booking Services: Service, Price
+- Fields: Day, Time, With, Time set aside (minutes), Deposit paid
+- Lines from Booking Services: Service, Skin test first, Price
 - Totals: Price for the visit, Less deposit paid, To pay on the day
 - Words: Prices include VAT. If you would like a different service on the day, the price may change; your stylist will tell you before starting.
-- Words: Colour, tints and lash lifts need a skin test in the six months before. If you have not had one with us in that time, please call in for a quick test at least 48 hours before your appointment. It takes five minutes.
+- Words: Your appointment includes colour, a tint or a lash lift, which needs a skin test in the six months before. If you have not had one with us in that time, please call in for a quick test at least 48 hours before your appointment. It takes five minutes.
 - Words: Our cancellation policy. If you need to move or cancel, please tell us at least 48 hours before, by phone on {Business.Phone} or by e-mail to {Business.E-mail}, and any deposit is refunded or moved to your new booking. With less notice, or if you do not come, we keep the deposit and may ask for one when you next book. If you are running late, please call: we will do what we can in the time left, or offer you another appointment.
 - Words: We look forward to seeing you.
 - Words: With best wishes, the team at {Business.Name}
@@ -7207,12 +7245,12 @@ It suits, with small changes: A barber shop with or without rented chairs; A hai
 - To start empty, choose the same business on the start screen and then Empty: the same tables, queries, forms, reports and print templates, with nothing in them but the Start Here guide.
 - Your records live in one file on your computer. Keep copies: File, Save As makes one, and a copy on another drive or in your own cloud storage keeps it safe if this computer is lost. Close the database before copying the file by hand.
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
-- A visit is also its receipt: the Receipt No, Total and VAT are filled in when it is paid for. A booking still to come, a no-show or a walk-out has no receipt number, and its Receipt prints empty.
+- A visit is also its receipt: the Receipt No, Total and VAT are filled in when it is paid for. A booking still to come, a no-show or a walk-out has no receipt number, so the Receipt template leaves it out.
 - Chair renters keep their own takings. Their visits are on the queue board so the queue, the waits and the loyalty cards are right, and their totals show in Takings by barber, but they are left out of the shop's VAT. Their lines carry a Tax Rate of 0.
 - Waiting times are worked out from Arrived and Started, which must be on the same day. A walk-in who leaves before their turn is kept, as Walked out, with no Started time, so the queries can count them.
 - Stock is not counted by Data Files on its own: take a product off In Stock when you sell it, and add a delivery when it comes. In the sample this was done while the records were made.
 - A free cut on a rented chair costs the renter their price, so the shop credits it against the next week's rent: that is the line below nought on a Chair rent invoice.
-- Every record of a table prints from its template, so choose the visit, card, agreement or invoice you want before printing.
+- Each print template prints only the records it is for: receipts for paid visits, agreements in force, loyalty cards still in use, and every rent invoice. Printed from a form, the record on screen prints whatever its state.
 
 ### Tutorial
 
@@ -7338,7 +7376,7 @@ Everyone who cuts hair in the shop, past and present: the employed barbers and t
 
 #### Clients
 
-Clients who have given their name, mostly regulars and anyone with a loyalty card. A walk-in who gives only a first name is on the queue board without a record here. The sample has 992 records.
+Clients who have given their name, mostly regulars and anyone with a loyalty card. A walk-in who gives only a first name is on the queue board without a record here. The sample has 975 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7401,7 +7439,7 @@ Each loyalty card a client has had: a stamp for each paid cut, and once there ar
 
 #### Visits
 
-The queue board: every visit, booked or walked in, past, today and to come. A visit that was paid for is also its receipt. The sample has 10,490 records.
+The queue board: every visit, booked or walked in, past, today and to come. A visit that was paid for is also its receipt. The sample has 10,489 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7426,7 +7464,7 @@ The queue board: every visit, booked or walked in, past, today and to come. A vi
 
 #### Visit Lines
 
-What was done and sold in each visit: a line for each service and each product. The sample has 11,467 records.
+What was done and sold in each visit: a line for each service and each product. The sample has 11,485 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7441,7 +7479,7 @@ What was done and sold in each visit: a line for each service and each product. 
 
 #### Stock Deliveries
 
-What came in from the supplier, one record per product per delivery. The sample has 79 records.
+What came in from the supplier, one record per product per delivery. The sample has 74 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7476,7 +7514,7 @@ Each chair rental agreement, current and ended: who rents which chair, for what 
 
 #### Rent Charges
 
-The weekly chair rent invoices, one per rental per week, sent on the Friday before the week. The sample has 108 records.
+The weekly chair rent invoices, one per rental per week, sent on the Friday before the week. The sample has 106 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7494,7 +7532,7 @@ The weekly chair rent invoices, one per rental per week, sent on the Friday befo
 
 #### Rent Lines
 
-The lines of each rent invoice: the week's rent, and a credit for any free loyalty cuts the renter gave the week before (up to five a week; any more are credited the week after). The sample has 190 records.
+The lines of each rent invoice: the week's rent, and a credit for any free loyalty cuts the renter gave the week before (up to five a week; any more are credited the week after). The sample has 179 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -7748,21 +7786,24 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Receipt
 
-The receipt from the till for a visit, on an 80 mm roll: the barber and chair, each service and product with the VAT within it, the total, how it was paid and the loyalty stamps so far. On a rented chair it says the takings are the renter's and carry no VAT. Every visit has one, including ones not yet paid: print the one on screen. One for each record of Visits, on receipt-80 paper, with the Business record at the head.
+The receipt from the till for a visit, on an 80 mm roll: the barber and chair, each service and product with the VAT within it, the total, how it was paid and the loyalty stamps so far. On a rented chair it says the takings are the renter's and carry no VAT, and leaves out the VAT line. It prints for visits paid for, those with a receipt number; the loyalty card lines print only when the visit was on a card. One for each record of Visits, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Receipt {Receipt No}
 - Fields: Date, Barber, Chair, Client, Loyalty card, Stamps on the card
 - Lines from Visit Lines: Item, Qty, Price, Amount, VAT %, VAT
 - Totals: Total paid, Of which VAT
-- Words: Paid by {Paid By}. {Barber.Receipt Note}
+- Words: Your tenth cut, free on your loyalty card.
+- Words: Paid by {Paid By}.
+- Words: {Barber.Receipt Note}
 - Words: Loyalty card: a stamp for every paid cut, on any chair, and the tenth cut is free. Ask at the desk for a card.
 - Words: {Business.Document Footer}
 
 #### Chair rental agreement
 
-The agreement a self-employed barber signs to rent a chair: the parties, the chair, the weekly rent and the day it is due, the deposit, what the rent covers, the hours, clients and payment, insurance, tax, notice and signatures. Plain words of our own: have it checked for your own country before you use it. One for each record of Chair Rentals, on a4 paper, with the Business record at the head.
+The agreement a self-employed barber signs to rent a chair: the parties, the chair, the weekly rent and the day it is due, the deposit, what the rent covers, the hours, clients and payment, insurance, tax, notice and signatures. It prints for agreements in force; an ended one prints from the Chair Rentals form and says when it ended. Plain words of our own: have it checked for your own country before you use it. One for each record of Chair Rentals, on a4 paper, with the Business record at the head.
 
 - Heading: Chair rental agreement {Number}
+- Words: This agreement ended on {End Date}.
 - Fields: Chair renter, Chair, Trading as, Starts, Address, Weekly rent (plus VAT), City, Rent due each, Postcode, Deposit
 - Words: This agreement is made on {Signed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Shop") and {Barber.First Name} {Barber.Last Name}, trading as {Barber.Trading Name}, of {Barber.Address}, {Barber.City} {Barber.Postcode} ("the Barber").
 - Words: 1. The chair. The Shop lets the Barber use {Chair.Name} ({Chair.Position}) in the shop, with its mirror, station, drawer and the shared basin, from {Start Date} until either side ends this agreement. The Barber runs their own business from the chair as a self-employed person. The Barber is not an employee or a partner of the Shop.
@@ -7780,23 +7821,24 @@ The agreement a self-employed barber signs to rent a chair: the parties, the cha
 
 #### Chair rent invoice
 
-The weekly invoice for a rented chair, numbered RENT-2026-0042, with the week's rent, any credit for free loyalty cuts, the VAT and the total due on the rent day. One for each record of Rent Charges, on a4 paper, with the Business record at the head.
+The weekly invoice for a rented chair, numbered RENT-2026-0042, with the week's rent, any credit for free loyalty cuts, the VAT and the total due on the rent day. An unpaid invoice says how to pay; a paid one says when and how it was paid. One for each record of Rent Charges, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Number}
 - Fields: Invoice to, Invoice number, Trading as, Date, Address, Week starting, City, Payment due, Postcode, Agreement
 - Lines from Rent Lines: Description, Qty, Unit Price, Net, VAT %, VAT
 - Totals: Net, VAT, Total due
 - Words: {Business.Payment Terms} Please pay to {Business.Bank Details}, quoting {Number}, or in cash at the desk.
-- Words: Paid on: {Paid On}
+- Words: Paid with thanks on {Paid On} by {Paid By}.
 
 #### Loyalty card
 
-A client's loyalty card on the narrow roll: the days of each stamped cut and who did it, the stamps so far and how many to the free cut. One for each record of Loyalty Cards, on receipt-58 paper, with the Business record at the head.
+A client's loyalty card on the narrow roll: the days of each stamped cut and who did it, the stamps so far and how many to the free cut, or that the free cut is waiting. It prints for cards still in use, not ones whose free cut has been given. One for each record of Loyalty Cards, on receipt-58 paper, with the Business record at the head.
 
 - Heading: Loyalty card {Number}
 - Fields: For, Started, Card
 - Lines from Visits: Day, Barber, Stamp, Free
 - Totals: Stamps, Cuts to your free one
+- Words: Your free cut is waiting: tell us when you come in.
 - Words: One stamp for every paid cut, on any chair. Nine stamps and your tenth cut is free. Show your card or give your name at the desk.
 
 ### Starting empty
@@ -7866,9 +7908,9 @@ It suits, with small changes: A phone and tablet repair kiosk; A computer suppor
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
 - Prices are typed with VAT included, as the customer sees them: a phone screen at 79.00 is 65.83 and 13.17 VAT. The VAT is worked out inside each line and rounded to the penny, then added up, so an invoice's Tax is the sum of its lines and not 20 percent of its total worked out once.
 - The numbers on jobs, quotes, invoices, warranties and receipts (JOB-, QUO-, INV-, WTY-, RCP-) are typed, not made by Data Files. Keep each run in date order and start again at 0001 each January. The record number (ID) is separate and is what Part Orders shows in For Job.
-- An invoice's lines are the job's own lines, Job Lines, pointed at the invoice once it is raised. Do not add lines to a job after its invoice is made; raise a second invoice for extra work.
-- A print template prints every record of its table. The Booking-in receipt and the Collection receipt print from Jobs and the Account statement from Accounts, so choose the record you want (or print from the form with it on screen) rather than printing them all.
-- The Account statement lists every invoice the business has ever had, the paid ones with the day they were paid; the Owing column counts only those still unpaid.
+- An invoice's lines are the job's own lines, Job Lines, found through the job the invoice is for. Raise one invoice for a job, once every part and hour is on it; extra work found later goes on a new job.
+- Each print template prints only the records it is for: the Booking-in receipt for jobs still in the shop, the Collection receipt for jobs collected, the Quote for quotes not yet answered and the Warranty certificate for warranties still running. Every invoice and every account prints. Printed from a form, the record on screen prints whatever its state.
+- The Account statement lists only the invoices still unpaid, oldest first, with the days each is overdue and a running total of what is owed. An account that owes nothing prints a line saying so.
 - A job that is beyond economic repair, a warranty return and a declined quote still have lines, at nought or at the diagnosis charge, so the bench time is recorded even when nothing is charged.
 - Customers who bring work for a business point at its Accounts record. The invoice is made out to the account and its balance is paid by transfer, not at the counter, so Accounts to chase is the list to watch.
 
@@ -7898,7 +7940,7 @@ It suits, with small changes: A phone and tablet repair kiosk; A computer suppor
 
 1. On the Jobs form, add the job's lines in Job Lines: the part fitted (Kind Part, the part, its name in Description, Quantity 1 and its price) and the labour (Kind Labour, what was done, the hours in Quantity and the rate in Unit Price). Fill in Done On on each.
 2. Set the job's Status to Ready and Outcome to Repaired, type today in Finished, the total of the lines in Charge, and in Warranty Until the day 90 days on.
-3. Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job, choose the account if it is business work, and fill in Invoice Date, Due Date, Net, Tax, Total, Deposit and Balance. Then on each of the job's lines choose the new invoice in Invoice.
+3. Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job, choose the account if it is business work, and fill in Invoice Date, Due Date, Net, Tax, Total, Deposit and Balance. The invoice lists the job's lines on its own, found through the job.
 4. Open the Warranties form, press New, type the next number (WTY-2026-...), choose the job and say in Covers what was fitted and done.
 5. Open the print templates Invoice and Warranty certificate, choose the new records, and press Save as PDF to e-mail them, or Print to put them in the bag with the device.
 6. Ring or text the customer: the query Ready for collection is the list, with how each wants to be told.
@@ -7912,7 +7954,7 @@ It suits, with small changes: A phone and tablet repair kiosk; A computer suppor
 #### Send the business accounts their statements
 
 1. At the month end, open the report Account invoices due to see what each business owes, and how late.
-2. Open the print template Account statement from Print templates. It makes one statement for each record in Accounts; choose the accounts that owe something, and press Save as PDF to e-mail each one to the address on its Accounts record.
+2. Open the print template Account statement from Print templates. It makes one statement for each record in Accounts, listing only the invoices still unpaid; choose the accounts that owe something, and press Save as PDF to e-mail each one to the address on its Accounts record.
 3. When a business pays, open the Payments form, record each invoice paid with Kind On account and Method Bank transfer, fill in Paid On on the invoice, and tick Paid on the job.
 
 #### Reorder parts and do the VAT
@@ -7978,7 +8020,7 @@ The businesses that have an account with the shop: their staff bring work in, th
 
 #### Customers
 
-One record for each person who brings work in. Someone who brings work for a business on account is linked to that account; everyone else pays at the counter. The sample has 1,709 records.
+One record for each person who brings work in. Someone who brings work for a business on account is linked to that account; everyone else pays at the counter. The sample has 1,673 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8046,7 +8088,7 @@ Every part the shop fits, whether kept on the shelf or ordered in for each job. 
 
 #### Devices
 
-Each device a customer has brought in. One customer can have several, and a device that comes back keeps its record, so its history is in one place. The sample has 2,062 records.
+Each device a customer has brought in. One customer can have several, and a device that comes back keeps its record, so its history is in one place. The sample has 2,030 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8088,7 +8130,7 @@ One record for each repair, from booking in to collection. The Booking-in receip
 
 #### Part Orders
 
-Parts ordered from suppliers: stock to refill the shelf, or one part for one job. The sample has 751 records.
+Parts ordered from suppliers: stock to refill the shelf, or one part for one job. The sample has 747 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8105,13 +8147,12 @@ Parts ordered from suppliers: stock to refill the shelf, or one part for one job
 
 #### Job Lines
 
-The parts and labour on each job, one line each, at the price charged with VAT included. They are the lines of the job's invoice and its collection receipt. The sample has 4,876 records.
+The parts and labour on each job, one line each, at the price charged with VAT included. They are the lines of the job's invoice and its collection receipt. The sample has 4,894 records.
 
 | Field | Type | What it holds |
 |---|---|---|
 | ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
 | Job | Points at Jobs, required | The job the line belongs to. |
-| Invoice | Points at Invoices | The invoice the line is on, once the job is invoiced. Empty before then, and on jobs that cost nothing. |
 | Kind | Short text | Part or Labour. |
 | Part | Points at Parts | The part fitted or waiting to be fitted. Empty on a labour line. |
 | Description | Short text | What the line is: the part's name, or the work done, as the invoice prints it. |
@@ -8122,7 +8163,7 @@ The parts and labour on each job, one line each, at the price charged with VAT i
 
 #### Quotes
 
-The written quotes given after a device has been diagnosed, with the price, VAT included, and whether the customer said yes. The Quote print template prints from it. The sample has 634 records.
+The written quotes given after a device has been diagnosed, with the price, VAT included, and whether the customer said yes. The Quote print template prints from it. The sample has 606 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8139,7 +8180,7 @@ The written quotes given after a device has been diagnosed, with the price, VAT 
 
 #### Quote Lines
 
-The parts and labour on each quote. The sample has 1,208 records.
+The parts and labour on each quote. The sample has 1,169 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8153,7 +8194,7 @@ The parts and labour on each quote. The sample has 1,208 records.
 
 #### Invoices
 
-An invoice for every job that costs something, raised the day the work is finished. It lists the job's lines, the VAT inside them, any deposit already paid and the balance. Members of the public pay it on collection; businesses on account pay it within their payment days. The sample has 2,245 records.
+An invoice for every job that costs something, raised the day the work is finished. It lists the job's lines, the VAT inside them, any deposit already paid and the balance. Members of the public pay it on collection; businesses on account pay it within their payment days. The sample has 2,272 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8172,7 +8213,7 @@ An invoice for every job that costs something, raised the day the work is finish
 
 #### Warranties
 
-A 90-day warranty certificate for every job repaired (not for a warranty return, which is covered by the first one). The Warranty certificate print template prints from it. The sample has 2,128 records.
+A 90-day warranty certificate for every job repaired (not for a warranty return, which is covered by the first one). The Warranty certificate print template prints from it. The sample has 2,160 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8184,7 +8225,7 @@ A 90-day warranty certificate for every job repaired (not for a warranty return,
 
 #### Payments
 
-Every payment taken, each against its job, each with its own receipt number. The sample has 2,499 records.
+Every payment taken, each against its job, each with its own receipt number. The sample has 2,511 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8208,7 +8249,6 @@ Every payment taken, each against its job, each with its own receipt number. The
 - Part Orders.Part points at a record in Parts
 - Part Orders.Job points at a record in Jobs
 - Job Lines.Job points at a record in Jobs
-- Job Lines.Invoice points at a record in Invoices
 - Job Lines.Part points at a record in Parts
 - Quotes.Job points at a record in Jobs
 - Quote Lines.Quote points at a record in Quotes
@@ -8438,14 +8478,16 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Booking-in receipt
 
-Printed at the counter when a device is booked in, on A5, one copy for the customer: the job number, the device and its serial, the fault as described, what was left with it, the price if one was quoted, the ready-by date, the shop's terms in short and two lines to sign. It prints from Jobs, so print the job on screen. One for each record of Jobs, on a5 paper, with the Business record at the head.
+Printed at the counter when a device is booked in, on A5, one copy for the customer: the job number, the device and its serial, the fault as described, what was left with it, the price if one was quoted, the ready-by date, the shop's terms in short and two lines to sign. It prints for jobs not yet collected; the price and deposit print only when there is one, and a warranty return says so. One for each record of Jobs, on a5 paper, with the Business record at the head.
 
 - Heading: Booking-in receipt {Number}
 - Fields: Job number, Booked in, Customer, Phone, Ready by, Technician
 - Fields: Device, Make, Model, Serial number, Colour, Left with it
-- Fields: Fault as described, Quoted price, VAT included
+- Fields: Fault as described, Quoted price, VAT included, Deposit paid
+- Words: This is a return under the warranty of job {Warranty Of}: there is nothing to pay for putting right the same fault.
 - Words: Our terms, in short:
-- Words: 1. If no price is quoted above, we will check the device and tell you the price before we do any work. If we cannot repair it, there is nothing to pay.
+- Words: 1. We will check the device and tell you the price before we do any work. If we cannot repair it, there is nothing to pay.
+- Words: 1. The price quoted above is for the repair described. If we find another fault once the work starts, we will ask you before doing anything more.
 - Words: 2. Please keep a copy of your photos and files. We take care with your data, but a repair can lose it, and we cannot be held to blame for that.
 - Words: 3. When a part has to be ordered in for you, we take its price as a deposit. It comes off your bill, and is kept only if you cancel after the part has arrived.
 - Words: 4. The ready-by date is our best estimate. We will tell you if it moves, and tell you by your chosen way when the device is ready.
@@ -8455,43 +8497,46 @@ Printed at the counter when a device is booked in, on A5, one copy for the custo
 
 #### Quote
 
-The written quote sent after diagnosis: the parts and labour, the VAT inside them, the total and how long the price holds, with how to say yes. One for each record in Quotes. One for each record of Quotes, on a4 paper, with the Business record at the head.
+The written quote sent after diagnosis: the parts and labour, the VAT inside them, the total and how long the price holds, with how to say yes. It prints for quotes not yet answered; printed from the Quotes form, an answered one says the answer and when. One for each record of Quotes, on a4 paper, with the Business record at the head.
 
 - Heading: Quote {Number}
 - Fields: Quote, Date, Valid until, Job number, For, Phone, Make, Model, Serial number
 - Fields: Fault reported
 - Lines from Quote Lines: Item, Description, Qty or hours, Price, Amount, VAT included
 - Totals: Net of VAT, VAT, Total
+- Words: {Answer} on {Answered On}.
 - Words: This is the price for the repair described above, VAT included, and it holds until {Valid Until}. If we find another fault once the work starts, we will ask you before doing anything more.
 - Words: To go ahead, reply to this quote or call us on {Business.Phone}, quoting {Number}. If you would rather not, there is a charge of half an hour at our bench rate for the diagnosis, and you can collect the device as it is.
 - Words: {Business.Document Footer}
 
 #### Invoice
 
-The VAT invoice raised when the work is finished: the parts and labour lines with the VAT in each, the net, VAT and total, the deposit already paid and the balance due. One for each record in Invoices. One for each record of Invoices, on a4 paper, with the Business record at the head.
+The VAT invoice raised when the work is finished: the parts and labour lines with the VAT in each, the net, VAT and total, and the deposit and balance due when a deposit was paid. A paid invoice says so; an unpaid one says how to pay. One for each record in Invoices, its lines found through its job. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: VAT invoice {Number}
 - Fields: Invoice, Date and tax point, Due, Job number, Customer, Account, Address, Postcode, Make, Model, Serial number
-- Lines from Job Lines: Item, Description, Qty or hours, Price, Amount, VAT rate, VAT included
+- Lines from Job Lines: Item, Description, Qty or hours, Price, Amount, VAT %, VAT included
 - Totals: Net of VAT, VAT, Total, Deposit paid, Balance due
+- Words: Paid in full on {Paid On}, thank you.
 - Words: {Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.
 - Words: {Business.Document Footer}
 
 #### Collection receipt
 
-The till receipt handed over with the device: the work done and its price, VAT included, the deposit, what was paid today and a line to sign that the device came back in working order. It prints from Jobs, so print the job on screen as it is collected; a job not yet collected prints with what is still to pay. One for each record of Jobs, on receipt-80 paper, with the Business record at the head.
+The till receipt handed over with the device: the work done and its price, VAT included, the deposit, what was paid today and a line to sign that the device came back in working order. It prints for jobs collected, with what was paid today or what is still to pay on an account. One for each record of Jobs, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Collection receipt
 - Fields: Job, Collected, Customer, Make, Model, Serial, Outcome, Guaranteed until
 - Lines from Job Lines: Description, Amount, VAT
 - Totals: Total, VAT included, Deposit paid, Paid today, Still to pay
+- Words: Nothing to pay: the work was under warranty.
 - Words: Handed back with: {Left With It}.
 - Signed by: Received in working order
 - Words: {Business.Document Footer}
 
 #### Warranty certificate
 
-The 90-day warranty given with every repair: the device, the dates, what it covers and what it does not, and how to claim. One for each record in Warranties. Have the wording checked against the consumer law of your own country. One for each record of Warranties, on a5 paper, with the Business record at the head.
+The 90-day warranty given with every repair: the device, the dates, what it covers and what it does not, and how to claim. It prints for warranties still running, the 90 days after the repair. Have the wording checked against the consumer law of your own country. One for each record of Warranties, on a5 paper, with the Business record at the head.
 
 - Heading: Repair warranty {Number}
 - Fields: Certificate, Job number, Repaired on, Covered until, Customer, Device, Make, Model, Serial number
@@ -8505,12 +8550,13 @@ The 90-day warranty given with every repair: the device, the dates, what it cove
 
 #### Account statement
 
-Sent to each business account at the month end: every invoice raised to the account with the day it was paid, what is still owing and how much of that is overdue. One for each record in Accounts. One for each record of Accounts, on a4 paper, with the Business record at the head.
+Sent to each business account at the month end: the invoices still unpaid, oldest first, with the days each is overdue, a running total of what is owed, how much of it is overdue and the day of the statement. One for each record in Accounts. One for each record of Accounts, on a4 paper, with the Business record at the head.
 
 - Heading: Statement of account
 - Fields: Account, For the attention of, Address, City, Postcode, Days to pay, Credit limit
-- Lines from Invoices: Invoice, Job, Date, Due, Amount, Paid on, Owing, Overdue
-- Totals: Of which overdue, Balance owing
+- Lines from Invoices: Invoice, Job, Date, Due, Days overdue, Owing, Owed so far, Overdue
+- Totals: Statement date, Of which overdue, Balance owing
+- Words: Nothing is owing on this account today. Thank you.
 - Words: Invoices are due {Payment Days} days from their date. Please pay by bank transfer to {Business.Bank Details}, quoting the invoice numbers. If you have paid in the last few days, thank you, and please ignore what is shown as owing.
 - Words: {Business.Document Footer}
 
@@ -8532,7 +8578,7 @@ Start with Business, your own name, address, VAT number and payment details, whi
 
 **How do I print an older invoice or quote?**
 
-Open the print template Invoice (or Quote) and choose the record you want by its number; every invoice ever raised is there. To find the number, look the job up on the Jobs form or in the query Job board.
+Open the print template Invoice and choose the invoice by its number; every invoice ever raised is there. The Quote template holds only quotes not yet answered, so print an answered one from the Quotes form with it on screen. To find the number, look the job up on the Jobs form or in the query Job board.
 
 **A customer has lost their receipt. How do I find their device?**
 
@@ -8581,10 +8627,10 @@ It suits, with small changes: A tyre and exhaust centre; A van and light commerc
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
 - Prices are kept without VAT and VAT is added on each line and rounded to the penny, then the lines are added up. An invoice's Tax is that sum, so it can differ by a penny from 20 percent of the net worked out once.
 - The MOT fee is a line of its own with a Tax Rate of 0: the test carries no VAT. Repairs to put a failure right are ordinary labour and part lines at the full rate.
-- An invoice's lines are the job card's own lines, pointed at the invoice once it is raised. Add all the work to the job card before you invoice it.
+- An invoice's lines are the job card's own lines, found through the job card it is for. Add all the work to the job card before you invoice it; there is one invoice for each job card.
 - The numbers on job cards, invoices, estimates and MOT tests (JC-, INV-, EST-, MT-) are typed, not made by Data Files. Keep each run in date order and start again at 0001 each January. A real test centre records the national MOT test number in Test Number.
 - MOT Due and Service Due on a vehicle are kept by hand when a test or service is done here. A test passed up to a month before the due date keeps the same date and adds a year; a later test starts a new year from the test.
-- A print template prints every record of its table. Choose the record you want: the job card on screen, the reminders not yet sent, the accounts that owe something.
+- Each print template prints only the records it is for: job cards not yet invoiced, estimates not answered or still in date, reminders not yet sent, every invoice and every trade account. A Trade statement lists only unpaid invoices. Printed from a form, the record on screen prints whatever its state.
 - Every registration in this sample is invented, with a Q among its last three letters so it cannot be a real car's. Your own records will have real registrations: keep the file safe, as they identify your customers' vehicles.
 
 ### Tutorial
@@ -8613,7 +8659,7 @@ It suits, with small changes: A tyre and exhaust centre; A van and light commerc
 
 1. On the job card, add a line in Job Lines for each part fitted (Kind Part, the part, its name, how many, its price and cost) and for the labour (Kind Labour, the technician, the hours and the rate). Fill in Done On on each.
 2. Open the Services form and press New: choose the vehicle and job card, the kind of service and the mileage, and when the next is due. Put the same date in the vehicle's Service Due.
-3. Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job card and the trade account if there is one, and fill in Invoice Date, Due Date, Net, Tax and Total. Then on each of the job card's lines choose the invoice in Invoice. Close the job card: Status Invoiced and Closed today.
+3. Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job card and the trade account if there is one, and fill in Invoice Date, Due Date, Net, Tax and Total. The invoice lists the job card's lines on its own. Close the job card: Status Invoiced and Closed today.
 4. Open the print template Invoice, choose the invoice, and press Print or Save as PDF. When the customer pays, fill in Paid On and Method.
 
 #### Give an estimate
@@ -8627,7 +8673,7 @@ It suits, with small changes: A tyre and exhaust centre; A van and light commerc
 
 1. Near the end of each month, open the query MOTs due next month and the query Services due next 30 days.
 2. For each vehicle, add a record on the Reminders form: the vehicle, the Kind (MOT, service, or MOT and service), the Due date and the Method from the customer's Remind By.
-3. Open the query Reminders to send to check them, then open the print template Reminder letter, choose the reminders not yet sent, and press Print. Fill in Sent On on each.
+3. Open the query Reminders to send to check them, then open the print template Reminder letter, which holds the reminders not yet sent, and press Print. Fill in Sent On on each.
 4. When a customer books from a reminder, tick Booked on it.
 
 #### Month end: trade statements, hours and VAT
@@ -8694,7 +8740,7 @@ The businesses with a trade account: their vehicles are invoiced to the account,
 
 #### Customers
 
-The people whose vehicles the garage looks after. A fleet manager or driver at a business on a trade account is linked to that account; everyone else pays when they collect. The sample has 817 records.
+The people whose vehicles the garage looks after. A fleet manager or driver at a business on a trade account is linked to that account; everyone else pays when they collect. The sample has 838 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8763,7 +8809,7 @@ Every part and fluid the garage fits, whether kept on the shelf or ordered in fo
 
 #### Vehicles
 
-One record for each vehicle the garage looks after, known by its registration, with when its MOT and service fall due. Its job cards, MOT tests and services are its history. The sample has 925 records.
+One record for each vehicle the garage looks after, known by its registration, with when its MOT and service fall due. Its job cards, MOT tests and services are its history. The sample has 946 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8784,7 +8830,7 @@ One record for each vehicle the garage looks after, known by its registration, w
 
 #### Bookings
 
-The diary: each vehicle booked in, the day and time and what for. A booking becomes a job card when the vehicle arrives. The sample has 1,995 records.
+The diary: each vehicle booked in, the day and time and what for. A booking becomes a job card when the vehicle arrives. The sample has 2,047 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8800,7 +8846,7 @@ The diary: each vehicle booked in, the day and time and what for. A booking beco
 
 #### Job Cards
 
-One record for each visit: the work asked for, the technician, and, in Job Lines, the labour and parts. The Job card print template prints from it for the workshop. The sample has 1,853 records.
+One record for each visit: the work asked for, the technician, and, in Job Lines, the labour and parts. The Job card print template prints from it for the workshop. The sample has 1,879 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8835,13 +8881,12 @@ Parts ordered from suppliers: stock for the shelf each Monday, or a part for one
 
 #### Job Lines
 
-The labour, parts and MOT fee on each job card, without VAT. When the job is invoiced, each line points at the invoice, and they are its lines. The sample has 5,929 records.
+The labour, parts and MOT fee on each job card, without VAT. When the job is invoiced, each line points at the invoice, and they are its lines. The sample has 6,079 records.
 
 | Field | Type | What it holds |
 |---|---|---|
 | ID | AutoNumber | The number Data Files gives each record. Other tables point at a record by it. |
 | Job Card | Points at Job Cards, required | The job card the line belongs to. |
-| Invoice | Points at Invoices | The invoice the line is on. Empty until the job is invoiced. |
 | Technician | Points at Staff | Who did the work, on a labour or MOT line; it is what the technician hours are counted from. |
 | Part | Points at Parts | The part fitted, on a part line. |
 | Kind | Short text | Labour, Part or MOT. |
@@ -8854,7 +8899,7 @@ The labour, parts and MOT fee on each job card, without VAT. When the job is inv
 
 #### MOT Tests
 
-Every MOT test carried out, with its result. A failed test is followed by a retest once the failures are put right. The sample has 908 records.
+Every MOT test carried out, with its result. A failed test is followed by a retest once the failures are put right. The sample has 931 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8872,7 +8917,7 @@ Every MOT test carried out, with its result. A failed test is followed by a rete
 
 #### MOT Items
 
-The failures and advisories found at each MOT test. The sample has 1,043 records.
+The failures and advisories found at each MOT test. The sample has 1,086 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8885,7 +8930,7 @@ The failures and advisories found at each MOT test. The sample has 1,043 records
 
 #### Services
 
-Each service carried out: its kind, the mileage and when the next is due. Together with the job cards it is the vehicle's service history. The sample has 664 records.
+Each service carried out: its kind, the mileage and when the next is due. Together with the job cards it is the vehicle's service history. The sample has 668 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8900,7 +8945,7 @@ Each service carried out: its kind, the mileage and when the next is due. Togeth
 
 #### Reminders
 
-The reminders the garage sends four weeks before an MOT or service is due, and those ready to send. The Reminder letter print template prints from it. The sample has 1,619 records.
+The reminders the garage sends four weeks before an MOT or service is due, and those ready to send. The Reminder letter print template prints from it. The sample has 1,644 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8914,7 +8959,7 @@ The reminders the garage sends four weeks before an MOT or service is due, and t
 
 #### Estimates
 
-Written estimates for repairs, given before the work is booked. The Estimate print template prints from it. The sample has 174 records.
+Written estimates for repairs, given before the work is booked. The Estimate print template prints from it. The sample has 167 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8933,7 +8978,7 @@ Written estimates for repairs, given before the work is booked. The Estimate pri
 
 #### Estimate Lines
 
-The labour and parts on each estimate. The sample has 440 records.
+The labour and parts on each estimate. The sample has 424 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8947,7 +8992,7 @@ The labour and parts on each estimate. The sample has 440 records.
 
 #### Invoices
 
-An invoice for every job card when the work is done. Private customers pay when they collect; trade accounts pay within their payment days. The sample has 1,844 records.
+An invoice for every job card when the work is done. Private customers pay when they collect; trade accounts pay within their payment days. The sample has 1,876 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -8976,7 +9021,6 @@ An invoice for every job card when the work is done. Private customers pay when 
 - Part Orders.Part points at a record in Parts
 - Part Orders.Job Card points at a record in Job Cards
 - Job Lines.Job Card points at a record in Job Cards
-- Job Lines.Invoice points at a record in Invoices
 - Job Lines.Technician points at a record in Staff
 - Job Lines.Part points at a record in Parts
 - MOT Tests.Vehicle points at a record in Vehicles
@@ -9198,23 +9242,24 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Estimate
 
-The written estimate for a repair: the vehicle, the work, the labour and parts with VAT, the total and how long it holds. One for each record in Estimates. One for each record of Estimates, on a4 paper, with the Business record at the head.
+The written estimate for a repair: the vehicle, the work, the labour and parts with VAT, the total and how long it holds. It prints for estimates not yet answered or still in date; an answered one says the answer and when. One for each record of Estimates, on a4 paper, with the Business record at the head.
 
 - Heading: Estimate {Number}
 - Fields: Estimate, Date, Valid until, For, Address, Postcode, Registration, Make, Model, Mileage
 - Fields: Work to be done
-- Lines from Estimate Lines: Item, Description, Qty or hours, Price, Net, VAT rate, VAT
+- Lines from Estimate Lines: Item, Description, Qty or hours, Price, Net, VAT %, VAT
 - Totals: Net, VAT, Estimated total
+- Words: {Answer} on {Answered On}.
 - Words: This estimate is our price for the work above, and holds until {Valid Until}. If we find anything else once the work starts, we will ring you before we do it: nothing more is done without your say-so.
 - Words: To book the work in, call us on {Business.Phone} quoting {Number}.
 - Words: {Business.Document Footer}
 
 #### Job card
 
-Printed when a vehicle arrives and kept with its keys: the vehicle, mileage and work asked for, then the work done and parts fitted with who did them, and two lines to sign. Prices are left off, as the workshop does not need them. One for each record in Job Cards; print the one on screen. One for each record of Job Cards, on a4 paper, with the Business record at the head.
+Printed when a vehicle arrives and kept with its keys: the vehicle, mileage and work asked for, then the work done and parts fitted with who did them, and two lines to sign. Prices are left off, as the workshop does not need them. It prints for job cards not yet invoiced, the vehicles in the workshop; a closed one prints from the Job Cards form. One for each record of Job Cards, on a4 paper, with the Business record at the head.
 
 - Heading: Job card {Number}
-- Fields: Job card, Opened, Technician, Registration, Make, Model, Fuel, Year, Mileage in, Customer, Phone, Tyres
+- Fields: Job card, Opened, Technician, Registration, Make, Model, Fuel, Year, Mileage in, Customer, Phone, Tyres, Status, Closed, Courtesy car
 - Fields: Work requested, Notes
 - Lines from Job Lines: Kind, Work done or part fitted, Part, Qty or hours, By, Date
 - Words: Before work starts: check the mileage, note any damage and warning lights, and fit seat and floor covers. Any work beyond what is asked for above is authorised by the customer first, and the call is noted here.
@@ -9222,24 +9267,27 @@ Printed when a vehicle arrives and kept with its keys: the vehicle, mileage and 
 
 #### Invoice
 
-The VAT invoice for a job card: the labour, parts and MOT fee with the VAT on each line, the net, VAT and total, and how to pay. One for each record in Invoices. One for each record of Invoices, on a4 paper, with the Business record at the head.
+The VAT invoice for a job card: the labour, parts and MOT fee with the VAT on each line, the net, VAT and total, and how to pay, or when it was paid. The note that the MOT fee carries no VAT prints only when there is one. One for each record in Invoices, its lines found through its job card. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: VAT invoice {Number}
 - Fields: Invoice, Date and tax point, Due, Job card, Customer, Trade account, Address, Postcode, Registration, Make, Model, Mileage
-- Lines from Job Lines: Item, Description, Qty or hours, Price, Net, VAT rate, VAT
+- Lines from Job Lines: Item, Description, Qty or hours, Price, Net, VAT %, VAT
 - Totals: Net, VAT, Total
-- Words: The MOT test fee carries no VAT. {Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.
+- Words: The MOT test fee carries no VAT.
+- Words: Paid on {Paid On} by {Method}, thank you.
+- Words: {Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.
 - Words: {Business.Document Footer}
 
 #### Reminder letter
 
-The letter sent four weeks before an MOT or service is due: short and friendly, with the registration, the due date and how to book. One for each record in Reminders; print those in the query Reminders to send. Have the wording checked for your own country. One for each record of Reminders, on a4 paper, with the Business record at the head.
+The letter sent four weeks before an MOT or service is due: short and friendly, with the registration, the due date and how to book. It prints for reminders not yet sent, with a paragraph for an MOT or for a service. Have the wording checked for your own country. One for each record of Reminders, on a4 paper, with the Business record at the head.
 
 - Fields: To, Address, Town, Postcode
 - Heading: {Vehicle}: {Kind} due on {Due}
 - Words: Dear {Vehicle.Customer.First Name} {Vehicle.Customer.Last Name},
 - Words: Our records show that your {Vehicle.Make} {Vehicle.Model}, registration {Vehicle}, is due its {Kind} on {Due}. We are writing in good time so that you can book a day that suits you.
 - Words: An MOT can be done up to a month before the due date without losing any time on the certificate, and if your service is due too we can do both on the same visit. A courtesy car can be booked if you need one, and we can collect the car from a local address.
+- Words: A service on time keeps the warranty and the service history in order, and we will tell you about anything else we find before doing it. A courtesy car can be booked if you need one, and we can collect the car from a local address.
 - Words: To book, ring us on {Business.Phone}, write to {Business.E-mail}, or call in. If the car has been sold, or the work done elsewhere, just let us know and we will update our records.
 - Words: Yours sincerely,
 - Signed by: Service desk
@@ -9247,12 +9295,13 @@ The letter sent four weeks before an MOT or service is due: short and friendly, 
 
 #### Trade statement
 
-Sent to each trade account at the month end: every invoice raised to the account with the day it was paid, what is still owing and how much is overdue. One for each record in Accounts. One for each record of Accounts, on a4 paper, with the Business record at the head.
+Sent to each trade account at the month end: the invoices still unpaid, oldest first, with the days each is overdue, a running total of what is owed, how much of it is overdue and the day of the statement. One for each record in Accounts. One for each record of Accounts, on a4 paper, with the Business record at the head.
 
 - Heading: Statement of account
 - Fields: Account, For the attention of, Address, City, Postcode, Days to pay, Credit limit
-- Lines from Invoices: Invoice, Registration, Date, Due, Amount, Paid on, Owing, Overdue
-- Totals: Of which overdue, Balance owing
+- Lines from Invoices: Invoice, Registration, Date, Due, Days overdue, Owing, Owed so far, Overdue
+- Totals: Statement date, Of which overdue, Balance owing
+- Words: Nothing is owing on this account today. Thank you.
 - Words: Invoices are due {Payment Days} days from their date. Please pay by bank transfer to {Business.Bank Details}, quoting the invoice numbers. If you have paid in the last few days, thank you, and please ignore what is shown as owing.
 - Words: {Business.Document Footer}
 
@@ -9289,7 +9338,7 @@ The MOT test fee carries no VAT, so its line has a Tax Rate of 0. Everything els
 
 **How do I print an older invoice or job card?**
 
-Open the print template and choose the record by its number; every invoice and job card ever made is there.
+Open the print template Invoice and choose the invoice by its number; every invoice ever made is there. The Job card template holds only cards still open, so print a closed one from the Job Cards form with it on screen.
 
 **How do I see how busy each technician is?**
 
@@ -9326,7 +9375,7 @@ It suits, with small changes: An office or commercial cleaning contractor; A dom
 - Numbers are typed, not made for you: contracts CON-, invoices INV-, jobs JOB- and payslips PAY-, each a new run each year and each used once.
 - Payslips show hours and gross pay only. Tax, National Insurance and pension depend on each person's own position, so they are left to payroll.
 - In Stock on Supplies is what the Supply Movements add up to. Change stock by adding a movement and then bringing In Stock to match, never by typing over it alone.
-- Each print template prints for every record of its table unless you choose one. Choose the contract, invoice, job or payslip you want before pressing Print; ended contracts and declined quotes print too.
+- Each print template prints only the records it is for: contracts and visit sheets for contracts in force, quotes for jobs waiting for an answer or booked, and every invoice and payslip. Printed from a form, the record on screen prints whatever its state, an ended contract or a declined quote too.
 
 ### Tutorial
 
@@ -9420,7 +9469,7 @@ The business's own details, in one record. Every document it prints, an invoice,
 
 #### Clients
 
-Everyone the company cleans for: businesses on contract, households, and people who have had a one-off job. The sample has 108 records.
+Everyone the company cleans for: businesses on contract, households, and people who have had a one-off job. The sample has 107 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9439,7 +9488,7 @@ Everyone the company cleans for: businesses on contract, households, and people 
 
 #### Sites
 
-The places that are cleaned. A client can have more than one: two offices, or a home and a flat they let out. The sample has 123 records.
+The places that are cleaned. A client can have more than one: two offices, or a home and a flat they let out. The sample has 120 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9474,7 +9523,7 @@ The cleaners, each paid by the hour. The sample has 12 records.
 
 #### Visits
 
-Every visit on the rota, booked ahead and then recorded as it went: the heart of the database. The sample has 5,317 records.
+Every visit on the rota, booked ahead and then recorded as it went: the heart of the database. The sample has 4,447 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9496,7 +9545,7 @@ Every visit on the rota, booked ahead and then recorded as it went: the heart of
 
 #### Contracts
 
-One for each site cleaned under contract: how often, how long, at what rate, from when and on what notice. A contract renews each year until either side gives notice. The sample has 50 records.
+One for each site cleaned under contract: how often, how long, at what rate, from when and on what notice. A contract renews each year until either side gives notice. The sample has 44 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9522,7 +9571,7 @@ One for each site cleaned under contract: how often, how long, at what rate, fro
 
 #### Contract Tasks
 
-The schedule of work for each contract: what is done in each area and how often. It prints on the contract and on the site visit sheet. The sample has 351 records.
+The schedule of work for each contract: what is done in each area and how often. It prints on the contract and on the site visit sheet. The sample has 315 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9535,7 +9584,7 @@ The schedule of work for each contract: what is done in each area and how often.
 
 #### Jobs
 
-One-off work: end of tenancy cleans, carpets, ovens, deep cleans. A job starts as a quote and is booked, done and invoiced, or declined. The sample has 99 records.
+One-off work: end of tenancy cleans, carpets, ovens, deep cleans. A job starts as a quote and is booked, done and invoiced, or declined. The sample has 94 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9559,7 +9608,7 @@ One-off work: end of tenancy cleans, carpets, ovens, deep cleans. A job starts a
 
 #### Job Items
 
-The priced parts of a job's quote, which become the lines of its invoice. The sample has 161 records.
+The priced parts of a job's quote, which become the lines of its invoice. The sample has 143 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9572,7 +9621,7 @@ The priced parts of a job's quote, which become the lines of its invoice. The sa
 
 #### Invoices
 
-A monthly invoice for each contract, listing its visits and any supplies, and an invoice for each one-off job when it is done. The sample has 538 records.
+A monthly invoice for each contract, listing its visits and any supplies, and an invoice for each one-off job when it is done. The sample has 487 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9593,7 +9642,7 @@ A monthly invoice for each contract, listing its visits and any supplies, and an
 
 #### Invoice Lines
 
-The lines of each invoice: a line for each visit, a line for each kind of supply recharged, or the items of a job. The sample has 5,484 records.
+The lines of each invoice: a line for each visit, a line for each kind of supply recharged, or the items of a job. The sample has 4,808 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9624,7 +9673,7 @@ What the company buys and keeps in its store: cleaning products, cloths and mops
 
 #### Supply Movements
 
-Every supply bought, taken out to a site, or corrected at a stock count. Added up, they give what is in the store. The sample has 2,861 records.
+Every supply bought, taken out to a site, or corrected at a stock count. Added up, they give what is in the store. The sample has 2,738 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9639,7 +9688,7 @@ Every supply bought, taken out to a site, or corrected at a stock count. Added u
 
 #### Payslips
 
-One for each cleaner for each month they worked: their hours and gross pay. Tax and deductions are left to payroll. The sample has 134 records.
+One for each cleaner for each month they worked: their hours and gross pay. Tax and deductions are left to payroll. The sample has 135 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9657,7 +9706,7 @@ One for each cleaner for each month they worked: their hours and gross pay. Tax 
 
 #### Payslip Lines
 
-The parts of each payslip: contract hours, job hours and the holiday pay on them. The sample has 300 records.
+The parts of each payslip: contract hours, job hours and the holiday pay on them. The sample has 299 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -9862,9 +9911,11 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Cleaning contract
 
-The contract for a record in Contracts, for the client to sign: the parties and the site, the days, times and hours, the rate and an average month, the schedule of tasks, invoicing and payment, supplies, cleaners, keys, complaints, insurance, renewal and notice. It is a plain starting point written for this sample, not legal advice: have it checked for your own country before you use it. One for each record of Contracts, on a4 paper, with the Business record at the head.
+The contract for a record in Contracts, for the client to sign. It prints for contracts in force; an ended one prints from the Contracts form and says when it ended. In it: the parties and the site, the days, times and hours, the rate and an average month, the schedule of tasks, invoicing and payment, supplies, cleaners, keys, complaints, insurance, renewal and notice. It is a plain starting point written for this sample, not legal advice: have it checked for your own country before you use it. One for each record of Contracts, on a4 paper, with the Business record at the head.
 
 - Heading: Cleaning contract {Number}
+- Words: This contract ended on {Ended On}.
+- Words: Notice to end this contract was given on {Notice Given On}.
 - Fields: Client, Site, Contact, Site address, Client address, Site postcode, Starts, Runs to, Visit days, Starting at, Hours a visit, Rate an hour, before VAT, About a month, before VAT, Notice, days
 - Words: THIS CONTRACT is between {Business.Name} of {Business.Address}, {Business.City} ("we", "us") and {Client.Name} of {Client.Address}, {Client.City} ("you"), for the cleaning of {Site.Name}, {Site.Address}, {Site.City} {Site.Postcode} ("the site").
 - Words: 1. The cleaning. We will clean the site on {Days}, starting at about {Start Time}, for {Hours per Visit} hours each visit ({Visits per Week} visits a week, where 0.5 means every other week), doing the work in the schedule below. If you want something added or changed, tell us and we will agree it with you in writing, with any change to the hours.
@@ -9882,24 +9933,26 @@ The contract for a record in Contracts, for the client to sign: the parties and 
 
 #### Invoice
 
-The VAT invoice for a record in Invoices: for a contract, every visit of the month with its date, hours and rate, and any washroom supplies; for a one-off job, its items. Then the net, VAT and total due, and how to pay. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
+The VAT invoice for a record in Invoices: for a contract, every visit of the month with its date, hours and rate, and any washroom supplies; for a one-off job, its items. Then the net, VAT and total due, and how to pay, or the day it was paid. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Number}
-- Fields: Bill to, Invoice, For the attention of, Date, Address, Payment due, City, For, Postcode, Site, Contract, Site address
+- Fields: Bill to, Invoice, For the attention of, Date, Address, Payment due, City, For, Postcode, Site, Contract, Job, Site address
 - Lines from Invoice Lines: Date, Description, Hours or qty, Rate, Amount, VAT
 - Totals: Net, VAT at 20%, Total due
 - Words: Please pay by {Due Date}. {Business.Payment Terms} Pay to {Business.Bank Details}, quoting {Number}. VAT registration {Business.Tax Number}.
+- Words: Paid on {Paid On}, thank you. VAT registration {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Quote
 
-The quote for a one-off job, for a record in Jobs: the address, each priced item, the net, VAT and total, how long the price holds and how to book. Numbered JOB-2026-0031. One for each record of Jobs, on a4 paper, with the Business record at the head.
+The quote for a one-off job, for a record in Jobs: the address, each priced item, the net, VAT and total, how long the price holds and how to book. It prints for jobs quoted and not yet answered, and for jobs booked and still to do, which say the day booked. Numbered JOB-2026-0031. One for each record of Jobs, on a4 paper, with the Business record at the head.
 
 - Heading: Quote {Number}: {Kind}
-- Fields: For, Quote, Address of the job, Date, City, Price holds until, Postcode, Time on site, hours
+- Fields: For, Quote, Address of the job, Date, City, Price holds until, Postcode, Time on site, hours, Booked for
 - Lines from Job Items: Description, Quantity, Price, Amount, VAT
 - Totals: Net, VAT at 20%, Total
 - Words: The price covers our cleaners, products and machines. Please make sure there is water and power at the property and that it is empty of furniture where the job says so. To book, call us on {Business.Phone} or reply to this quote with the day you would like. We invoice when the job is done; payment is due within seven days.
+- Words: Thank you for booking. The price covers our cleaners, products and machines. Please make sure there is water and power at the property on the day and that it is empty of furniture where the job says so. We invoice when the job is done; payment is due within seven days.
 - Words: {Business.Document Footer}
 
 #### Payslip
@@ -9915,7 +9968,7 @@ A cleaner's monthly payslip from Payslips: contract hours and job hours at their
 
 #### Site visit sheet
 
-A sheet for each contract's site, printed for the cleaner to take: the address, access notes, the days and hours, every task with a box to tick, room for times and notes, and lines for the cleaner and the client to sign. One for each record of Contracts, on a4 paper, with the Business record at the head.
+A sheet for each contract's site, printed for the cleaner to take: the address, access notes, the days and hours, every task with a box to tick, room for times and notes, and lines for the cleaner and the client to sign. It prints for contracts in force. One for each record of Contracts, on a4 paper, with the Business record at the head.
 
 - Heading: Visit sheet: {Site.Name}
 - Fields: Client, Contract, Address, Visit days, Postcode, Start at, On site, Hours a visit, Regular cleaner, Access
@@ -9994,8 +10047,8 @@ It suits, with small changes: A freelance designer or developer; A marketing or 
 - An invoice's Net, VAT and Total are kept on the invoice as it was sent. If you change a line afterwards, change these too, or the totals block on the printed invoice and the figures in the revenue queries will differ.
 - VAT comes from the client: 0.2 for clients in the UK, 0 for clients abroad. Each invoice line carries its own Tax Rate so an old invoice keeps the rate it was sent at.
 - An hourly project's Fee is the estimate while the work goes on; when it is completed the Fee becomes what its billable time came to, so Project profit compares like with like.
-- Each print template prints for every record of its table unless you choose one: choose the invoice, project, client or time sheet you want before pressing Print. The Proposal and the Letter of engagement are for projects whose Status is Proposal or newly Active.
-- The Statement lists every invoice the client has had, paid or not; the balance owing is the sum of the Owing column.
+- Some print templates print only the records they are for: the Proposal for projects whose Status is Proposal, the Letter of engagement for Active client projects, and the Statement for every client but the studio itself. A record you choose from its form always prints, so an old proposal or the letter for a finished project can be printed again.
+- The Statement lists only invoices with money still owing, so it reads the same as Unpaid invoices for that client; the balance owing is the sum of the Owing column, and the statement date is the day it is printed.
 
 ### Tutorial
 
@@ -10034,7 +10087,7 @@ It suits, with small changes: A freelance designer or developer; A marketing or 
 1. When money arrives, open the Payments form and press New: choose the Invoice, type Received On, Amount, Method and the client's Reference.
 2. Open the invoice in the Invoices form and bring Paid up to what has been received, and Status to Part paid or Paid.
 3. Run the query Overdue invoices: it lists what is past due, the longest first, with the client's phone number.
-4. Open the print template Statement, choose the client, and send it: it lists every invoice with what is owing and the balance.
+4. Open the print template Statement, choose the client, and send it: it lists only the invoices with money still owing, with the days each is overdue and the balance.
 
 #### Keep projects on budget
 
@@ -10135,7 +10188,7 @@ Everyone who logs time. What each hour costs and what it is charged at turn hour
 
 #### Projects
 
-One record per piece of work quoted for, from proposal to completion or loss. The studio's own time (admin, new business, training) is kept on three internal projects. The sample has 116 records.
+One record per piece of work quoted for, from proposal to completion or loss. The studio's own time (admin, new business, training) is kept on three internal projects. The sample has 117 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10159,7 +10212,7 @@ One record per piece of work quoted for, from proposal to completion or loss. Th
 
 #### Tasks
 
-The parts a project is broken into, each with the hours estimated for it, so you can see which part ran over. The sample has 565 records.
+The parts a project is broken into, each with the hours estimated for it, so you can see which part ran over. The sample has 524 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10172,7 +10225,7 @@ The parts a project is broken into, each with the hours estimated for it, so you
 
 #### Time Sheets
 
-One for each person for each week they log time. Their time entries for the week point at it, it is printed for them to sign, and it is approved before the month's invoices go out. The sample has 413 records.
+One for each person for each week they log time. Their time entries for the week point at it, it is printed for them to sign, and it is approved before the month's invoices go out. The sample has 414 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10186,7 +10239,7 @@ One for each person for each week they log time. Their time entries for the week
 
 #### Time Entries
 
-Every stretch of time someone worked, logged to a project and one of its tasks. The heart of the database. The sample has 4,395 records.
+Every stretch of time someone worked, logged to a project and one of its tasks. The heart of the database. The sample has 4,412 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10203,7 +10256,7 @@ Every stretch of time someone worked, logged to a project and one of its tasks. 
 
 #### Expenses
 
-Money spent on a project: licences, printing, travel, hosting. Rechargeable ones are passed on to the client at cost. The sample has 145 records.
+Money spent on a project: licences, printing, travel, hosting. Rechargeable ones are passed on to the client at cost. The sample has 139 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10219,7 +10272,7 @@ Money spent on a project: licences, printing, travel, hosting. Rechargeable ones
 
 #### Invoices
 
-Every invoice sent, with what was paid on it so far. The sample has 168 records.
+Every invoice sent, with what was paid on it so far. The sample has 176 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10237,7 +10290,7 @@ Every invoice sent, with what was paid on it so far. The sample has 168 records.
 
 #### Invoice Lines
 
-The lines of each invoice: hours by role on hourly work, a stage of the fee on fixed-fee work, and expenses passed on. The sample has 333 records.
+The lines of each invoice: hours by role on hourly work, a stage of the fee on fixed-fee work, and expenses passed on. The sample has 343 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10251,7 +10304,7 @@ The lines of each invoice: hours by role on hourly work, a stage of the fee on f
 
 #### Payments
 
-Money received from clients. An invoice can be paid in more than one payment. The sample has 166 records.
+Money received from clients. An invoice can be paid in more than one payment. The sample has 175 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10470,63 +10523,73 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Invoice
 
-The VAT invoice for a record in Invoices: the client and the person it is for, the project, the client's order number where they have one, each line (hours by grade, a fee stage or an expense) with its VAT, then the total, what has been paid and the balance due, and how to pay. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
+The VAT invoice for a record in Invoices: the client and the person it is for, the project, the client's order number where they have one, each line (hours by grade, a fee stage or an expense) with its VAT rate and VAT, then the total. Once something has been paid it shows what has come in and the balance due; a paid invoice says so in place of how to pay, and one to a client abroad says why no VAT is charged. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Number}
-- Fields: Bill to, Invoice, For the attention of, Date, Address, Payment due, City, Our reference, Postcode, Your order number, Country, Project
-- Lines from Invoice Lines: Description, Hours or qty, Rate, Amount, VAT rate, VAT
-- Totals: Fees and expenses, VAT, Total, Paid, Balance due
-- Words: Please pay by {Due Date}. {Business.Payment Terms} Pay to {Business.Bank Details}, quoting {Number}. VAT registration {Business.Tax Number}.
+- Fields: Bill to, Invoice, For the attention of, Date, Address, Payment due, City, Our reference, Postcode, Project, Country, Your order number
+- Lines from Invoice Lines: Description, Hours or qty, Rate, Amount, VAT %, VAT
+- Totals: Fees and expenses, VAT, Total, Paid so far, Balance due
+- Words: No VAT is charged on this invoice: the client is outside the UK.
+- Words: Please pay by the payment due date above. {Business.Payment Terms} Pay to {Business.Bank Details}, quoting {Number}. VAT registration {Business.Tax Number}.
+- Words: Paid in full. Thank you. VAT registration {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Proposal
 
-The quote for a record in Projects: the parts of the work with the hours allowed for each, the total hours and the fee before VAT, when it could start and how it is charged. Print it from the Projects form for a project whose Status is Proposal; the template prints for any project you choose. One for each record of Projects, on a4 paper, with the Business record at the head.
+The quote for a project whose Status is Proposal: the parts of the work with the hours allowed for each, the total hours, the fee before VAT (a fixed fee, or an estimate for hourly work, each with its own wording), and when it could start and finish. A project already won or lost prints when you choose it from the Projects form. One for each record of Projects, on a4 paper, with the Business record at the head.
 
 - Heading: Proposal {Quote No}: {Name}
-- Fields: For, Proposal, For the attention of, Date, Address, Our reference, City, The work, Postcode, Charged as, Country, Could start
-- Words: Thank you for asking us to quote. Below is the work as we would plan it, in its parts, with the hours we allow for each. We could start on {Start Date} and finish by {Due Date}, given your comments at each stage within a week of asking.
+- Fields: For, Proposal, Address, Date, City, Our reference, Postcode, The work, Country, Charged as, Could start, Could finish by, For the attention of
+- Words: Thank you for asking us to quote. Below is the work as we would plan it, in its parts, with the hours we allow for each. We could start and finish on the dates above, given your comments at each stage within a week of asking.
 - Lines from Tasks: Part of the work, Who does it, Hours
-- Totals: Hours planned, Fee, before VAT
-- Words: A fixed fee covers the work above with two rounds of changes at each stage, and is invoiced in stages as the work goes. Work charged by the hour is invoiced monthly for the time spent, and the fee above is then our estimate. VAT is added for clients in the UK. Printing, licences, hosting and travel are passed on at cost. This proposal holds for 60 days from its date.
+- Totals: Hours planned, Fixed fee, before VAT, Estimated fee, before VAT
+- Words: The fixed fee covers the work above with two rounds of changes at each stage, and is invoiced in stages as the work goes: the first part when it starts and the last on completion.
+- Words: This work is charged by the hour for the time we spend, and invoiced at the start of each month for the month before. The fee above is our estimate, and we will tell you before the time used goes past it.
+- Words: VAT is added for clients in the UK. Printing, licences, hosting and travel are passed on at cost. This proposal holds for 60 days from its date.
 - Words: To go ahead, reply to this proposal and we will send a letter of engagement to sign. {Business.Document Footer}
 
 #### Statement
 
-A statement for a record in Clients: every invoice sent to the client with what was invoiced, what has been paid and what is still owing on each, the days overdue, and the balance owing. Paid invoices are listed too, for the client's records. One for each record of Clients, on a4 paper, with the Business record at the head.
+A statement for each client (not the studio itself), dated the day it is printed: only the invoices with money still owing, with what was invoiced, what has been paid and what is owing on each, the days overdue, how many are unpaid and the balance owing. A client who owes nothing gets a short note saying so. One for each record of Clients, on a4 paper, with the Business record at the head.
 
 - Heading: Statement of account
+- Totals: Statement date
 - Fields: Client, Address, City, Postcode, Country, Payment terms, days
 - Lines from Invoices: Invoice, Date, Due, Project, Invoiced, Paid, Owing, Days overdue
-- Totals: Invoiced, Received, Balance owing
-- Words: Invoices with nothing owing are shown for your records. Please pay the balance owing to {Business.Bank Details}, quoting the invoice numbers. If you think anything here is wrong, call us on {Business.Phone}.
+- Totals: Invoices unpaid, Balance owing
+- Words: Please pay the balance owing to {Business.Bank Details}, quoting the invoice numbers. If you think anything here is wrong, call us on {Business.Phone}.
+- Words: Nothing is owing on your account. Thank you.
 
 #### Weekly time sheet
 
-One person's week from Time Sheets: each day's entries with client, project, task and hours, the hours worked and the billable share, and lines for the person to sign and for the approver. One for each record of Time Sheets, on a4 paper, with the Business record at the head.
+One person's week from Time Sheets, day by day: each day's entries with client, project, task and hours, and the day's hours under it, then the hours worked, the billable hours and the billable share, the days it was submitted and approved once it has been, and lines for the person to sign and for the approver. One for each record of Time Sheets, on a4 paper, with the Business record at the head.
 
 - Heading: Time sheet {Number}
-- Fields: Name, Role, Week commencing, Contracted hours, Status, Approved on
-- Lines from Time Entries: Date, Client, Code, Project, Task, Note, Hours, Billable
-- Totals: Hours worked, Billable hours, Billable share, percent
+- Fields: Name, Role, Week commencing, Contracted hours, Status, Submitted on, Approved on
+- Lines from Time Entries: Day, Client, Code, Project, Task, Note, Hours, Billable
+- Totals: Hours worked, Billable hours, Billable share, %
 - Words: I confirm these are the hours I worked this week.
 - Signed by: Signed, Approved by
 
 #### Letter of engagement
 
-The letter that goes to the client with a won proposal, for a record in Projects: the work and its dates, the fee and how it is charged, costs passed on, how and when invoices are paid, who owns the work once paid for, confidentiality and how either side can end it, with two signature lines. It is a plain starting point written for this sample, not legal advice: have it checked for your own country and trade before you use it. One for each record of Projects, on a4 paper, with the Business record at the head.
+The letter that goes to the client with a won proposal, for each project whose Status is Active (not the studio's internal ones): the work and its dates, the fee and how it is charged and invoiced (worded for a fixed fee or for hourly work), costs passed on, who owns the work once paid for, confidentiality and how either side can end it, with two signature lines. A finished project prints when you choose it from the Projects form. It is a plain starting point written for this sample, not legal advice: have it checked for your own country and trade before you use it. One for each record of Projects, on a4 paper, with the Business record at the head.
 
 - Heading: Letter of engagement: {Name}
-- Fields: Client, Our reference, For the attention of, Proposal, Address, Starting, City, Finishing by, Postcode, The work
+- Fields: Client, Our reference, Address, Proposal, City, Starting, Postcode, Finishing by, The work, Charged as, Hours planned, Fixed fee, before VAT, Estimated fee, before VAT, For the attention of
 - Words: Dear {Contact.First Name},
+- Words: Dear colleagues at {Client},
 - Words: Thank you for asking us to do this work. This letter sets out what we will do, what it costs, how we invoice it, who owns the result and how either of us can bring it to an end, so that we both know where we stand. Please sign a copy and send it back to us before the work starts.
-- Words: 1. The work. We will carry out the {Work Type} work set out in our proposal {Quote No}, which goes with this letter. We plan to start on {Start Date} and to finish by {Due Date}. Those dates depend on your comments reaching us when the plan says; if they are late, or you ask us to pause, the finish date moves on by the same time.
-- Words: 2. The fee. This work is charged as: {Kind}. It is planned at {Budget Hours} hours and the fee is {Fee}, plus VAT where it applies. A fixed fee covers the work in the proposal with two rounds of changes at each stage; changes beyond those, or work you add, we quote for before we do them. Work by the hour is charged in quarters of an hour for the time we spend, at the rates in the proposal; its fee is our estimate, and we will tell you before the time used goes past it.
+- Words: 1. The work. We will carry out the {Work Type} work set out in our proposal {Quote No}, which goes with this letter, starting and finishing on the dates above. Those dates depend on your comments reaching us when the plan says; if they are late, or you ask us to pause, the finish date moves on by the same time.
+- Words: 2. The fee. This work is for the fixed fee above, plus VAT where it applies, worked out from the hours planned. It covers the work in the proposal with two rounds of changes at each stage; changes beyond those, or work you add, we quote for before we do them.
+- Words: 2. The fee. This work is charged by the hour, in quarters of an hour, for the time we spend, at the rates in the proposal, plus VAT where it applies. The fee above is our estimate from the hours planned, and we will tell you before the time used goes past it.
 - Words: 3. Costs we pay for you. Printing, licences for photographs and fonts, hosting, couriers and travel to see you are passed on at what they cost us and shown on the invoice. We will ask you before taking on any single large cost.
-- Words: 4. How we invoice. A fixed fee is invoiced in stages: the first part when the work starts, the next as the proposal sets out, and the last on completion. Work by the hour is invoiced at the start of each month for the month before. Each invoice is due {Client.Payment Days} days after its date, paid by bank transfer to {Business.Bank Details}, quoting the invoice number. If an invoice is more than 30 days overdue we may pause the work until it is paid.
+- Words: 4. How we invoice. The fixed fee is invoiced in stages: the first part when the work starts, the next as the proposal sets out, and the last on completion. Each invoice is due {Client.Payment Days} days after its date, paid by bank transfer to {Business.Bank Details}, quoting the invoice number. If an invoice is more than 30 days overdue we may pause the work until it is paid.
+- Words: 4. How we invoice. The time is invoiced at the start of each month for the month before, with the hours by person. Each invoice is due {Client.Payment Days} days after its date, paid by bank transfer to {Business.Bank Details}, quoting the invoice number. If an invoice is more than 30 days overdue we may pause the work until it is paid.
 - Words: 5. Who owns the work. Once every invoice for this work has been paid in full, the rights in the final work we deliver pass to you. Until then the work stays ours and you may use it only to review it. Ideas and drafts you did not choose stay ours. Photographs, fonts and software made by others are licensed to you on their makers' terms, which we will hand over with the files. We may show the finished work in our portfolio unless you ask us not to.
 - Words: 6. Keeping things private. We keep to ourselves anything you tell us about your business that is not public, and ask the same of you for what we tell you about our methods and prices.
-- Words: 7. Ending the work. Either of us may end this engagement by writing to the other with 14 days' notice. You then pay for the work done up to the day it ends, at our hourly rates and, for fixed-fee work, never more than the fee, and for any costs already taken on for you. The rights pass to you in the work that has been paid for.
+- Words: 7. Ending the work. Either of us may end this engagement by writing to the other with 14 days' notice. You then pay for the work done up to the day it ends, at our hourly rates and never more than the fixed fee, and for any costs already taken on for you. The rights pass to you in the work that has been paid for.
+- Words: 7. Ending the work. Either of us may end this engagement by writing to the other with 14 days' notice. You then pay for the time spent up to the day it ends, and for any costs already taken on for you. The rights pass to you in the work that has been paid for.
 - Words: 8. Keeping in touch. We will name one person to look after the work day to day, and ask you to do the same. Approvals are best given by e-mail, so that there is a record of them.
 - Words: If this is as you understand it, please sign and return a copy. We look forward to working with you.
 - Words: Yours sincerely, for {Business.Name}
@@ -10601,7 +10664,7 @@ It suits, with small changes: A boxing or martial arts club with monthly members
 - A member who has given notice stays Active until their Ends day has passed, so they still show in Plan mix and still pay. Cancel Requested and Ends tell them apart.
 - A member whose payment failed twice cannot get in until they pay at the desk. If they never do, their invoice is set to Written off and their Status to Lapsed about a month later.
 - Every visit comes from the door reader, including members coming for a class, so a member who only comes to classes is not missed by Not seen for 30 days.
-- A print template prints every record of its table unless you choose some, so choose the new member, invoice or pack you mean before pressing Print.
+- Print templates print only the records they are for: the Membership agreement for memberships still running, the Membership card for Active and Frozen members, the Welcome letter for members who joined in the last 30 days, and the Monthly invoice for every invoice not written off. A record you choose from its form always prints, whatever its status.
 - The gym is closed on Christmas Day and New Year's Day, so those days have no visits, classes or training sessions. Fees are still collected on them.
 
 ### Tutorial
@@ -10755,7 +10818,7 @@ One record per member, past and present, with their plan, fee, payment day and w
 
 #### Freezes
 
-Each time a member freezes their membership: one to three months from a payment day, at the plan's freeze fee. The sample has 45 records.
+Each time a member freezes their membership: one to three months from a payment day, at the plan's freeze fee. The sample has 44 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10768,7 +10831,7 @@ Each time a member freezes their membership: one to three months from a payment 
 
 #### Invoices
 
-An invoice for each month's fee, raised ten days before the payment day, and one when a member joins with the joining fee and first month. The sample has 2,583 records.
+An invoice for each month's fee, raised ten days before the payment day, and one when a member joins with the joining fee and first month. The sample has 2,592 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10788,7 +10851,7 @@ An invoice for each month's fee, raised ten days before the payment day, and one
 
 #### Invoice Lines
 
-The lines on each invoice. The sample has 2,694 records.
+The lines on each invoice. The sample has 2,705 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10802,7 +10865,7 @@ The lines on each invoice. The sample has 2,694 records.
 
 #### Payments
 
-Every try at taking money for an invoice, collected or not, as the bank reports it: a failed direct debit and its second try are both here. The sample has 2,641 records.
+Every try at taking money for an invoice, collected or not, as the bank reports it: a failed direct debit and its second try are both here. The sample has 2,650 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10829,7 +10892,7 @@ The classes on the timetable, one record each, whatever day they run. The sample
 
 #### Class Sessions
 
-Each time a class runs, past and on the timetable for the fortnight ahead. The sample has 1,257 records.
+Each time a class runs, past and on the timetable for the fortnight ahead. The sample has 1,261 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10845,7 +10908,7 @@ Each time a class runs, past and on the timetable for the fortnight ahead. The s
 
 #### Bookings
 
-Each place a member books in a class. The sample has 9,397 records.
+Each place a member books in a class. The sample has 9,433 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10857,7 +10920,7 @@ Each place a member books in a class. The sample has 9,397 records.
 
 #### Visits
 
-Every time a member comes through the door, as the door reader records it. The sample has 14,269 records.
+Every time a member comes through the door, as the door reader records it. The sample has 14,291 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10868,7 +10931,7 @@ Every time a member comes through the door, as the door reader records it. The s
 
 #### PT Packs
 
-Packs of personal training sessions sold to members, each with a trainer and a use-by date. The sample has 102 records.
+Packs of personal training sessions sold to members, each with a trainer and a use-by date. The sample has 99 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -10887,7 +10950,7 @@ Packs of personal training sessions sold to members, each with a trainer and a u
 
 #### PT Sessions
 
-Each personal training session, given, missed or booked ahead. The sample has 836 records.
+Each personal training session, given, missed or booked ahead. The sample has 831 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -11112,17 +11175,18 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Membership agreement
 
-The agreement a new member signs: their plan, fee, payment day and minimum term, then numbered clauses on fees, freezing, cancelling with notice, health and the gym's rules, and two signatures. Written for this sample; have it checked for your own country before you use it. One for each record of Members, on a4 paper, with the Business record at the head.
+The agreement a member signs, for every membership still running (Active, Frozen, or in notice; not Cancelled or Lapsed): their plan, fees, payment day, minimum term and freeze fee, then numbered clauses on fees, freezing, cancelling with notice, health and the gym's rules, and two signatures. A member who has not answered the health questions gets a line saying they cannot train until they do. Written for this sample; have it checked for your own country before you use it. One for each record of Members, on a4 paper, with the Business record at the head.
 
 - Heading: Membership agreement
-- Fields: Membership no, Start date, First Name, Last Name, Date of Birth, Phone, Address, Postcode, Plan, Monthly Fee, Joining fee, Payment day each month, Minimum term ends, Health questions done, Emergency Contact, Emergency Phone
-- Words: 1. The parties. This agreement is between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the gym") and {First Name} {Last Name} of {Address}, {City} {Postcode} ("the member"). It starts on {Joined}.
+- Fields: Membership no, Start date, First Name, Last Name, Date of Birth, Phone, Address, Town, Postcode, Plan, Monthly fee, Joining fee, Payment day each month, Minimum term ends, Freeze fee a month, Health questions done, Emergency Contact, Emergency Phone
+- Words: 1. The parties. This agreement is between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the gym") and {First Name} {Last Name} of {Address}, {City} {Postcode} ("the member"). It starts on the start date above.
 - Words: 2. The plan. The member joins on the {Plan.Name} plan: {Plan.Description}. The member may use the gym {Plan.Access Hours}. A family plan covers the people named on it at one address, and the member who signs pays the fees for all of them.
-- Words: 3. Fees. The joining fee of {Plan.Joining Fee} and the first month's fee are paid on joining. After that the monthly fee of {Monthly Fee} is collected by direct debit on day {Payment Day} of each month. Prices include VAT. If a payment fails, the gym tries again five days later; if that fails too, the member's card stops opening the door until the amount is paid at the desk. The gym gives at least a month's notice in writing of any change to the fee.
-- Words: 4. Minimum term. The plan has a minimum term of {Plan.Minimum Months} months, ending on {Minimum Term Ends}, and the monthly fee is paid for the whole of it. The gym will let a member leave early for a serious illness or injury, or a move of more than 20 miles away, if they show evidence of it.
-- Words: 5. Freezing. The member may freeze the membership for one to three months in any twelve, from a payment day, by asking at the desk at least ten days before it. While it is frozen the member pays {Plan.Freeze Fee} a month instead of the monthly fee, and cannot use the gym or book classes.
+- Words: 3. Fees. The joining fee and the first month's fee, both shown above, are paid on joining. After that the monthly fee is collected by direct debit on day {Payment Day} of each month. Prices include VAT. If a payment fails, the gym tries again five days later; if that fails too, the member's card stops opening the door until the amount is paid at the desk. The gym gives at least a month's notice in writing of any change to the fee.
+- Words: 4. Minimum term. The plan has a minimum term of {Plan.Minimum Months} months, ending on the day shown above, and the monthly fee is paid for the whole of it. The gym will let a member leave early for a serious illness or injury, or a move of more than 20 miles away, if they show evidence of it.
+- Words: 5. Freezing. The member may freeze the membership for one to three months in any twelve, from a payment day, by asking at the desk at least ten days before it. While it is frozen the member pays the freeze fee shown above instead of the monthly fee, and cannot use the gym or book classes.
 - Words: 6. Cancelling. The member may cancel at any time, in person at the desk or in writing, giving {Plan.Notice Months} month's notice. The membership then ends the day before the first payment day that is at least that far ahead, or at the end of the minimum term if that is later; fees up to that day are still due. The gym may end a membership at once if the member seriously or repeatedly breaks the rules below.
 - Words: 7. Health. The member confirms that their answers to the health questions are true, that they will tell staff of any change, and that they will stop and ask for help if they feel unwell while exercising. Anyone with a health condition should ask their doctor before starting a new kind of exercise.
+- Words: The health questions are not answered yet. The member may not use the gym floor or join a class until they have answered them at the desk.
 - Words: 8. The rules. Show your card at the door and do not let anyone in on it. Wipe equipment down after use and put weights back. Wear clean indoor shoes on the gym floor. Classes are booked up to seven days ahead; a place not cancelled at least two hours before counts as a no-show, and three no-shows in a month stop booking for a fortnight. Children aged 14 to 17 on a family plan use the gym floor only with an adult on the same plan. Lockers are emptied each night.
 - Words: 9. Personal details. The gym keeps the member's details to run the membership, collect the fees and contact them about it. It passes them to no one but its bank, for the direct debit. The member may ask to see what is kept about them.
 - Words: 10. Belongings and injury. The gym is not responsible for belongings left in the building unless it has been careless with them. Nothing here limits the gym's responsibility for injury caused by its own negligence.
@@ -11131,7 +11195,7 @@ The agreement a new member signs: their plan, fee, payment day and minimum term,
 
 #### Membership card
 
-A small card with the member's name, membership number, plan and the times they may come in, printed when they join. One for each record of Members, on receipt-58 paper, with the Business record at the head.
+A small card with the member's name, membership number, plan, the month they joined and the times they may come in, for members who are Active or Frozen. One for each record of Members, on receipt-58 paper, with the Business record at the head.
 
 - Heading: {First Name} {Last Name}
 - Fields: Member no, Plan, Member since, Access
@@ -11139,13 +11203,14 @@ A small card with the member's name, membership number, plan and the times they 
 
 #### Welcome letter
 
-Handed over or posted when someone joins: their membership number, fee and payment day, minimum term, how to book an induction and classes, and personal training. One for each record of Members, on a4 paper, with the Business record at the head.
+Handed over or posted when someone joins, for members who joined in the last 30 days and have not cancelled: their membership number, fee and payment day, minimum term, how to book an induction and classes, and personal training, with a reminder to answer the health questions when they have not yet. One for each record of Members, on a4 paper, with the Business record at the head.
 
-- Fields: First Name, Membership no, Last Name, Joined on, Address, Plan, Town, Postcode
+- Fields: First Name, Membership no, Last Name, Joined on, Address, Plan, Town, Monthly fee, Postcode, Minimum term ends
 - Heading: Welcome to {Business.Name}
 - Words: Dear {First Name},
 - Words: Thank you for joining us, and welcome. Your membership number is {Number}, and it is on your card; show the card at the door each time you come in. On the {Plan.Name} plan you can use the gym {Plan.Access Hours}.
-- Words: Your monthly fee of {Monthly Fee} will be collected by direct debit on day {Payment Day} of each month, and an invoice comes by e-mail ten days before. Your minimum term ends on {Minimum Term Ends}; after that you can cancel with a month's notice, or freeze for up to three months if you are injured or away.
+- Words: Your monthly fee, shown above, will be collected by direct debit on day {Payment Day} of each month, and an invoice comes by e-mail ten days before. Once your minimum term ends on the date above, you can cancel with a month's notice; you can also freeze for up to three months if you are injured or away.
+- Words: Before your first visit, please answer the health questions at the desk: we cannot let you on the gym floor or into a class until you have.
 - Words: Your first visit should be a gym induction with one of our instructors, which is free and takes about forty minutes: ask at the desk or call {Business.Phone} to book one. Classes are on the timetable by the door and can be booked up to seven days ahead; please cancel at least two hours before if you cannot come, so someone else can have the place.
 - Words: If you would like a programme of your own, our personal trainers sell sessions in packs of five, ten or twenty, and your first consultation with one is free.
 - Words: We are glad to have you. If anything is not right, tell any of us, or write to {Business.E-mail}.
@@ -11155,13 +11220,16 @@ Handed over or posted when someone joins: their membership number, fee and payme
 
 #### Monthly invoice
 
-Each month's invoice, sent ten days before the payment day: the period it covers, each line with the VAT in its price, and the total collected. The first one has the joining fee on it. A failed payment shows Retry due or Failed. One for each record of Invoices, on a4 paper, with the Business record at the head.
+Each month's invoice, sent ten days before the payment day: the period it covers, each line with the VAT in its price, and the total collected. The first one has the joining fee on it. Its last words follow the Status: when it will be collected, paid with thanks, a failed payment to be tried again (Retry due), or one to pay at the desk (Failed). Written-off invoices are not printed unless you choose one. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Number}
 - Fields: Member, Invoice no, Address, Invoice date, Town, Collected on, Postcode, Member no, Period from, Period to, Status, Paid on
-- Lines from Invoice Lines: Description, Quantity, Unit Price, Amount, VAT included
-- Totals: Price before VAT, VAT at 20%, Total
+- Lines from Invoice Lines: Description, Quantity, Unit Price, Amount, VAT %, VAT included
+- Totals: Price before VAT, VAT included, Total
 - Words: {Business.Payment Terms}
+- Words: Paid, with thanks.
+- Words: The direct debit on the collection day did not go through. We will try again five days later: please make sure the money is in your account.
+- Words: Both tries at the direct debit failed. Please pay this invoice at the desk or call {Business.Phone}; until it is paid your card will not open the door.
 - Words: Prices include VAT. VAT number {Business.Tax Number}. {Business.Document Footer}
 
 #### PT pack receipt
@@ -11170,7 +11238,7 @@ The till receipt for a pack of personal training: the trainer, the sessions in i
 
 - Heading: Receipt {Number}
 - Fields: Date, Member, Member no, Trainer, Personal training sessions, Use by, Paid by
-- Totals: Price per session, VAT included, Total paid
+- Totals: Price per session, VAT rate, %, VAT included, Total paid
 - Words: Book your sessions with {Trainer} at the desk or on {Business.Phone}. A session cancelled with less than 24 hours' notice counts as used. Sessions not used by the use-by date end then and are not refunded.
 - Words: Prices include VAT. VAT number {Business.Tax Number}. Thank you.
 
@@ -11245,7 +11313,7 @@ It suits, with small changes: A family doctor or GP practice that sees private p
 - The Bill To fields are copied on to each invoice when it is made, so a patient who moves house, or an insurer that changes its address, does not change invoices already sent.
 - Medical care is exempt from VAT, so Business has a Tax Rate of nought and the invoice's VAT row comes to nothing. A clinic that also sells things VAT is charged on would put its rate in Business and keep those sales on invoices of their own.
 - Visit Notes holds short notes in everyday words. A real clinic decides who may open that table, and keeps clinical records under the rules where it works.
-- Each print template prints every record of its table: every appointment has a letter, every insurer a statement. Print the one on screen from its form, or choose the records to print.
+- Some print templates print only the records they are for: the Appointment letter for booked appointments still to come, the Recall letter for open recalls due within 30 days with no letter sent, and the Insurer statement for insurers, not Self-pay. A record you choose from its form always prints, so a past appointment's letter can be printed again.
 - The Self-pay record in Insurers stands for patients who pay for themselves. Do not delete it: every patient must point at an insurer or at Self-pay.
 
 ### Tutorial
@@ -11282,7 +11350,7 @@ It suits, with small changes: A family doctor or GP practice that sees private p
 #### Send the recall letters
 
 1. Each Monday, open the Recall letters to send query: open recalls due in the next 30 days for patients who agree to letters.
-2. Open the Recalls form, find each of those recalls, and print the Recall letter template for it.
+2. Open the print template Recall letter: it holds a letter for each open recall due in the next 30 days. Print those for the patients the query lists (it leaves out patients who want no reminders).
 3. Type today's date in Sent On on each recall you sent a letter for.
 4. When the patient books, type the date in Booked On. The Recalls due query lists the ones still open, including patients who do not want letters, for a phone call instead.
 
@@ -11348,7 +11416,7 @@ The health insurers whose policies the clinic accepts, and one record called Sel
 
 #### Patients
 
-One record per patient registered with the clinic, with contact details, who pays for their care and whether they agree to reminders. The sample has 841 records.
+One record per patient registered with the clinic, with contact details, who pays for their care and whether they agree to reminders. The sample has 825 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -11402,7 +11470,7 @@ What the clinic offers, how long each takes in the diary and what it costs. The 
 
 #### Appointments
 
-Every booking in the diary, past and future, with what came of it. The sample has 5,343 records.
+Every booking in the diary, past and future, with what came of it. The sample has 5,265 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -11418,7 +11486,7 @@ Every booking in the diary, past and future, with what came of it. The sample ha
 
 #### Visit Notes
 
-A short note written by the practitioner after each attended appointment. In this sample they are invented and kept to everyday words. The sample has 4,632 records.
+A short note written by the practitioner after each attended appointment. In this sample they are invented and kept to everyday words. The sample has 4,573 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -11431,7 +11499,7 @@ A short note written by the practitioner after each attended appointment. In thi
 
 #### Invoices
 
-What the clinic charges, one invoice per visit, and for a missed appointment or a late cancellation when a fee is charged. Each invoice keeps the name and address it was made out to, so a reprint reads as the one that was sent. The sample has 4,846 records.
+What the clinic charges, one invoice per visit, and for a missed appointment or a late cancellation when a fee is charged. Each invoice keeps the name and address it was made out to, so a reprint reads as the one that was sent. The sample has 4,786 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -11454,7 +11522,7 @@ What the clinic charges, one invoice per visit, and for a missed appointment or 
 
 #### Payments
 
-Money received against invoices. An invoice can have more than one payment when a patient pays in parts. Each payment has a receipt. The sample has 4,603 records.
+Money received against invoices. An invoice can have more than one payment when a patient pays in parts. Each payment has a receipt. The sample has 4,557 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -11468,7 +11536,7 @@ Money received against invoices. An invoice can have more than one payment when 
 
 #### Recalls
 
-Patients the clinic should ask back: for a yearly health check, a blood pressure review, the autumn flu vaccination or a review after physiotherapy. The sample has 746 records.
+Patients the clinic should ask back: for a yearly health check, a blood pressure review, the autumn flu vaccination or a review after physiotherapy. The sample has 752 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -11677,23 +11745,25 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Invoice
 
-The invoice for a visit, a missed appointment or a late cancellation, made out to the insurer with the patient's policy reference, or to the patient. It shows the visit, any payments received, and the balance due, and says that medical care is exempt from VAT. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
+The invoice for a visit, a missed appointment or a late cancellation, made out to the insurer with the patient's policy reference, or to the patient. It shows the visit and, once something has been paid, the payments received and the balance due; the policy reference only on a claim to an insurer; and how to pay, or that it is paid in full. With no VAT rate in Business it says that medical care is exempt from VAT; with one, it adds a VAT row. Numbered INV-2026-0042. One for each record of Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Number}
 - Fields: Invoice to, Invoice number, Address, Date, Town, Payment due, Postcode, Charge for
-- Fields: Patient, Service, Patient number, Appointment, Date of birth, Seen by, Policy reference, Minutes
+- Fields: Patient, Service, Patient number, Appointment, Date of birth, Seen by, Minutes, Policy reference
 - Words: Payments received against this invoice:
 - Lines from Payments: Receipt, Paid on, Method, Reference, Received
 - Totals: Fee, VAT, Total, Paid, Balance due
-- Words: Medical care given at the clinic is exempt from VAT, so no VAT is charged. {Business.Payment Terms} Please pay by card at the desk, or by transfer to {Business.Bank Details}, quoting {Number}.
+- Words: Medical care given at the clinic is exempt from VAT, so no VAT is charged.
+- Words: {Business.Payment Terms} Please pay by card at the desk, or by transfer to {Business.Bank Details}, quoting {Number}.
+- Words: Paid in full. Thank you.
 - Words: {Business.Document Footer}
 
 #### Payment receipt
 
-Given to a patient who pays at the desk, or sent when a transfer arrives: who paid, how much, for which invoice and visit. Numbered RCP-2026-0042. One for each record of Payments, on a5 paper, with the Business record at the head.
+Given to a patient who pays at the desk, or sent when a transfer arrives: who paid, how much, for which invoice and visit, the payment's reference when it has one, and the invoice total and what has been paid to date. Numbered RCP-2026-0042. One for each record of Payments, on a5 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
-- Fields: Received from, Date, For invoice, Paid by, Patient, Reference, Service, Appointment
+- Fields: Received from, Date, For invoice, Paid by, Patient, Service, Appointment, Reference
 - Totals: Amount received
 - Fields: Invoice total, Paid to date
 - Words: Thank you. Medical care is exempt from VAT, so this receipt shows none.
@@ -11701,15 +11771,15 @@ Given to a patient who pays at the desk, or sent when a transfer arrives: who pa
 
 #### Appointment letter
 
-Sent when an appointment is booked: the date and time, who it is with, where to come, who pays, and how to cancel or move it. Every appointment can print one, past ones too, so print it from the Appointments form for the one on screen. One for each record of Appointments, on a4 paper, with the Business record at the head.
+Sent when an appointment is booked: the day, date and time, who it is with, where to come, who pays and the fee, and how to cancel or move it. It prints for appointments still Booked and still to come; a past one prints when you choose it from the Appointments form. One for each record of Appointments, on a4 paper, with the Business record at the head.
 
 - Heading: Your appointment
 - Fields: To, Patient number, Address, Booked on, Town, Postcode
 - Words: Dear {Patient.First Name},
 - Words: Thank you for booking with us. This letter confirms your appointment.
-- Fields: Date and time, Appointment for, With, Length in minutes, Paid by, Policy reference
+- Fields: Date and time, Appointment for, With, Length in minutes, Paid by, Fee, Policy reference
 - Words: Where: {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}. Please come to reception five minutes before your time. The front door has step-free access and every treatment room is on the ground floor.
-- Words: If your insurer is paying, please check that your policy covers this appointment and bring your policy reference with you. If you pay for yourself, the fee of {Service.Price} is paid at the desk on the day, by card or cash.
+- Words: If your insurer is paying, please check that your policy covers this appointment and bring your policy reference with you. If you pay for yourself, the fee above is paid at the desk on the day, by card or cash.
 - Words: If you need to cancel or move the appointment, please ring us on {Business.Phone} or write to {Business.E-mail} at least 24 hours before. We may charge half the fee for an appointment that is missed, or cancelled with less notice, because we cannot offer the time to someone else.
 - Words: We look forward to seeing you.
 - Words: Yours sincerely,
@@ -11717,12 +11787,12 @@ Sent when an appointment is booked: the date and time, who it is with, where to 
 
 #### Recall letter
 
-A short, friendly letter asking a patient back for a check that is due, with how to book. Print it for the patients in the Recall letters to send query, from the Recalls form. Have the wording checked against the rules where you work. One for each record of Recalls, on a4 paper, with the Business record at the head.
+A short, friendly letter asking a patient back for a check that is due, with the month it is due and how to book. It prints for open recalls (not booked, no letter sent yet) due in the next 30 days, the same recalls as the Recall letters to send query, except that it cannot see a patient's Reminders: leave out anyone the query does not list. Have the wording checked against the rules where you work. One for each record of Recalls, on a4 paper, with the Business record at the head.
 
 - Heading: A reminder from {Business.Name}
-- Fields: To, Patient number, Address, Town, Postcode
+- Fields: To, Patient number, Address, Town, Postcode, Due
 - Words: Dear {Patient.First Name},
-- Words: This is a friendly reminder that you are due to come back and see us for your {Service.Name}, around {Due Date}. It takes about {Service.Minutes} minutes.
+- Words: This is a friendly reminder that you are due to come back and see us for your {Service.Name}, in the month shown above. It takes about {Service.Minutes} minutes.
 - Words: To book a time that suits you, ring us on {Business.Phone}, write to {Business.E-mail}, or book online at {Business.Website}.
 - Words: If you have already booked, or have had this done elsewhere, please ignore this letter, or tell us and we will update our records. If you would rather not have reminders from us, just let us know.
 - Words: With best wishes,
@@ -11730,13 +11800,15 @@ A short, friendly letter asking a patient back for a check that is due, with how
 
 #### Insurer statement
 
-Sent to each insurer: every claim made to it, what it has paid and the balance owing. The Self-pay record prints an empty one, which can be left out. One for each record of Insurers, on a4 paper, with the Business record at the head.
+Sent to each insurer, dated the day it is printed: only the claims it has not paid, with what was claimed, any part paid and what is owing on each, how many there are, and the balance owing. The Self-pay record has no statement. One for each record of Insurers, on a4 paper, with the Business record at the head.
 
 - Heading: Statement of claims
+- Totals: Statement date
 - Fields: Insurer, Terms (days), Address, Claims e-mail, Town, Postcode
 - Lines from Invoices: Invoice, Date, Patient, Policy, Service, Due, Claimed, Paid, Owing
-- Totals: Claimed, Paid, Balance owing
+- Totals: Claims unpaid, Claimed, Paid, Balance owing
 - Words: Please pay the balance owing to {Business.Bank Details}, quoting each invoice number, and send the remittance list to {Business.E-mail}. If you have paid since this statement was made, thank you.
+- Words: Every claim we have made to you is paid. Thank you.
 
 ### Starting empty
 
@@ -11807,7 +11879,7 @@ It suits, with small changes: A tutoring business with group or one-to-one lesso
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
 - An invoice's lines are the enrolments that point at it, so an enrolment with no Invoice is not on any invoice yet. Set it when you send the invoice; a place booked after the invoice was sent goes on a new invoice of its own.
 - Paid So Far on an invoice and Balance After on a payment are typed, not worked out. Keep Paid So Far equal to the invoice's payments added up, or the balance printed on the invoice will be wrong.
-- A print template prints every record of its table, so the Enrolment letter, the Fee invoice and the others print the whole history unless you choose the records first. Choose the ones you want (the new enrolments, this term's invoices) before pressing Print.
+- The Enrolment letter prints only for places whose Status is Enrolled. The other print templates print every record of their table (every invoice, receipt, report, certificate and pay statement there is), so choose the ones you want, such as this term's invoices, before pressing Print. A record you choose from its form always prints.
 - Term reports and certificates are records of their own, written once at the end of a term. Changing the register later does not change a report already written: update its line by hand if a mark was wrong.
 - A pay statement's lines are the lessons that point at it. A lesson covered by another teacher has that teacher in its Teacher field, so it is paid on their statement, not the class teacher's.
 - Tuition here is exempt from VAT, so the Business record's Tax Rate is 0 and no document shows VAT. If yours is not, see the last of the ways to adapt the sample.
@@ -12037,7 +12109,7 @@ Every lesson of every class: those taught, those planned for the rest of the ter
 
 #### Attendance
 
-The register: one mark for each student at each lesson taught. The sample has 7,485 records.
+The register: one mark for each student at each lesson taught. The sample has 7,516 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12049,7 +12121,7 @@ The register: one mark for each student at each lesson taught. The sample has 7,
 
 #### Assessments
 
-The tests and marked pieces of work set to a class. Children's classes have a test at half term and one at the end of term; adult courses have one at the end. The sample has 143 records.
+The tests and marked pieces of work set to a class. Children's classes have a test at half term and one at the end of term; adult courses have one at the end. The sample has 147 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12061,7 +12133,7 @@ The tests and marked pieces of work set to a class. Children's classes have a te
 
 #### Results
 
-Each student's mark in each assessment they sat. A student away that day has no result. The sample has 838 records.
+Each student's mark in each assessment they sat. A student away that day has no result. The sample has 872 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12088,7 +12160,7 @@ One invoice for each family for each term or holiday they book, covering every c
 
 #### Payments
 
-Each payment received against an invoice. A family paying in instalments has several. Each one is a receipt. The sample has 601 records.
+Each payment received against an invoice. A family paying in instalments has several. Each one is a receipt. The sample has 600 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12356,39 +12428,43 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Fee invoice
 
-Sent to each family about three weeks before a term or holiday starts: a line for each child's class with the lessons, the price per lesson and any discount, then the total, what has been paid so far and the balance due. Numbered INV-2026-0042. Print it again later and it shows the payments since. One for each record of Fee Invoices, on a4 paper, with the Business record at the head.
+Sent to each family about three weeks before a term or holiday starts: a line for each child's class with the lessons, the price per lesson and any discount, then the total. The discounts row and the line about discounts show only when there is one; once something has been paid it shows what has come in and the balance due, and a paid invoice says so in place of how to pay. Numbered INV-2026-0042. Print it again later and it shows the payments since. One for each record of Fee Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: Fee invoice {Number}
 - Fields: To, Invoice, Address, Invoice Date, City, Please pay by, Postcode, For, Account
 - Lines from Enrolments: Student, Course, Day, Time, Lessons, Per Lesson, Fees, Discount, To Pay
 - Totals: Fees, Less discounts, Total for the term, Paid so far, Balance due
-- Words: Brothers and sisters after the first child booked in a term have ten percent off; a bursary place is half fees. {Business.Payment Terms}
-- Words: Pay by bank transfer to {Business.Bank Details}, quoting {Number}, or by card or cash at the office.
+- Words: Brothers and sisters after the first child booked in a term have ten percent off; a bursary place is half fees.
+- Words: {Business.Payment Terms} Pay by bank transfer to {Business.Bank Details}, quoting {Number}, or by card or cash at the office.
+- Words: Paid in full. Thank you.
 - Words: {Business.Document Footer}
 
 #### Payment receipt
 
-Given or sent for each payment, on A5: the receipt number, who paid, how, which invoice it was for, and what is left to pay on it. One for each record of Payments, on a5 paper, with the Business record at the head.
+Given or sent for each payment, on A5: the receipt number, who paid, how, which invoice it was for, what was owing before it, and what is left to pay, or that the invoice is now paid in full. One for each record of Payments, on a5 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
 - Fields: Receipt, Received on, Received from, Paid by, For invoice, Term
-- Totals: Invoice total, Received with thanks, Left to pay on the invoice
-- Words: The invoice total here is what was owing on the invoice before this payment.
+- Totals: Owing before this payment, Received with thanks, Left to pay on the invoice
+- Words: The invoice is now paid in full.
 - Words: {Business.Document Footer}
 - Signed by: Received for the centre
 
 #### Enrolment letter
 
-Sent when a place is booked: the class, its day, time and room, the teacher, the first lesson, the term's dates, what to bring and what happens if the student cannot come. It prints for every enrolment, so choose the ones just booked before printing. Have the wording checked for your own centre and country. One for each record of Enrolments, on a4 paper, with the Business record at the head.
+Sent when a place is booked: the class, its day, time and room, the teacher, the first lesson, the term's dates, what to bring, any discount or bursary, and what happens if the student cannot come. It prints for places whose Status is Enrolled; a finished or withdrawn place prints when you choose it from the Enrolments form. Have the wording checked for your own centre and country. One for each record of Enrolments, on a4 paper, with the Business record at the head.
 
 - Fields: To, Date, Address, City, Postcode, Our reference
 - Heading: Your place is confirmed: {Student.First Name} on {Class.Course.Name}
 - Words: Dear {Student.Family.Contact},
 - Words: Thank you for booking with us. This letter confirms the place for {Student} and tells you what to expect before the first lesson.
+- Fields: First lesson, Term starts, Term ends
 - Words: 1. The class. {Class.Course.Name} meets every {Class.Weekday} at {Class.Start Time} in {Class.Room}, and each lesson lasts {Class.Course.Minutes} minutes. The teacher is {Class.Teacher}.
-- Words: 2. When it starts. The first lesson for {Student.First Name} is on {First Lesson}. {Class.Term} runs from {Class.Term.Starts} to {Class.Term.Ends}, and the class has {Class.Lessons Planned} lessons in that time.
+- Words: 2. When it starts. The first lesson for {Student.First Name} is on the day above. {Class.Term} runs between the dates above, and the class has {Class.Lessons Planned} lessons in that time.
 - Words: 3. What to bring. {Class.Course.What to Bring}
 - Words: 4. Fees. The place is charged for {Lessons Billed} lessons, on the invoice for the term. Fees are not refunded part way through a term, but if a lesson is cancelled by us it is made up or taken off the next invoice.
+- Words: Another place in the family was booked first this term, so this place for {Student.First Name} has ten percent off.
+- Words: This is a bursary place, at half fees.
 - Words: 5. Arriving and going home. Please arrive five minutes before the start. Children are signed in at the front desk and wait inside until they are collected, so please tell the office if someone new is coming for them. Adult learners go straight to the room.
 - Words: 6. If you cannot come. Ring {Business.Phone} or write to {Business.E-mail} before the lesson, so the register can be marked and work kept back.
 - Words: We look forward to seeing {Student.First Name}.
@@ -12402,7 +12478,7 @@ The progress report sent home after each term: for each class, the lessons, late
 - Heading: Progress report, {Term}
 - Fields: Student, School Year, Term, Date, Sent to
 - Lines from Report Lines: Course, Teacher, Lessons, Late, Absent, Attended %, Half-term %, End of Term %, Teacher's comment
-- Totals: Lessons this term, Missed, Attendance, percent
+- Totals: Classes, Lessons this term, Missed, Attendance, %
 - Words: {Comment}
 - Words: Marks are percentages of the test. A blank mark means the test was missed or the course has none.
 - Signed by: Centre director
@@ -12420,10 +12496,10 @@ Given to each adult learner who finishes a course and each child who finishes a 
 
 #### Pay statement
 
-Given to each teacher each month: every lesson they taught with its class, minutes and pay at their hourly rate, then the hours and the gross pay. Tax and National Insurance are worked out by the payroll, not here. One for each record of Pay Statements, on a4 paper, with the Business record at the head.
+Given to each teacher each month: every lesson they taught with its day, class, minutes and pay at their hourly rate, then the lessons counted, the hours and the gross pay, and the day it was paid once it has been. Tax and National Insurance are worked out by the payroll, not here. One for each record of Pay Statements, on a4 paper, with the Business record at the head.
 
 - Heading: Pay statement {Number}
-- Fields: Teacher, Statement, Month, Paid On, From, To, Hourly Rate
+- Fields: Teacher, Statement, Month, Hourly Rate, From, To, Paid On
 - Lines from Lessons: Date, Class, Course, Minutes, Hours, Rate, Pay
 - Totals: Lessons taught, Hours, Gross pay
 - Words: Pay is for lessons taught, at your hourly rate; cancelled lessons are not paid. Tax and National Insurance are taken by the payroll and shown on the payslip it sends.
@@ -12498,7 +12574,7 @@ It suits, with small changes: A sports or social club with yearly subscriptions;
 - A renewal is a new Memberships record, not a change to the old one. Tick Renewed on the old one, or the member stays in Renewals due and later in Lapsed members.
 - Claimable is set from the declaration in place on the day of the gift. Where your scheme lets a new declaration cover earlier gifts, as the UK's does for four years, tick Claimable on those gifts too.
 - The claim of a quarter of each gift is written in three places: the Gifts to claim query, the Donation receipt and the Tax claim schedule. Change all three if your scheme pays a different share.
-- A print template prints every record of its table unless you choose some, so choose the gifts, memberships or bookings you mean before pressing Print.
+- Some print templates print only the records they are for: the Donation receipt for gifts that are not standing orders, the Renewal reminder for memberships ending in the next 30 days and not renewed, the Membership card for memberships still good, and the Event ticket for bookings not cancelled. A record you choose from its form always prints. The rest print every record, so choose the ones you mean before pressing Print.
 - The trust is not registered for VAT, so Tax Rate in Business is nought and no document shows VAT. Company Number holds the charity number, printed at the foot of each letter.
 - The volunteer shifts go back further than the other records, so the whole of the last volunteer year (to 31 March) is there to count for the certificates.
 
@@ -12515,7 +12591,7 @@ It suits, with small changes: A sports or social club with yearly subscriptions;
 #### Send renewal reminders and renew a membership
 
 1. Each week, run the query Renewals due: memberships ending in the next 30 days that have not been renewed. The report Renewal reminders prints the same list.
-2. Open the print template Renewal reminder from Print templates, choose the memberships in that list, and press Print.
+2. Open the print template Renewal reminder from Print templates: it holds a letter for each membership on that list. Press Print.
 3. When the fee comes in, open the Memberships form, find the old membership and tick Renewed.
 4. Press New for the new year: choose the Person and Membership Type, set Starts to the day after the old Ends and Ends a year on, type the Amount, Paid On and Method, and the next membership number in Number (MEM-2026-0042).
 5. Write the fee in the Income form with Source Membership and the membership number in Reference.
@@ -12597,7 +12673,7 @@ The business's own details, in one record. Every document it prints, an invoice,
 
 #### People
 
-One record per person the trust knows: members, donors, event guests and volunteers are all here, once each. What someone is to the trust comes from their other records (a membership, a gift, a shift). The sample has 865 records.
+One record per person the trust knows: members, donors, event guests and volunteers are all here, once each. What someone is to the trust comes from their other records (a membership, a gift, a shift). The sample has 871 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12632,7 +12708,7 @@ The kinds of membership on offer and what each costs. Enter these first. The sam
 
 #### Memberships
 
-One record for each year of membership paid. A renewal is a new record starting the day after the last one ends, so a member's history stays. The sample has 497 records.
+One record for each year of membership paid. A renewal is a new record starting the day after the last one ends, so a member's history stays. The sample has 501 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12676,7 +12752,7 @@ Each claim made to the tax office for tax back on gifts, made each quarter. The 
 
 #### Donations
 
-One record per gift, whether one-off or a monthly standing order. The sample has 1,703 records.
+One record per gift, whether one-off or a monthly standing order. The sample has 1,693 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12709,7 +12785,7 @@ Everything the trust holds: quiz nights, ceilidhs, coffee mornings, talks, the s
 
 #### Event Bookings
 
-One record per booking: a person and the tickets they took for one event. The sample has 1,564 records.
+One record per booking: a person and the tickets they took for one event. The sample has 1,563 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12737,7 +12813,7 @@ The jobs volunteers do, with a value per hour so their time can be counted in mo
 
 #### Volunteer Shifts
 
-One record for each turn a volunteer does, past and on the rota ahead. The sample has 1,495 records.
+One record for each turn a volunteer does, past and on the rota ahead. The sample has 1,624 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12750,7 +12826,7 @@ One record for each turn a volunteer does, past and on the rota ahead. The sampl
 
 #### Volunteer Certificates
 
-One record for each volunteer thanked with a certificate for a volunteer year, which runs to 31 March as the accounts do. Made once a year from Volunteer Shifts, for everyone who gave six hours or more, and handed out at the annual general meeting. The sample has 21 records.
+One record for each volunteer thanked with a certificate for a volunteer year, which runs to 31 March as the accounts do. Made once a year from Volunteer Shifts, for everyone who gave six hours or more, and handed out at the annual general meeting. The sample has 25 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -12799,7 +12875,7 @@ Each application for a grant, from the day it was sent to the report the funder 
 
 #### Income
 
-The cash book: one line for every payment received, whatever it was for, as the treasurer banks it. Fees, gifts, tickets, grants, tax claims and collections are all here, so income can be counted in one place. The sample has 3,486 records.
+The cash book: one line for every payment received, whatever it was for, as the treasurer banks it. Fees, gifts, tickets, grants, tax claims and collections are all here, so income can be counted in one place. The sample has 3,487 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -13042,14 +13118,15 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Donation receipt
 
-The thank-you letter for a gift, which is also its receipt: the amount, the day it came, the appeal it goes to, whether the giver has a tax declaration, and what the tax claim adds to it. Every gift has one; print those of the last week or two by choosing them, and leave out standing orders, which are thanked once a year. One for each record of Donations, on a4 paper, with the Business record at the head.
+The thank-you letter for a gift, which is also its receipt: the amount, the day it came, the appeal it goes to, whether the giver has a tax declaration and, when they have, what the tax claim adds to it; without one, a line asking them for the form. It prints for every gift but standing orders, which are thanked once a year (choose one from the Donations form to print it anyway); print those of the last week or two by choosing them. One for each record of Donations, on a4 paper, with the Business record at the head.
 
 - Heading: Thank you for your gift
 - Fields: To, Receipt, Address, Received on, Town, Given to, Postcode, Tax declaration
 - Words: Dear {Person.First Name},
-- Words: Thank you for your gift of {Amount}, which reached us on {Gift Date}. It goes to the {Campaign}: {Campaign.Description}.
+- Words: Thank you for your gift, which reached us on the day above. It goes to the {Campaign}: {Campaign.Description}.
 - Totals: Your gift, Tax we can claim back on it, What your gift is worth to us
-- Words: Where Tax declaration says Yes, you have told us that you pay enough UK income tax for us to claim tax back on your gifts. We will put this one in our next claim, which adds a quarter to it at no cost to you; please tell us if your tax changes. Where it says No, we cannot claim on this gift. If you do pay UK income tax, a short declaration lets us claim on this gift and on your future ones: ask us for the form.
+- Words: You have told us that you pay enough UK income tax for us to claim tax back on your gifts. We will put this one in our next claim, which adds a quarter to it at no cost to you; please tell us if your tax changes.
+- Words: We cannot claim tax back on this gift. If you do pay UK income tax, a short declaration lets us claim on this gift and on your future ones, adding a quarter at no cost to you: ask us for the form.
 - Words: Please keep this letter as your receipt. Our newsletter tells you how the money is spent; let us know whether you would like it by post or by e-mail.
 - Words: With warm thanks,
 - Signed by: Treasurer
@@ -13057,13 +13134,14 @@ The thank-you letter for a gift, which is also its receipt: the amount, the day 
 
 #### Renewal reminder
 
-A short letter to a member whose membership is ending: the fee for next year, how to pay, and what membership gives. Choose the memberships in the Renewals due query to print; a life membership has no end and needs no reminder. One for each record of Memberships, on a4 paper, with the Business record at the head.
+A short letter to a member whose membership ends in the next 30 days and has not been renewed, the same memberships as the Renewals due query: the day it ends, the fee for next year, how to pay (worded for a standing order, which renews itself, or for paying at the office or by transfer), and what membership gives. A life membership has no end and gets no reminder. One for each record of Memberships, on a4 paper, with the Business record at the head.
 
 - Heading: Your membership is due for renewal
 - Fields: To, Membership no, Address, Membership, Town, Ends on, Postcode, Fee for next year
 - Words: Dear {Person.First Name},
-- Words: Your {Membership Type} membership of {Business.Name} comes to an end on {Ends}. We hope you will stay with us for another year. The fee for the year ahead is {Membership Type.Fee}.
-- Words: Your fee last year was paid by: {Method}. If you pay by standing order, your membership renews itself on the day and there is nothing you need to do, unless your bank details have changed. Otherwise you can pay by card or cash at the hall office, or by bank transfer to {Business.Bank Details}, quoting your membership number, {Number}.
+- Words: Your {Membership Type} membership of {Business.Name} comes to an end on the day above. We hope you will stay with us for another year, for the fee shown above.
+- Words: You pay by standing order, so your membership renews itself on the day and there is nothing you need to do, unless your bank details have changed.
+- Words: You can pay by card or cash at the hall office, or by bank transfer to {Business.Bank Details}, quoting your membership number, {Number}. A standing order renews it each year without a letter: ask us for the form.
 - Words: Members pay members' rates for events and the junior sessions, and have a vote at the annual general meeting. Your fee also helps to keep the hall warm and open for everyone who uses it.
 - Words: If you have renewed since this letter was printed, thank you, and please ignore it. If you would rather not renew, you need do nothing, though we would be glad to know why: write to {Business.E-mail} or call {Business.Phone}.
 - Words: With best wishes,
@@ -13072,42 +13150,44 @@ A short letter to a member whose membership is ending: the fee for next year, ho
 
 #### Membership card
 
-A small card for each membership, to show for members' rates: the member, the membership number, the kind of membership and the dates it is good for. Print it for a new or renewed membership. One for each record of Memberships, on receipt-58 paper, with the Business record at the head.
+A small card for each membership, to show for members' rates: the member, the membership number, the kind of membership and the dates it is good for, or Life for a life membership. It prints for memberships still good today and those starting soon; print it for a new or renewed membership. One for each record of Memberships, on receipt-58 paper, with the Business record at the head.
 
 - Heading: Membership card
-- Fields: Member, Membership no, Membership, Valid from, Valid until
-- Words: Show this card for members' rates at events. A life membership has no end date.
+- Fields: Member, Membership no, Membership, Valid from, Valid until, Valid until
+- Words: Show this card for members' rates at events.
 - Words: If found, please return to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}.
 
 #### Event ticket
 
-Sent or handed to each guest when they book: the event, when and where, how many it admits, what was paid, and a ticket number to check at the door. A cancelled booking prints with Cancelled: Yes. One for each record of Event Bookings, on a5 paper, with the Business record at the head.
+Sent or handed to each guest when they book: the event, when and where, how many it admits, what was paid (or that entry is free), and a ticket number to check at the door. It prints for bookings not cancelled; a cancelled one chosen from its form says the ticket is no longer valid. One for each record of Event Bookings, on a5 paper, with the Business record at the head.
 
 - Heading: {Event}
-- Fields: Ticket, Date, Name, Starts, Admits, Venue, Paid, Booked on, Cancelled
+- Fields: Ticket, Date, Name, Starts, Admits, Venue, Booked on, Paid
+- Words: Entry is free.
+- Words: This booking has been cancelled, and the ticket is no longer valid.
 - Words: Please bring this ticket, printed or on your phone, and give the number at the door. Tickets are refunded only if the event is cancelled.
 - Words: {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}. Registered charity number {Business.Company Number}.
 
 #### Volunteer certificate
 
-A certificate of thanks for each volunteer, with the hours and shifts they gave in the volunteer year and the roles they did. Handed out at the annual general meeting, and useful to a volunteer for a job or college application. One for each record of Volunteer Certificates, on a4 paper, with the Business record at the head.
+A certificate of thanks for each volunteer, with the hours and shifts they gave in the volunteer year, its dates, and the roles they did. Handed out at the annual general meeting, and useful to a volunteer for a job or college application. One for each record of Volunteer Certificates, on a4 paper, with the Business record at the head.
 
 - Heading: Certificate of thanks
 - Words: This certificate is presented to
 - Heading: {Person}
-- Words: in thanks for the {Hours} hours given as a volunteer with {Business.Name}, over {Shifts} shifts, in the year from {Year Starting} to {Year Ending}.
-- Fields: Roles, Certificate, Most hours in, Presented on
+- Words: in thanks for the {Hours} hours given as a volunteer with {Business.Name}, over {Shifts} shifts, in the volunteer year below.
+- Fields: From, To, Roles, Most hours in, Certificate, Presented on
 - Words: Our work depends on people who give their time freely. Thank you for yours.
 - Signed by: Chair of trustees, Volunteer coordinator
 
 #### Tax claim schedule
 
-The list of gifts that goes with each claim to the tax office: each giver's name, house and postcode, the date and amount of each gift and the tax back on it, with the totals. The form your tax office wants may differ: check what it asks for in your own country. One for each record of Tax Claims, on a4 paper, with the Business record at the head.
+The list of gifts that goes with each claim to the tax office: each giver's name, house and postcode, the date and amount of each gift and the tax back on it, with the number of gifts, the totals, and what was received once the claim is paid. The form your tax office wants may differ: check what it asks for in your own country. One for each record of Tax Claims, on a4 paper, with the Business record at the head.
 
 - Heading: Tax claim schedule {Reference}
 - Fields: Claim, Charity number, Gifts up to, Tax office reference, Submitted on, Paid on
 - Lines from Donations: Date, Receipt, First name, Last name, House and street, Postcode, Amount, Tax back
-- Totals: Gifts, Tax back on them, Amount claimed
+- Totals: Gifts listed, Gifts, Tax back on them, Amount claimed, Amount received
 - Words: Every gift listed was made by a person who had a tax declaration in place on the day of the gift. Keep this schedule, with the declarations, as long as the tax office asks.
 
 ### Starting empty
@@ -13165,7 +13245,7 @@ The sample holds eighteen months of letting. Each unit has its run of leases: te
 
 Rent on a home carries no VAT. The workshop yard is a building the landlord has opted to tax, so its rent invoices add VAT at twenty percent, and the VAT collected is paid over to the tax office each quarter.
 
-Money for each building goes through one Transactions table, rent in and costs out, so income and expenditure, net income and the month-by-month accounts come from one place. A rent payment also points at the rent invoice it pays, and the invoice keeps the total paid against it, which is how arrears are found. Seven print templates make the papers a landlord sends: the rent invoice, the rent statement, the tenancy agreement for a home, the summary of a commercial lease, the deposit receipt, the arrears letter and the notice of an inspection.
+Money for each building goes through one Transactions table, rent in and costs out, so income and expenditure, net income and the month-by-month accounts come from one place. A rent payment also points at the rent invoice it pays, and the invoice keeps the total paid against it, which is how arrears are found. Seven print templates make the papers a landlord sends: the rent invoice, the rent statement with a running balance, the tenancy agreement for a home, the summary of a commercial lease, the deposit receipt, the arrears letter listing the months unpaid, and the notice of an inspection. Each prints only for the records it is for, and leaves out what does not apply: no VAT lines on a home's rent, no payments table before anything is paid.
 
 It suits, with small changes: A private landlord with a few houses or flats; A small letting agent managing homes for owners; Holiday lets, with weekly lets in place of leases; Student houses let by the room; Storage units or lock-up garages; Allotments or moorings let by the year; A small commercial landlord with shops and workshops.
 
@@ -13180,7 +13260,7 @@ It suits, with small changes: A private landlord with a few houses or flats; A s
 - Monthly Rent on a lease is the rent before VAT. A rent invoice's Amount is the rent and VAT together, and that is what Amount Paid is measured against.
 - Only the workshop yard is opted to tax, so only its two workshops have a Tax Rate of 0.2. The shops in Market Parade are commercial lets without VAT, which is how a building is until its landlord opts to tax it.
 - The Status of units and leases (Let, Vacant, Upcoming, Active, Ended) is as it stood on the day the sample was made. Change it by hand when a tenancy starts or ends; the queries for current tenants and the rent roll read it.
-- A print template prints a document for every record of its table: every rent invoice, every lease, every inspection. Choose the records you want before you print, or print the one on screen from its form. The Tenancy agreement is worded for a home and the Commercial lease summary for a shop or workshop, so choose a lease of the right Type.
+- Each print template prints only the records it is for: the rent invoices of the last 31 days, the leases running or about to start (homes for the Tenancy agreement, shops and workshops for the Commercial lease summary), the deposits still held, the arrears letters still waiting, and the visits of the next three weeks. A record printed from its own form always prints, whatever the template would choose.
 - An arrears letter keeps the amount owed on the day it was written. It is a record of what the tenant was told, so it does not change when they pay.
 - A renewal is a new lease for the same tenant and unit. It keeps the deposit and its protection reference from the lease before, so it has no Deposits record of its own.
 - Tenants keep a correspondence address. For a tenant living in one of your units it is that unit; when they leave, change it to their forwarding address so the final statement and the deposit letter reach them.
@@ -13207,7 +13287,7 @@ It suits, with small changes: A private landlord with a few houses or flats; A s
 1. Each working day, open the query Rent due in the next 14 days, or the Leases form, to see whose rent day is two weeks away.
 2. Open the Rent Charges form and press New for each one. Give the next number in Number (RENT-, the year and the next number), choose the Lease and the Tenant, and type Period (as 2026-11), Invoice Date (today), Due Date (the rent day) and Period End (the day before the next rent day).
 3. Type Net (the lease's Monthly Rent) and Tax Rate (the lease's Tax Rate), then Tax (the rent times the rate, to the penny) and Amount (Net and Tax together). Leave Amount Paid at nought.
-4. Open the print template Rent invoice from Print templates, choose the new invoices and press Print or Save as PDF to send them.
+4. Open the print template Rent invoice from Print templates: it holds the invoices raised in the last 31 days. Choose the new ones and press Print or Save as PDF to send them.
 5. At the end of the month, open the report Rent invoices this month to check the month's invoicing.
 
 #### Record a rent payment
@@ -13408,7 +13488,7 @@ Each deposit taken, one record for each new tenancy: a renewal keeps the deposit
 
 #### Rent Reminders
 
-Each letter sent about rent that is late: the first a week after the rent day, then one a fortnight while it is still unpaid. The Rent arrears letter is printed from here. The sample has 155 records.
+Each letter sent about rent that is late: the first a week after the rent day, then one a fortnight while it is still unpaid. The Rent arrears letter is printed from here. The sample has 156 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -13738,45 +13818,52 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Rent invoice
 
-The invoice each tenant gets two weeks before the rent day: the month it covers, the rent, any VAT, the payments already received against it and the balance to pay, with the bank details to pay to. Numbered RENT-2026-0042. It prints for every rent invoice, so choose the ones to print, or print from the Rent Charges form. One for each record of Rent Charges, on a4 paper, with the Business record at the head.
+The invoice each tenant gets two weeks before the rent day: who it is addressed to (a business by its name), the month it covers, the rent, and for a workshop in the opted building the VAT rate, the VAT and the total. Once something is paid, it lists the payments received and what is left to pay; paid in full, it says so. Numbered RENT-2026-0042. It prints the invoices raised in the last 31 days; print an older one from the Rent Charges form. One for each record of Rent Charges, on a4 paper, with the Business record at the head.
 
 - Heading: Rent invoice {Number}
-- Fields: Invoice to, Invoice number, Trading as, Date, Address, Rent due, City, Rent paid up to, Postcode, Rent account
-- Words: Rent for {Lease.Unit.Postal Address}, {Lease.Unit.Property.City} {Lease.Unit.Property.Postcode}, for the month from {Due Date} to {Period End}, due in advance. You pay by: {Lease.Pays By}.
+- Fields: Invoice number, Date, Rent account, Rent due, You pay by, Rent paid up to
+- Lines from Tenants: Invoice to, Address
+- Words: Rent for {Lease.Unit.Postal Address}, {Lease.Unit.Property.City} {Lease.Unit.Property.Postcode}, for the month from {Due Date} to {Period End}, due in advance.
 - Words: Payments received against this invoice:
 - Lines from Transactions: Received, Method, Amount
-- Totals: Rent, VAT, Total for the month, Already paid, Balance to pay
-- Words: {Business.Payment Terms} Bank transfer to {Business.Bank Details}, quoting {Number}. A standing order pays this on the due date by itself: there is nothing more to do.
-- Words: VAT registration {Business.Tax Number}. VAT is added only to the rent of a shop or workshop in a building the landlord has opted to tax; rent on a home carries none.
+- Totals: Rent, VAT rate %, VAT, Total for the month, Already paid, Balance to pay
+- Words: {Business.Payment Terms} Bank transfer to {Business.Bank Details}, quoting {Number}. If you pay by standing order, it pays this on the due date by itself and there is nothing more to do.
+- Words: Paid in full: thank you. There is nothing more to pay for this month.
+- Words: VAT registration {Business.Tax Number}. The landlord has opted to tax this building, so VAT is added to the rent of its shops and workshops.
 - Words: {Business.Document Footer}
 
 #### Rent statement
 
-A tenant's account: every rent invoice with what was charged, paid and when, and the balance owing. Sent when a tenant asks, with an arrears letter, or when a tenancy ends. It prints for every tenant; choose the one you want, or print from the Tenants form. One for each record of Tenants, on a4 paper, with the Business record at the head.
+A tenant's account on the day it is printed: every rent invoice with what was charged, what was paid and when, what is unpaid on each month, and the running balance after each, ending with the balance owing. Sent when a tenant asks, with an arrears letter, or when a tenancy ends. It prints for every tenant, past and present; choose the one you want, or print from the Tenants form. One for each record of Tenants, on a4 paper, with the Business record at the head.
 
 - Heading: Rent statement: {First Name} {Last Name}
-- Fields: Trading as, Rent account, Address, Phone, City, E-mail, Postcode
-- Lines from Rent Charges: Invoice, Month, Due, Charged, Paid, Paid on, Owing
+- Totals: Statement date
+- Fields: Rent account, Phone, Address, E-mail, City, Postcode, Trading as
+- Lines from Rent Charges: Invoice, Month, Due, Charged, Paid, Paid on, Unpaid, Balance
 - Totals: Rent charged, Rent paid, Balance owing
-- Words: Please pay any balance owing to {Business.Bank Details}, quoting your rent account {Account}. If you have paid since this statement was made, thank you. If anything here looks wrong, call us on {Business.Phone} and we will look into it.
+- Words: Please pay the balance owing to {Business.Bank Details}, quoting your rent account {Account}. If you have paid since this statement was made, thank you. If anything here looks wrong, call us on {Business.Phone} and we will look into it.
+- Words: Your rent account is clear: nothing is owed. Thank you. If anything here looks wrong, call us on {Business.Phone} and we will look into it.
 - Words: {Business.Document Footer}
 
 #### Tenancy agreement
 
-The agreement for a home, filled from the lease, the tenant, the unit and the building: the parties, the property, the term, the rent and rent day, the deposit and its protection, what the rent includes, each side's duties, repairs and access, pets and smoking, ending the tenancy, and places to sign. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it. Choose a residential lease to print it. One for each record of Leases, on a4 paper, with the Business record at the head.
+The agreement for a home, filled from the lease, the tenant, the unit and the building: the parties, the property, the term, the rent and rent day, the deposit and its protection, what the rent includes, each side's duties, repairs and access, pets and smoking, ending the tenancy, and places to sign. A renewal says so, and keeps the deposit already held; the pets clause reads one way when pets are agreed and another when none are. It prints for residential leases running or about to start. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it. One for each record of Leases, on a4 paper, with the Business record at the head.
 
 - Heading: Tenancy agreement for a home
 - Fields: Tenant, Date of this agreement, The property, Tenancy begins, City, Fixed term ends, Postcode, Rent day each month, Bedrooms, Rent paid by, Rent account, Deposit protection reference
 - Totals: Rent each month, Deposit
 - Words: This agreement is made on {Signed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Landlord") and {Tenant} ("the Tenant"). The Landlord lets the property named above ("the Property") to the Tenant as a home, on the terms below.
+- Words: It renews the Tenant's earlier tenancy of the Property, which ends the day before this one begins.
 - Words: 1. The property. The Property is let together with the use of any shared entrance, halls, stairs, paths, garden and bin store that serve it, and with the contents listed in the inventory. It is to be lived in by the Tenant and the members of the Tenant's household named on the application, and no one else without the Landlord's written consent.
 - Words: 2. The term. The tenancy begins on {Start} and its fixed term ends on {End}. If neither side has ended it by then, it carries on from month to month on the same terms until it is ended as clause 11 says.
 - Words: 3. The rent. The rent is {Monthly Rent} a month, paid in advance on day {Rent Day} of each month, the first payment on {Start}. The Tenant pays it by the method shown above into the Landlord's account, {Business.Bank Details}, quoting the rent account {Tenant.Account}. The Landlord sends a rent invoice before each rent day. The rent does not go up during the fixed term. After it, the Landlord may raise it no more than once a year, by giving at least two months' notice in writing.
 - Words: 4. What the rent includes. The rent includes: {Unit.Rent Includes}. The Tenant pays for everything else used at the Property, among them council tax, gas, electricity, water and sewerage, telephone and broadband.
 - Words: 5. The deposit. The Tenant pays a deposit of {Deposit} before the tenancy begins. Within 30 days of receiving it, the Landlord protects it in a government-approved tenancy deposit scheme and gives the Tenant the scheme's details; its reference is shown above once it has been given. At the end of the tenancy the deposit is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning needed to bring the Property back to its condition at the start. If they cannot agree, either of them may ask the scheme to decide.
+- Words: 5. The deposit. The deposit of {Deposit} paid for the earlier tenancy is kept, and carries on as the deposit for this one, protected in the same scheme under the reference shown above. At the end of the tenancy it is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning needed to bring the Property back to its condition at the start of the first tenancy. If they cannot agree, either of them may ask the scheme to decide.
 - Words: 6. The Tenant agrees: to pay the rent on time; to keep the Property clean and in good order, and to heat and air it so that damp and mould do not build up; to tell the Landlord promptly of any repair needed or damage done; to test the smoke alarms once a month; not to make alterations, redecorate or change the locks without the Landlord's written consent; not to cause a nuisance or annoyance to the neighbours; not to sublet the Property or take in a lodger without the Landlord's written consent; and to give back all the keys at the end.
 - Words: 7. The Landlord agrees: to let the Tenant live in the Property in peace, without needless interruption; to keep the structure and outside in repair, including the roof, walls, windows, gutters and drains; to keep the supplies of water, gas and electricity, and the heating and hot water, in repair and working order; to have any gas appliances checked by a registered engineer every year and the wiring every five years, and to give the Tenant a copy of each certificate; to fit smoke alarms, and carbon monoxide alarms where they are needed; and to insure the building.
 - Words: 8. Repairs and access. The Tenant reports repairs to the Landlord on {Business.Phone} or at {Business.E-mail}, and the Landlord arranges them in a reasonable time, the most urgent first. The Landlord, or a contractor sent by the Landlord, may come in at a reasonable time of day to inspect the Property or carry out repairs after giving the Tenant at least 24 hours' notice in writing. In an emergency, such as a gas leak, a flood or a fire, they may come in at once.
+- Words: 9. Pets and smoking. No pets are agreed for this tenancy. A pet needs the Landlord's written consent first, which will not be refused without good reason. No one may smoke or vape inside the Property.
 - Words: 9. Pets and smoking. Pets agreed for this tenancy: {Pets}. Any other pet needs the Landlord's written consent first, which will not be refused without good reason. No one may smoke or vape inside the Property.
 - Words: 10. The inventory. An inventory and record of condition, with photographs, is made at the start of the tenancy and signed by both sides. At the end, the Property is compared with it, allowing for fair wear and tear.
 - Words: 11. Ending the tenancy. The Tenant may end the tenancy at the end of the fixed term, or at any time after it, by giving at least one month's notice in writing, ending the day before a rent day. The Landlord may end it only on the grounds, and with the notice, that the law allows, and always in writing. Before the fixed term ends, the Landlord will ask the Tenant whether they would like to renew.
@@ -13786,19 +13873,22 @@ The agreement for a home, filled from the lease, the tenant, the unit and the bu
 
 #### Commercial lease summary
 
-A summary of the main terms of a lease of a shop or workshop: the premises, the use allowed, the term, the rent with any VAT and its review, the deposit, outgoings, repairs, access and the end of the lease. It goes with the full lease, which a solicitor draws up; have both checked for your own country. Choose a commercial lease to print it. One for each record of Leases, on a4 paper, with the Business record at the head.
+A summary of the main terms of a lease of a shop or workshop: the premises, the use allowed, the term, the rent with its VAT where the building is opted to tax, the rent review where there is one, the deposit, outgoings, repairs, access and the end of the lease. It prints for commercial leases running or about to start. It goes with the full lease, which a solicitor draws up; have both checked for your own country. One for each record of Leases, on a4 paper, with the Business record at the head.
 
 - Heading: Commercial lease: summary of terms
-- Fields: Tenant, Date of the lease, Signed for the tenant by, Term begins, The premises, Term ends, City, Rent review, Postcode, Rent day each month, Permitted use, Rent account
-- Totals: Rent each month, VAT on the rent, Each month with VAT, Rent for a year, Deposit held
+- Fields: Tenant, Date of the lease, Signed for the tenant by, Term begins, The premises, Term ends, City, Rent day each month, Postcode, Rent account, Permitted use, Rent review
+- Totals: Rent each month, VAT rate %, VAT on the rent, Each month with VAT, Rent for a year, Deposit held
 - Words: This summary sets out the main terms agreed between {Business.Name} ("the Landlord") and {Tenant.Business Name} ("the Tenant") for the lease of the premises named above. It goes with the lease and does not replace it: where the two differ, the lease is what counts.
 - Words: 1. The premises. The unit named above, with the right to use the shared paths, service yard and bin store in common with the other occupiers.
 - Words: 2. Use. The premises may be used for the permitted use shown above and for nothing else without the Landlord's written consent, which will not be refused without good reason.
 - Words: 3. Term. The lease runs from {Start} to {End}. The Tenant has no right to end it early except as the lease says.
-- Words: 4. Rent. The rent is {Monthly Rent} a month, paid in advance by bank transfer on day {Rent Day} of each month, quoting the rent account. VAT is added at the rate shown above when the Landlord has opted to tax the building; otherwise none is added. Where a rent review date is shown, the rent is reviewed on that date to the rent the premises would then let for on the open market, and it does not go down at review.
+- Words: 4. Rent. The rent is {Monthly Rent} a month, paid in advance by bank transfer on day {Rent Day} of each month, quoting the rent account. The Landlord has opted to tax the building, so VAT is added to the rent at the rate shown above.
+- Words: 4. Rent. The rent is {Monthly Rent} a month, paid in advance by bank transfer on day {Rent Day} of each month, quoting the rent account. No VAT is added: the Landlord has not opted to tax the building, and will give the Tenant notice in writing before ever doing so.
+- Words: The rent is reviewed on {Rent Review} to the rent the premises would then let for on the open market. It does not go down at review.
 - Words: 5. Deposit. The Tenant pays the deposit shown above, three months' rent, before the term begins. The Landlord holds it until the lease ends and returns it within 28 days, less any rent or other sums then owed and the cost of any repairs the Tenant should have done.
 - Words: 6. Outgoings. The Tenant pays the business rates, water, power and telephone for the premises. The Landlord insures the building; the premium is included in the rent.
-- Words: 7. Repairs. The Tenant keeps the inside of the premises in good repair and decoration, together with the shop front or roller door, the doors and the glass, and the Tenant's own fittings. The Landlord keeps the roof, the structure, the outside walls and the shared parts in repair. Notes agreed for this lease: {Notes}
+- Words: 7. Repairs. The Tenant keeps the inside of the premises in good repair and decoration, together with the shop front or roller door, the doors and the glass, and the Tenant's own fittings. The Landlord keeps the roof, the structure, the outside walls and the shared parts in repair.
+- Words: 7. Repairs. The Tenant keeps the inside of the premises in good repair and decoration, together with the shop front or roller door, the doors and the glass, and the Tenant's own fittings. The Landlord keeps the roof, the structure, the outside walls and the shared parts in repair. Agreed for this lease: {Notes}
 - Words: 8. Access. The Landlord may come in to inspect or repair after giving at least 48 hours' notice, and at once in an emergency. The premises are inspected once a year.
 - Words: 9. Alterations, signs and assignment. Alterations other than minor ones inside, and any sign outside, need the Landlord's written consent. The Tenant may not assign the lease or sublet without the Landlord's written consent, which will not be refused without good reason.
 - Words: 10. The end of the lease. At the end the Tenant gives the premises back clean, in the repair the lease asks for, with the Tenant's own fittings and signs taken away if the Landlord asks. The Landlord will talk to the Tenant about a new lease at least six months before the term ends.
@@ -13806,23 +13896,26 @@ A summary of the main terms of a lease of a shop or workshop: the premises, the 
 
 #### Deposit receipt
 
-Given when a new tenant pays the deposit: how much, on what day, for which tenancy, and who holds it. Numbered DRC-2026-0042. One for each record of Deposits, on a5 paper, with the Business record at the head.
+Given when a new tenant pays the deposit: how much, on what day, for which tenancy, and who holds it, with the words for a home's protected deposit or a shop's deposit held by the landlord. Numbered DRC-2026-0042. It prints for the deposits still held. One for each record of Deposits, on a5 paper, with the Business record at the head.
 
 - Heading: Deposit receipt {Number}
-- Fields: Received from, Receipt number, Trading as, Received on, For the tenancy of, Paid by, Tenancy begins, Held by, Rent account, Protection reference
+- Fields: Received from, Receipt number, For the tenancy of, Received on, Rent account, Paid by, Tenancy begins, Held by, Trading as, Returned on, Amount returned
 - Totals: Deposit received
-- Words: This deposit is held as security for the tenant's side of the agreement. It is not rent and is not used to pay rent while the tenancy runs. The deposit on a home is protected in a tenancy deposit scheme within 30 days, and the scheme's reference is sent to the tenant; the deposit on a shop or workshop is held by the landlord until the lease ends. At the end it is returned, less anything owed, as the agreement says.
+- Words: This deposit is held as security for the tenant's side of the agreement. It is not rent and is not used to pay rent while the tenancy runs. It is protected in a government-approved tenancy deposit scheme within 30 days of being received, and the scheme's details and reference are sent to the tenant. At the end it is returned, less anything owed, as the agreement says.
+- Words: This deposit is held as security for the tenant's side of the lease. It is not rent and is not used to pay rent while the lease runs. The landlord holds it until the lease ends and returns it within 28 days, less any rent or other sums then owed, as the lease says.
+- Words: Returned on {Returned On}. {Notes}
 - Signed by: Received for the Landlord
 
 #### Rent arrears letter
 
-The reminder sent when rent is a week late, and each fortnight after while it is unpaid: polite, clear about the amount and the date to pay by, and firmer at each stage, ending with the final notice. Have the final notice's wording checked for your own country before you rely on it. One for each record of Rent Reminders, on a4 paper, with the Business record at the head.
+The reminder sent when rent is a week late, and each fortnight after while it is unpaid: polite, clear about the amount, the months unpaid when it was written (and anything already paid towards them) and the date to pay by, and firmer at each stage, ending with the final notice. It prints the letters still waiting for their pay-by date; print an older one from the Rent Reminders form. Have the final notice's wording checked for your own country before you rely on it. One for each record of Rent Reminders, on a4 paper, with the Business record at the head.
 
-- Fields: To, Date, Address, Our reference, City, Rent account, Postcode, Unpaid since
+- Fields: To, Date, Address, Our reference, City, Rent account, Postcode, Please pay by
 - Heading: Rent arrears: {Stage}
 - Words: Dear {Lease.Tenant},
-- Words: Our records show that rent of {Amount Owed} is unpaid on your tenancy of {Lease.Unit.Postal Address}. The oldest unpaid month fell due on {Since}; the number of months unpaid is {Months Owing}.
-- Totals: Rent unpaid
+- Words: Our records show that rent of {Amount Owed} is unpaid on your tenancy of {Lease.Unit.Postal Address}. The months unpaid are listed below; the oldest fell due on {Since}.
+- Lines from Rent Charges: Invoice, Month, Due, Rent
+- Totals: Rent for these months, Paid towards them, Rent unpaid
 - Words: Please pay the full amount by {Pay By}, by bank transfer to {Business.Bank Details}, quoting your rent account {Lease.Tenant.Account}, or by card by calling us on {Business.Phone}.
 - Words: {Next Step}
 - Words: If you have paid in the last few days, thank you, and please ignore this letter. If you cannot pay it all by that date, please call us before then: we would much rather agree a plan with you to clear it in steps than take things further. Free and confidential advice on money and debt is available from advice services near you.
@@ -13831,13 +13924,16 @@ The reminder sent when rent is a week late, and each fortnight after while it is
 
 #### Notice of inspection
 
-The letter that tells a tenant, at least a week ahead, the day and time of a routine inspection or safety check, what happens at it and how to change the day. One for each record of Inspections, on a4 paper, with the Business record at the head.
+The letter that tells a tenant, at least a week ahead, the day and time of a routine inspection or safety check, what happens at that kind of visit and how to change the day. It prints for the visits of the next three weeks to a unit with a tenant, dated the day the notice went, or today for one not sent yet. One for each record of Inspections, on a4 paper, with the Business record at the head.
 
-- Fields: To, Date, Address, Visit for, City, Day of the visit, Postcode, Time
+- Totals: Date
+- Fields: To, Visit for, Address, Day of the visit, City, Time, Postcode
 - Heading: Notice of a visit to {Unit.Postal Address}
 - Words: Dear {Lease.Tenant},
 - Words: We are writing to let you know that we will visit {Unit.Postal Address} on {Due}, {Visit Time}. The visit is for: {Kind}.
-- Words: A routine inspection takes about half an hour. We look at the general condition of the property, test the smoke and carbon monoxide alarms, look for any damp, leaks or damage, and note anything that needs mending so that we can arrange it. A gas or electrical safety check is made by a registered engineer from our contractor, takes about an hour, and needs the boiler, the meters and the fuse board to be easy to reach; you will be given a copy of the certificate.
+- Words: A routine inspection takes about half an hour. We look at the general condition of the property, test the smoke and carbon monoxide alarms, look for any damp, leaks or damage, and note anything that needs mending so that we can arrange it.
+- Words: The gas safety check is made by a registered gas engineer from our contractor and takes about an hour. The engineer checks the boiler, the cooker, any gas fire and the flues, so please make sure they and the gas meter are easy to reach. You will be given a copy of the certificate.
+- Words: The electrical safety check is made by a qualified electrician from our contractor and takes two to three hours. The electrician tests the wiring, the sockets and the fuse board, and the power is off for short spells, so please save any work on a computer, and expect to reset clocks afterwards. You will be given a copy of the report.
 - Words: You do not need to be in, though you are welcome to be, and it is a good time to tell us about anything that needs attention. If you are out, we will let ourselves in with our key, lock up when we leave, and leave a card to say that we have been.
 - Words: If the day or time does not suit you, please call us on {Business.Phone} or write to {Business.E-mail}, and we will find another time in the next two weeks. This letter gives you at least 24 hours' notice in writing, as your agreement asks.
 - Words: Yours sincerely,
@@ -13880,9 +13976,9 @@ Open the Leases form, press New, and enter the same Unit and Tenant with the new
 
 Agree any deductions with the tenant against the inventory, then return the rest. Open the Deposits form, find the deposit and type Returned On, Amount Returned and, in Notes, what was kept back and why.
 
-**How do I print older documents, or many at once?**
+**How do I print older documents?**
 
-Every record of a print template's table can print. Open Print templates, choose the template, and choose the records you want in its list; for a month's rent invoices, choose those whose Invoice Date falls in that month. The query Rent invoices raised lists the last month's.
+Open the record's own form and print from there: a record asked for by its form prints whether or not the template would list it. An old rent invoice prints from the Rent Charges form, an old arrears letter from the Rent Reminders form, an ended lease's agreement from the Leases form.
 
 **Can I use this for flats I manage for other owners?**
 
@@ -13913,7 +14009,7 @@ It suits, with small changes: An estate agent that only sells homes; A letting a
 - Rent the agency collects is the landlord's money, not the agency's. It shows on the landlord statements, while the agency's own income is only its invoices, which is what Commission earned by month adds up.
 - A landlord statement's Paid Out is the rent collected less everything deducted. When the repairs of a month cost more than the rent left after fees, they are carried to the next month's statement, so a statement never asks a landlord for money.
 - Statuses on properties, applicants, sales and tenancies are as they stood on the day the sample was made. Change them by hand as things move on; the queries read them.
-- Every print template prints a document for each record of its table: every viewing, every sale, every invoice. Choose the record you want, or print from its form.
+- Each print template prints only the records it is for: this month's landlord statements, the tenancies running or about to start, the viewings still to come, the sales going through and the invoices of the last 31 days. A record printed from its own form always prints, whatever the template would choose.
 - Commission on sales is taken from the sale money by the seller's solicitor on completion, so most sale invoices are paid within a few days. Letting and management fees for managed homes are taken from the rent, so they are paid the day the statement is made.
 
 ### Tutorial
@@ -14035,7 +14131,7 @@ The parts of the city the agency works in. Properties and applicants are each in
 
 #### Clients
 
-The people the agency acts for: owners selling a home and landlords letting one. A landlord has one record however many homes they let. The sample has 120 records.
+The people the agency acts for: owners selling a home and landlords letting one. A landlord has one record however many homes they let. The sample has 122 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14054,7 +14150,7 @@ The people the agency acts for: owners selling a home and landlords letting one.
 
 #### Properties
 
-Each home the agency has been asked to sell or let, one record each. A home let again after a tenant leaves keeps its record. The sample has 130 records.
+Each home the agency has been asked to sell or let, one record each. A home let again after a tenant leaves keeps its record. The sample has 139 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14079,7 +14175,7 @@ Each home the agency has been asked to sell or let, one record each. A home let 
 
 #### Applicants
 
-Everyone looking to buy or rent through the agency, with what they want. A tenant is an applicant who has rented a home. The sample has 331 records.
+Everyone looking to buy or rent through the agency, with what they want. A tenant is an applicant who has rented a home. The sample has 353 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14102,7 +14198,7 @@ Everyone looking to buy or rent through the agency, with what they want. A tenan
 
 #### Viewings
 
-Each viewing booked, kept or not. The sample has 722 records.
+Each viewing booked, kept or not. The sample has 789 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14119,7 +14215,7 @@ Each viewing booked, kept or not. The sample has 722 records.
 
 #### Offers
 
-Each offer made on a home for sale. The sample has 147 records.
+Each offer made on a home for sale. The sample has 127 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14150,7 +14246,7 @@ The solicitors and conveyancers buyers and sellers use, for the memorandum of sa
 
 #### Sales
 
-Each accepted offer, from the day it is agreed to completion, or to the day it falls through. The Memorandum of sale is printed from here. The sample has 87 records.
+Each accepted offer, from the day it is agreed to completion, or to the day it falls through. The Memorandum of sale is printed from here. The sample has 78 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14179,7 +14275,7 @@ Each accepted offer, from the day it is agreed to completion, or to the day it f
 
 #### Tenancies
 
-Each tenancy of a let home. A renewal is a new tenancy for the same tenant and home. The Tenancy agreement is printed from here. The sample has 67 records.
+Each tenancy of a let home. A renewal is a new tenancy for the same tenant and home. The Tenancy agreement is printed from here. The sample has 81 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14206,7 +14302,7 @@ Each tenancy of a let home. A renewal is a new tenancy for the same tenant and h
 
 #### Landlord Statements
 
-The monthly account sent to each landlord whose rent the agency collects: rent in, fees and repairs out, and the sum paid to them. The Landlord statement is printed from here. The sample has 175 records.
+The monthly account sent to each landlord whose rent the agency collects: rent in, fees and repairs out, and the sum paid to them. The Landlord statement is printed from here. The sample has 178 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14222,7 +14318,7 @@ The monthly account sent to each landlord whose rent the agency collects: rent i
 
 #### Statement Lines
 
-The lines of each landlord statement: each rent received, each fee, the VAT and each repair. The sample has 786 records.
+The lines of each landlord statement: each rent received, each fee, the VAT and each repair. The sample has 1,019 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14237,7 +14333,7 @@ The lines of each landlord statement: each rent received, each fee, the VAT and 
 
 #### Rent Charges
 
-The rent due each month on a tenancy whose rent the agency collects, and what has been received. The sample has 280 records.
+The rent due each month on a tenancy whose rent the agency collects, and what has been received. The sample has 399 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14264,7 +14360,7 @@ The trades the agency books for repairs at managed homes. The sample has 6 recor
 
 #### Repairs
 
-Each repair at a managed home, from the tenant's call to the contractor's bill being taken from the landlord's rent. The sample has 77 records.
+Each repair at a managed home, from the tenant's call to the contractor's bill being taken from the landlord's rent. The sample has 75 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14286,7 +14382,7 @@ Each repair at a managed home, from the tenant's call to the contractor's bill b
 
 #### Agency Invoices
 
-The agency's own invoices to its clients: commission on a sale, the letting fee for a new tenancy, and each month's management fees. The Commission invoice is printed from here. The sample has 264 records.
+The agency's own invoices to its clients: commission on a sale, the letting fee for a new tenancy, and each month's management fees. The Commission invoice is printed from here. The sample has 262 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14306,7 +14402,7 @@ The agency's own invoices to its clients: commission on a sale, the letting fee 
 
 #### Invoice Lines
 
-The lines of each agency invoice. The sample has 350 records.
+The lines of each agency invoice. The sample has 456 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14514,32 +14610,38 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Landlord statement
 
-Sent to each landlord on the third working day of the month: every rent received for them, the management fee and VAT, any letting fee and repairs, and the sum paid into their account. Numbered STM-2026-0042. One for each record of Landlord Statements, on a4 paper, with the Business record at the head.
+Sent to each landlord on the third working day of the month: every rent received for them, the management fee and VAT, any letting fee and repairs, each sum on its own side as received or deducted, and the sum paid into their account (or, in a month when repairs took it all, why nothing was paid). Numbered STM-2026-0042. It prints this month's statements, and in the first week of a month last month's too; print an older one from the Landlord Statements form. One for each record of Landlord Statements, on a4 paper, with the Business record at the head.
 
 - Heading: Landlord statement {Number}
-- Fields: Landlord, Statement, Address, For the month, City, Date, Postcode, Your account
+- Totals: For the month
+- Fields: Landlord, Statement, Address, Date, City, Your account, Postcode
 - Lines from Statement Lines: Date, Property, Description, Received, Deducted
 - Totals: Rent collected, Fees, VAT and repairs, Paid to you
-- Words: We paid {Paid Out} into your account by bank transfer on {Paid On}. Our fees are shown with VAT; our VAT invoices for them come with this statement. Repairs are charged at what the contractor billed, with nothing added.
+- Words: We paid {Paid Out} into your account by bank transfer on {Paid On}.
+- Words: Nothing was paid to you this month: the repairs came to more than the rent left after our fees, and what was left of them is carried to next month's statement. A statement never asks you for money.
+- Words: Our fees are shown with VAT; our VAT invoices for them come with this statement. Repairs are charged at what the contractor billed, with nothing added.
 - Words: Rent we collect for you is held in our client account, kept apart from our own money, until it is paid to you. Questions about this statement: call {Business.Phone} or write to {Business.E-mail}.
 - Words: {Business.Document Footer}
 
 #### Tenancy agreement
 
-The agreement for a home the agency lets, filled from the tenancy, the tenant, the home and its landlord. The agency signs it for the landlord and says that it acts for the landlord. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it. One for each record of Tenancies, on a4 paper, with the Business record at the head.
+The agreement for a home the agency lets, filled from the tenancy, the tenant, the home and its landlord. The agency signs it for the landlord and says that it acts for the landlord. A renewal says so and keeps the deposit already held; the pets clause reads one way when pets are agreed and another when none are. It prints for tenancies running or about to start. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it. One for each record of Tenancies, on a4 paper, with the Business record at the head.
 
 - Heading: Tenancy agreement {Reference}
-- Fields: Landlord, Date of this agreement, Tenant, Tenancy begins, The property, Fixed term ends, City, Rent day each month, Postcode, Deposit protection reference, Bedrooms, Our service to the landlord
+- Fields: Landlord, Date of this agreement, Tenant, Tenancy begins, The property, Fixed term ends, City, Rent day each month, Postcode, Bedrooms, Our service to the landlord, Deposit protection reference
 - Totals: Rent each month, Deposit
 - Words: This agreement is made on {Signed On} between {Property.Client} of {Property.Client.Address}, {Property.Client.City} {Property.Client.Postcode} ("the Landlord") and {Tenant} ("the Tenant"). {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Agent") signs it for the Landlord and acts for the Landlord, not for the Tenant. The Landlord lets the property named above ("the Property") to the Tenant as a home, on the terms below.
+- Words: It renews the Tenant's earlier tenancy of the Property, which ends the day before this one begins.
 - Words: 1. The property. The Property is let together with the use of any shared entrance, paths, garden and bin store that serve it, and with the contents listed in the inventory. It is to be lived in by the Tenant and the members of the Tenant's household named on the application.
 - Words: 2. The term. The tenancy begins on {Start} and its fixed term ends on {End}. If neither side has ended it by then, it carries on from month to month on the same terms until it is ended as clause 11 says.
 - Words: 3. The rent. The rent is {Monthly Rent} a month, paid in advance on day {Rent Day} of each month, the first payment before the tenancy begins. It is paid to {Rent Paid To}, by standing order, quoting the reference {Reference}. The rent does not go up during the fixed term; after it, it may be raised no more than once a year, by at least two months' notice in writing.
 - Words: 4. Bills. The Tenant pays council tax, gas, electricity, water and sewerage, telephone and broadband for the Property from the start of the tenancy, and tells the suppliers of the meter readings on the day of moving in.
 - Words: 5. The deposit. The Tenant pays a deposit of {Deposit} before the tenancy begins. Within 30 days of receiving it, the Agent protects it for the Landlord in a government-approved tenancy deposit scheme and gives the Tenant the scheme's details; its reference is shown above once given. At the end, the deposit is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning; if they cannot agree, either may ask the scheme to decide.
+- Words: 5. The deposit. The deposit of {Deposit} paid for the earlier tenancy is kept, and carries on as the deposit for this one, protected in the same scheme under the reference shown above. At the end, it is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning; if they cannot agree, either may ask the scheme to decide.
 - Words: 6. The Tenant agrees: to pay the rent on time; to keep the Property clean and in good order, and to heat and air it so that damp and mould do not build up; to report any repair needed promptly; to test the smoke alarms once a month; not to make alterations, redecorate or change the locks without consent in writing; not to cause a nuisance to the neighbours; not to sublet or take in a lodger without consent in writing; and to give back all the keys at the end.
 - Words: 7. The Landlord agrees: to let the Tenant live in the Property in peace; to keep the structure and outside in repair, and the supplies of water, gas and electricity, the heating and the hot water in repair and working order; to have any gas appliances checked every year and the wiring every five years, and give the Tenant copies of the certificates; to fit smoke alarms, and carbon monoxide alarms where needed; and to insure the building.
 - Words: 8. Repairs and access. The Tenant reports repairs to {Repairs To}. The Landlord or the Agent, or a contractor sent by either, may come in at a reasonable time of day to inspect the Property or carry out repairs after giving at least 24 hours' notice in writing, and at once in an emergency such as a gas leak, a flood or a fire.
+- Words: 9. Pets and smoking. No pets are agreed for this tenancy. A pet needs consent in writing first, which will not be refused without good reason. No one may smoke or vape inside the Property.
 - Words: 9. Pets and smoking. Pets agreed for this tenancy: {Pets}. Any other pet needs consent in writing first, which will not be refused without good reason. No one may smoke or vape inside the Property.
 - Words: 10. The inventory. An inventory and record of condition, with photographs, is made at the start and signed by both sides. At the end, the Property is compared with it, allowing for fair wear and tear.
 - Words: 11. Ending the tenancy. The Tenant may end the tenancy at the end of the fixed term, or at any time after it, by giving at least one month's notice in writing ending the day before a rent day. The Landlord may end it only on the grounds, and with the notice, that the law allows, and always in writing.
@@ -14548,42 +14650,49 @@ The agreement for a home the agency lets, filled from the tenancy, the tenant, t
 
 #### Viewing confirmation
 
-The letter or e-mail an applicant gets when a viewing is booked: the home, the day and time, who will meet them, and what to do after. One for each record of Viewings, on a4 paper, with the Business record at the head.
+The letter or e-mail an applicant gets when a viewing is booked: the day and time, who will meet them, the home with its asking price (or its rent a month, for a let), and what to do after. It prints for the viewings booked for today or later. One for each record of Viewings, on a4 paper, with the Business record at the head.
 
-- Fields: To, Date, Address, Property reference, City, Postcode
+- Totals: Date
+- Fields: To, Property reference, Address, City, Postcode
 - Heading: Your viewing of {Property.Address}
 - Words: Dear {Applicant},
 - Words: Thank you for booking a viewing with us. This is to confirm the details.
-- Fields: Day, Time, Property, Area, Postcode, Kind of home, Bedrooms, Price, You will be met by, Their phone
+- Fields: Day, Time, You will be met by, Their phone
+- Lines from Properties: The home, Area, Kind of home, Bedrooms, Asking price or rent
 - Words: {Accompanied By} will meet you outside the property a minute or two before the time above. The viewing takes about twenty minutes, and you are welcome to bring someone with you. If you are running late, or need to change the day, please call {Accompanied By.Phone} or the office on {Business.Phone}.
-- Words: If you would like to make an offer, or apply to rent, after the viewing, tell {Accompanied By} or call the office. For a purchase we will ask how you are buying (a mortgage agreed in principle, the sale of your home, or cash) so that we can put your offer to the owner fully.
+- Words: If you would like to make an offer, or apply to rent, after the viewing, tell us at the viewing or call the office. For a purchase we will ask how you are buying (a mortgage agreed in principle, the sale of your home, or cash) so that we can put your offer to the owner fully.
 - Words: Yours sincerely,
 - Words: {Business.Name}
 - Words: {Business.Document Footer}
 
 #### Memorandum of sale
 
-Sent to the seller, the buyer and both solicitors when an offer is accepted: the property, the agreed price, both parties and their solicitors, how the buyer is buying, what is included, and the completion hoped for. Subject to contract. One for each record of Sales, on a4 paper, with the Business record at the head.
+Sent to the seller, the buyer and both solicitors when an offer is accepted: the property, the agreed price, both parties and their solicitors, how the buyer is buying, what is included, and the completion hoped for. Subject to contract. It prints for the sales going through, not those completed or fallen through. One for each record of Sales, on a4 paper, with the Business record at the head.
 
 - Heading: Memorandum of sale {Number}
+- Totals: Date of this memorandum
 - Words: To the seller, the buyer and their solicitors. An offer for the property below has been accepted, subject to contract. The details agreed are set out here so that the solicitors can begin their work. Nothing here is binding on either side until contracts are exchanged.
-- Fields: Property, Offer accepted on, City, Date of this memorandum, Postcode, Kind of home, Completion hoped for by, Our negotiator
+- Fields: Property, Offer accepted on, City, Completion hoped for by, Postcode, Kind of home, Our negotiator
 - Totals: Agreed price
-- Fields: Seller, Buyer, Seller's address, Buyer's address, City, City, Seller's phone, Buyer's phone, Seller's solicitor, Buyer's solicitor, Dealing, Dealing, Phone, Phone, E-mail, E-mail
+- Fields: Seller, Buyer, Seller's address, Buyer's address, City, City, Seller's phone, Buyer's phone
+- Fields: Seller's solicitor, Buyer's solicitor, Dealing, Dealing, Phone, Phone, E-mail, E-mail
 - Fields: How the buyer is buying, The offer was made, Included in the price
 - Words: The seller has agreed to take the property off the market while the sale goes ahead, and we will not show it to anyone else. Our sales progressor will keep in touch with both solicitors each week and tell you both of any news. Please tell us at once of anything that may delay the sale, such as a change in the buyer's mortgage or the seller's onward move.
 - Words: Our fee is due from the seller on completion, as agreed when the property came to us. Questions: call {Business.Phone} or write to {Business.E-mail}, quoting {Number}.
 
 #### Commission invoice
 
-The agency's VAT invoice to a client: commission on a completed sale, the letting fee for a new tenancy, or a month's management fees, each line with its VAT. Numbered INV-2026-0042. One for each record of Agency Invoices, on a4 paper, with the Business record at the head.
+The agency's VAT invoice to a client: commission on a completed sale, the letting fee for a new tenancy, or a month's management fees, each line with its VAT. Paid, it says when and how; unpaid, how to pay. Numbered INV-2026-0042. It prints the invoices of the last 31 days; print an older one from the Agency Invoices form. One for each record of Agency Invoices, on a4 paper, with the Business record at the head.
 
 - Heading: Invoice {Number}
 - Fields: Invoice to, Invoice number, Address, Date, City, Payment due, Postcode, Your account
 - Lines from Invoice Lines: Description, Property, Net, VAT %, VAT
 - Totals: Fees, VAT, Total
-- Fields: Paid on, Paid by
-- Words: {Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}. Fees for a sale are paid by your solicitor from the sale money on completion; fees for a managed let are taken from the rent we collect and shown on your statement.
+- Fields: Paid on, Paid
+- Words: Paid in full: thank you.
+- Words: {Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.
+- Words: Commission on a sale is paid by your solicitor from the sale money on completion.
+- Words: Fees for a managed let are taken from the rent we collect, and shown on your landlord statement.
 - Words: VAT registration {Business.Tax Number}. {Business.Document Footer}
 
 ### Starting empty
@@ -14656,7 +14765,7 @@ It suits, with small changes: A bed and breakfast or guest house; A small hotel 
 - Commission is worked out on the room charge alone, not on extras, at the rate held on the booking. Cancelled bookings and no-shows carry none in the sample. Booking sites' own terms differ; set the rate and the rules to match yours.
 - Cancellation and no-show charges carry no VAT in the sample. How they are taxed depends on your country and your terms: ask your accountant.
 - The passport number is kept only for guests whose nationality calls for it and is left empty for the rest, as the registration card is printed. Every name, address, passport number, car registration and booking reference in the sample is invented.
-- Print templates print one document for every record of their table. Print a single one from its form (the booking, bill or payment on screen), or choose the ones you want.
+- Each print template prints only the records it is for: confirmations for new direct bookings, the bills of the last 14 days, the receipts of the last 7, registration cards for today's and tomorrow's arrivals and this month's commission statements. A record printed from its own form (the booking, bill or payment on screen) always prints.
 
 ### Tutorial
 
@@ -14680,7 +14789,7 @@ It suits, with small changes: A bed and breakfast or guest house; A small hotel 
 
 1. Print the report Housekeeping sheet for whoever cleans the rooms: departures first, then stayovers, then arrivals.
 2. Open the query Arrivals in the next 7 days, or print the report Arrivals list, to see who comes today, at what time and with what requests.
-3. Print the Registration card for each of today's arrivals from the Bookings form, so they are ready on the desk.
+3. Open the print template Registration card from Print templates and press Print: it holds the cards for today's and tomorrow's arrivals, so they are ready on the desk.
 4. Open the Rooms form and set Housekeeping for each room as the cleaning is done: Vacant clean, Inspected, Occupied, Due out or Out of order. The query Room status shows them all.
 
 #### Check a guest in
@@ -14831,7 +14940,7 @@ Where bookings come from: your own website and e-mail, the phone, guests at the 
 
 #### Guests
 
-Everyone who has booked a room, one record each. A guest who comes back is the same record with another booking. The sample has 1,123 records.
+Everyone who has booked a room, one record each. A guest who comes back is the same record with another booking. The sample has 1,141 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14883,7 +14992,7 @@ One statement for each booking site and month: the stays it sent that ended that
 
 #### Bookings
 
-Each booking of a room for a run of nights, from the day it is taken to the day the guest leaves, or cancels. The sample has 1,336 records.
+Each booking of a room for a run of nights, from the day it is taken to the day the guest leaves, or cancels. The sample has 1,346 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14916,7 +15025,7 @@ Each booking of a room for a run of nights, from the day it is taken to the day 
 
 #### Room Nights
 
-The diary: one record for every room and every night, fifteen months back and six months ahead, as a booking chart would show it. The sample has 6,270 records.
+The diary: one record for every room and every night, fifteen months back and six months ahead, as a booking chart would show it. The sample has 6,280 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14930,7 +15039,7 @@ The diary: one record for every room and every night, fifteen months back and si
 
 #### Bills
 
-The bill given to a guest when they leave, which is also the VAT invoice. A late cancellation or a no-show gets a bill too. The sample has 1,137 records.
+The bill given to a guest when they leave, which is also the VAT invoice. A late cancellation or a no-show gets a bill too. The sample has 1,157 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14946,7 +15055,7 @@ The bill given to a guest when they leave, which is also the VAT invoice. A late
 
 #### Charges
 
-Everything charged to a room: each night, and each extra on the day it was taken. The sample has 5,765 records.
+Everything charged to a room: each night, and each extra on the day it was taken. The sample has 5,778 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -14963,7 +15072,7 @@ Everything charged to a room: each night, and each extra on the day it was taken
 
 #### Payments
 
-Money taken from guests: deposits, the balance on leaving, and the charge for a guest who did not come. The sample has 1,561 records.
+Money taken from guests: deposits, the balance on leaving, and the charge for a guest who did not come. The sample has 1,578 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15181,16 +15290,19 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Booking confirmation
 
-The letter sent when a booking is taken: the dates, the room, the rate, the deposit received and the balance, check-in and check-out times, the cancellation terms and how to find the house. Print it from the Bookings form for the booking on screen; the template prints every booking when run alone, including those from booking sites. One for each record of Bookings, on a4 paper, with the Business record at the head.
+The letter sent when a booking is taken with us directly: the dates, the room, the rate, the deposit and the balance, check-in and check-out times, the cancellation terms, any request the guest made and how to find the house. Its deposit paragraph says thank you once the deposit is in, asks for it while it is not, and says none is needed for a booking made close to the stay. It prints for direct bookings taken in the last 14 days for a stay still ahead; booking sites send their own confirmations. Print any other booking from the Bookings form. One for each record of Bookings, on a4 paper, with the Business record at the head.
 
 - Heading: Booking confirmation {Number}
 - Fields: Guest, Booking, Address, Booked on, Town, Arriving, Postcode, Leaving, Country, Nights, Room, Room name, Room type, Rate, Adults, Children
 - Totals: Room charge for the stay, Deposit asked for, Deposit received, Balance due on departure
 - Words: Dear {Guest.First Name},
 - Words: Thank you for booking with us. This letter confirms room {Room.Number}, {Room.Name}, arriving on {Arrival} and leaving on {Departure}, at the rate shown above. Our rates include VAT. Where the rate is bed and breakfast, breakfast is included for the guests booked; on a room only rate it can be added on the morning.
-- Words: Deposit. To hold a room booked with us directly we ask for a deposit of the first night. What we have received so far is shown above. If it is not yet paid, please pay it within three days of this letter, by card on {Business.Phone} or by bank transfer to {Business.Bank Details}, quoting {Number}. The balance and anything charged to the room are paid when you leave.
+- Words: Deposit. Thank you for your deposit, which holds the room for you. The balance and anything charged to the room are paid when you leave.
+- Words: Deposit. To hold a room booked with us directly we ask for a deposit of the first night, shown above. Please pay it within three days of this letter, by card on {Business.Phone} or by bank transfer to {Business.Bank Details}, quoting {Number}. The balance and anything charged to the room are paid when you leave.
+- Words: Payment. As you booked so close to your stay, we ask for no deposit: the room and anything charged to it are paid when you leave.
 - Words: Arriving and leaving. Check-in is from 3 pm to 8 pm. If you will be later than 8 pm, please ring us and we will leave your key in the lock box by the front door. On the day you leave the room is needed by 10.30 am, and you are welcome to leave your bags with us. A late check-out until 1 pm can be arranged for a small charge when the room is not needed.
 - Words: Cancelling. If you cancel seven days or more before you arrive, we return your deposit in full. If you cancel later than that, we keep the deposit unless we let the room to someone else. If you do not arrive and have not told us, the first night is charged.
+- Words: You asked us: {Requests}
 - Words: Finding us. We are at {Business.Address}, {Business.City} {Business.Postcode}, the white house with blue window frames facing the bandstand. By car, follow the signs for the seafront and turn left along the Esplanade. We have four parking spaces behind the house, to be booked with your room, and there is a long-stay car park on Station Road two minutes away. From the railway station it is a ten-minute walk downhill towards the sea.
 - Words: Breakfast is served from 8 am to 9.30 am, and from 9 am to 10 am on Sundays. Please tell us of any allergy or diet before you come. If there is anything else we can do, write to {Business.E-mail} or ring us. We look forward to welcoming you.
 - Signed by: With best wishes, for the guest house
@@ -15198,45 +15310,49 @@ The letter sent when a booking is taken: the dates, the room, the rate, the depo
 
 #### Guest bill
 
-The bill and VAT invoice given on leaving: each night and each extra as a line with the VAT within it, the total, the deposit taken off and the balance paid. Numbered INV-2026-0042. One for each record of Bills, on a4 paper, with the Business record at the head.
+The bill and VAT invoice given on leaving: each night and each extra as a line with the VAT within it, the total, the deposit taken off when there was one and the balance paid. Numbered INV-2026-0042. It prints the bills of the last 14 days; print an older one from the Bills form. One for each record of Bills, on a4 paper, with the Business record at the head.
 
 - Heading: Bill and VAT invoice {Number}
 - Fields: Guest, Invoice number, Address, Date, Town, Booking, Postcode, Room, Country, Arrived, Rate, Left
 - Lines from Charges: Date, Description, Quantity, Price, Amount, VAT %, VAT within
 - Totals: Total for your stay, Of which VAT, Total before VAT, Less deposit paid, Balance paid on departure
-- Words: Balance paid by {Paid By}. Prices include VAT at the rate shown on each line. VAT registration {Business.Tax Number}.
+- Words: Balance paid by {Paid By}. Thank you.
+- Words: Prices include VAT at the rate shown on each line. VAT registration {Business.Tax Number}.
 - Words: {Business.Document Footer}
 
 #### Receipt
 
-A till-roll receipt for each payment: a deposit, a balance or a no-show charge. A deposit paid back is kept on the payment's record (Refunded On and Refund), not on the receipt, which is printed when the money is taken. One for each record of Payments, on receipt-80 paper, with the Business record at the head.
+A till-roll receipt for each payment: a deposit, a balance or a no-show charge. A deposit paid back shows on its receipt, with the day and the amount refunded, and only then. It prints the payments of the last 7 days; print an older one from the Payments form. One for each record of Payments, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Receipt {Number}
-- Fields: Date, Received from, Booking, Room, Arrival, Departure, For, Paid by
-- Totals: Amount received
+- Fields: Date, Received from, Booking, Room, Arrival, Departure, For, Paid by, Refunded on
+- Totals: Amount received, Refunded, Kept
 - Words: Thank you. Your VAT invoice is the bill you are given when you leave.
+- Words: Your deposit was paid back, as you cancelled in time. Thank you, and we hope to see you another time.
 
 #### Registration card
 
-The card a guest fills in and signs on arrival: name, nationality, passport where it must be recorded and blank otherwise, home address, car registration and signature. Print it from the Bookings form for the day's arrivals; run alone it prints every booking. One for each record of Bookings, on a5 paper, with the Business record at the head.
+The card a guest fills in and signs on arrival: name, nationality, passport where it must be recorded and blank otherwise, home address, car registration and signature, with a line for the other guests when more than one adult is booked. It prints for the bookings arriving today and tomorrow, so the cards are ready at the desk. One for each record of Bookings, on a5 paper, with the Business record at the head.
 
 - Heading: Registration card
 - Fields: Booking, Room, Arriving, Leaving, Adults, Children
 - Fields: Full name, Nationality, Passport number, Passport issued by, Home address, Town, Postcode, Country, Phone, E-mail, Car registration, Expected at
 - Words: Passport details are filled in only for guests from countries where we are asked to record them, and left blank for others. Please write the name and nationality of any other guest over 16 sharing the room on the line below.
 - Words: Other guests: ..................................................................................
+- Words: Passport details are filled in only for guests from countries where we are asked to record them, and left blank for others.
 - Words: I confirm these details are correct. Breakfast is from 8 am to 9.30 am, rooms are needed by 10.30 am on the day you leave, and we ask for quiet after 11 pm.
 - Signed by: Guest signature, Date
 
 #### Commission statement
 
-Sent to each booking site at the start of the month: the stays it sent that ended last month, with their references, and the commission owed. Numbered COM-2026-0012. One for each record of Commission Statements, on a4 paper, with the Business record at the head.
+Sent to each booking site at the start of the month: the stays it sent that ended last month, with their references, how many there were and the commission owed, and once paid, the day it was paid. Numbered COM-2026-0012. It prints this month's statements. One for each record of Commission Statements, on a4 paper, with the Business record at the head.
 
 - Heading: Commission statement {Number}
 - Fields: To, Statement, Address, Date, City, Stays ending in, Postcode, Our account, Country, Paid on
 - Lines from Bookings: Booking, Your reference, Guest, Arrival, Departure, Nights, Room takings, Rate %, Commission
-- Totals: Room takings, Commission owed
+- Totals: Stays, Room takings, Commission owed
 - Words: These are the stays booked through you that ended in {Month}, with the commission on each at the rate we agreed. We will pay the commission owed by bank transfer within 14 days of this statement. Please tell us of any difference before then, quoting {Number}.
+- Words: These are the stays booked through you that ended in {Month}, with the commission on each at the rate we agreed. The commission owed was paid by bank transfer on the day shown above, quoting {Number}.
 - Words: {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}. {Business.E-mail}
 
 ### Starting empty
@@ -15306,7 +15422,7 @@ It suits, with small changes: A multi-let office building or business centre; A 
 - Every change to the design (a new field, a renamed table) is a numbered step that Data Files keeps, so you can see what was changed and when.
 - In the building now looks at visits signed in today or yesterday that have no Signed Out time. Someone who left without signing out stays on it until the desk sets their Signed Out or their Status; check it before trusting it in an evacuation.
 - The query and report work from the clock: Expected today and tomorrow and In the building now change through the day as visitors come and go, so the sample shows the building as it was when the file was made.
-- A print template prints every record of its table, so choose the visit, delivery or induction you want before pressing Print, or it prints them all.
+- Each print template prints only the records it is for: passes for the visitors in the building and those expected in the next three days, agreements and certificates for the inductions in force, and slips for the deliveries waiting. The Fire roll call prints every drill and alarm. A record printed from its own form always prints.
 - Contractors in the sample take a new induction on their first visit after the last one ran out. The older induction is kept, with Renewed ticked, so the history stays.
 - Badges here are reused: the same badge appears on many visits. A badge not handed back is Missing for a month and then Written off, and a new number is added.
 - Only what the desk needs about a visitor is kept: a name, a company and a car registration. Do not add home addresses, dates of birth or ID numbers; delete old visits when you no longer need them (see the ways to adapt the sample).
@@ -15443,7 +15559,7 @@ The people in the building whom visitors come to see and deliveries are addresse
 
 #### Visitors
 
-Everyone who has been to the building or is booked to come, once each, however many times they visit. Kept to a name, a company and a car registration. The sample has 2,757 records.
+Everyone who has been to the building or is booked to come, once each, however many times they visit. Kept to a name, a company and a car registration. The sample has 2,790 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15458,7 +15574,7 @@ Everyone who has been to the building or is booked to come, once each, however m
 
 #### Badges
 
-The numbered visitor and contractor badges at the desk. A badge is given out at sign-in and handed back at sign-out. The sample has 59 records.
+The numbered visitor and contractor badges at the desk. A badge is given out at sign-in and handed back at sign-out. The sample has 58 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15470,7 +15586,7 @@ The numbered visitor and contractor badges at the desk. A badge is given out at 
 
 #### Visits
 
-One record for each visit, booked or walked in: who, to see whom, when they were expected, when they signed in and out, and the badge they had. The sample has 6,888 records.
+One record for each visit, booked or walked in: who, to see whom, when they were expected, when they signed in and out, and the badge they had. The sample has 6,935 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15492,7 +15608,7 @@ One record for each visit, booked or walked in: who, to see whom, when they were
 
 #### Inductions
 
-The site induction each contractor takes before working in the building, valid for a year. When it runs out it is taken again and a new record made. The sample has 127 records.
+The site induction each contractor takes before working in the building, valid for a year. When it runs out it is taken again and a new record made. The sample has 125 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15506,7 +15622,7 @@ The site induction each contractor takes before working in the building, valid f
 
 #### Permits
 
-Permits to work, issued at the desk for a contractor's visit when the work carries a particular risk. The sample has 270 records.
+Permits to work, issued at the desk for a contractor's visit when the work carries a particular risk. The sample has 244 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15523,7 +15639,7 @@ Permits to work, issued at the desk for a contractor's visit when the work carri
 
 #### Deliveries
 
-Every parcel, letter, pallet and order taken in at the desk for someone in the building, until it is collected. The sample has 2,845 records.
+Every parcel, letter, pallet and order taken in at the desk for someone in the building, until it is collected. The sample has 2,754 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15558,7 +15674,7 @@ The evacuation drill log: each fire drill and real alarm, when the building was 
 
 #### Roll Call Lines
 
-The roll call itself: each visitor and contractor signed in when the alarm sounded, by name, and each tenant's staff as counted by its fire warden. The sample has 75 records.
+The roll call itself: each visitor and contractor signed in when the alarm sounded, by name, and each tenant's staff as counted by its fire warden. The sample has 97 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -15754,17 +15870,18 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Visitor pass
 
-Printed on a label roll when a visitor signs in: their name and company, whom they are seeing, the floor, the date, the badge number, when the pass runs out and where to go if the alarm sounds. One for each record of Visits, on receipt-58 paper, with the Business record at the head.
+Printed on a label roll when a visitor signs in: their name and company, whom they are seeing, the floor, the date, the badge number once one is given, the time the pass runs out, a parking space when one is booked, and where to go if the alarm sounds. It prints for the visitors in the building now and those expected in the next three days, so passes for booked visitors can be ready. One for each record of Visits, on receipt-58 paper, with the Business record at the head.
 
 - Heading: VISITOR
 - Heading: {Visitor}
-- Fields: From, Visiting, Company, Floor, Date, Badge, Valid Until, Pass
+- Words: {Visitor.Company}
+- Fields: Visiting, Company, Floor, Date, Badge, Valid until, Pass, Parking space
 - Words: Wear this pass where it can be seen and stay with your host. Sign out and hand your badge back at the front desk when you leave.
 - Words: If the fire alarm sounds, leave by the nearest exit, do not use the lifts, and go to {Host.Tenant.Floor.Assembly Point}.
 
 #### Site rules agreement
 
-Signed by each contractor at the site induction, once a year: signing in, permits to work, working safely, fire, waste and noise, and keeping what they see in the tenants' offices to themselves. Have the wording checked for your own building and country. One for each record of Inductions, on a4 paper, with the Business record at the head.
+Signed by each contractor at the site induction, once a year: signing in, permits to work, working safely, fire, waste and noise, and keeping what they see in the tenants' offices to themselves. It prints for the inductions in force (the latest for each contractor, not yet run out). Have the wording checked for your own building and country. One for each record of Inductions, on a4 paper, with the Business record at the head.
 
 - Heading: Site rules and confidentiality agreement for contractors
 - Fields: Contractor, Company, Date, Induction, Valid until
@@ -15783,7 +15900,7 @@ Signed by each contractor at the site induction, once a year: signing in, permit
 
 #### Induction certificate
 
-Given to a contractor after the site induction, on A5: who they are, the date and when it runs out. One for each record of Inductions, on a5 paper, with the Business record at the head.
+Given to a contractor after the site induction, on A5: who they are, the date and when it runs out. It prints for the inductions in force. One for each record of Inductions, on a5 paper, with the Business record at the head.
 
 - Heading: Site induction certificate
 - Words: This certifies that
@@ -15795,21 +15912,24 @@ Given to a contractor after the site induction, on A5: who they are, the date an
 
 #### Delivery collection slip
 
-Printed when a delivery comes in and stuck to it, on a till roll: whom it is for, the floor, the carrier and reference, where it is kept, and a line to sign on collection. One for each record of Deliveries, on receipt-80 paper, with the Business record at the head.
+Printed when a delivery comes in and stuck to it, on a till roll: whom it is for, the floor, the carrier, the reference and the number of pieces where there are several, where it is kept, and a line to sign on collection. It prints for the deliveries waiting at the desk; printed from the form after collection, it says who collected it and when. One for each record of Deliveries, on receipt-80 paper, with the Business record at the head.
 
 - Heading: Delivery {Number}
 - Fields: For, Company, Floor, Received, Carrier, Kind, Pieces, Reference, Kept at, Collected, Collected By
 - Words: Received at the front desk. Please sign when you collect it. Anything not collected within 14 days goes back to the carrier.
 - Signed by: Collected by
+- Words: Collected from the front desk on the day and by the person shown above.
 
 #### Fire roll call
 
-The record of a drill or alarm: when it started and when the building was clear, then every visitor and contractor on the list and each tenant's staff count, floor by floor, and whether all were found. One for each record of Roll Calls, on a4 paper, with the Business record at the head.
+The record of a drill or alarm: when it started and when the building was clear, then every visitor and contractor on the list and each tenant's staff count, under a heading for each floor with the people counted on it, and whether all were found. When someone was not found, they are listed again on their own. One for each record of Roll Calls, on a4 paper, with the Business record at the head.
 
 - Heading: Fire roll call {Number}
-- Fields: Kind, Roll call taken by, Alarm at, Building clear at, Minutes to Clear, All Accounted
+- Fields: Kind, Roll call taken by, Alarm at, Building clear at, Minutes to Clear, All accounted for
 - Lines from Roll Call Lines: Floor, Kind, Name, Company, People, Accounted For
 - Totals: People counted
+- Words: Not found at the assembly point:
+- Lines from Roll Call Lines: Floor, Kind, Name, Company
 - Words: {Notes}
 - Words: Visitors and contractors are listed by name from the front desk's sign-in records; each tenant's fire warden counts their own staff.
 - Signed by: Fire marshal, Building manager
@@ -15888,7 +16008,7 @@ It suits, with small changes: A shop or a chain of two or three shops; A cafe, r
 - Everyone is paid monthly, on the last working day of the month. Salaries are paid for that month. Hours are paid a month behind, for the whole weeks (Monday to Sunday) that ended in the month before, so every timesheet is approved well before it is paid. A payslip belongs to the pay year its pay date falls in, so January's pay for December's hours counts in the new year.
 - Bank details are noughts and the tax code is empty in every record. Employee numbers and document references are your own, never a government or identity number. Keep reasons for absence general: medical details do not belong in this file.
 - The payroll cost queries add up by the department each person is in now, so someone who moved department counts in the new one for the months before the move.
-- A print template prints every record of its table: the Payslip prints every payslip, and the Leave request every absence. To print one, open it on its form and print from there, or choose the records when you print.
+- Each print template prints only the records it is for: the latest pay run's payslips, the timesheets waiting for approval, the contract summaries of the people working here, the leave requests still to decide or to come, and last year's annual summaries. A record printed from its own form always prints. A payslip keeps its own Pay Date, the same as its pay run's, so the Payslip template can find the latest run.
 
 ### Tutorial
 
@@ -15927,7 +16047,7 @@ It suits, with small changes: A shop or a chain of two or three shops; A cafe, r
 #### Run the month's pay
 
 1. Open the Pay Runs form and press New: Number (PAY-2026-M10), Pay Year, Frequency Monthly, the month in Period, its first and last days in Period Starts and Period Ends, Pay Date (its last working day) and Status Open.
-2. For each salaried person, open the Payslips form and press New: choose the Pay Run and the Employee, give it the next Number, and add a Payslip Lines line for Basic pay of their Annual Salary divided by 12 (a share of it for someone who joined or left during the month).
+2. For each salaried person, open the Payslips form and press New: choose the Pay Run and the Employee, give it the next Number and the run's Pay Date, and add a Payslip Lines line for Basic pay of their Annual Salary divided by 12 (a share of it for someone who joined or left during the month).
 3. For each person paid by the hour, add a payslip with Hours From and Hours To set to the weeks that ended last month. Add up their approved timesheets: a Basic pay line for the hours within contract at their Hourly Rate, and an Overtime line for the overtime hours at one and a half times it.
 4. Add Holiday pay, Sick pay and Paid leave lines for the paid days on the Absences form in those weeks: the days times their usual hours a day, at their rate.
 5. Open the query Deduction rates in use. For each Employee rate add a Deduction line: the gross less a twelfth of the yearly Threshold, times the Percent; or a twelfth of the Fixed Amount. The Employer rates, worked out the same way, go in Employer Costs.
@@ -16097,7 +16217,7 @@ Each person's holiday for each holiday year: what they may take, what they broug
 
 #### Absences
 
-Every day someone is away from work: holiday, sickness, appointments, compassionate leave and unpaid leave. Holiday and unpaid leave are asked for ahead and decided by the manager; sickness is recorded when it happens. The sample has 479 records.
+Every day someone is away from work: holiday, sickness, appointments, compassionate leave and unpaid leave. Holiday and unpaid leave are asked for ahead and decided by the manager; sickness is recorded when it happens. The sample has 490 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -16148,7 +16268,7 @@ Each time pay is worked out and paid: once a month in the sample, with a payslip
 
 #### Timesheets
 
-One for each person paid by the hour, for each week they worked, with a line for each day. The person hands it in when their week is done and their manager approves it, in time for the month's pay run. The sample has 1,523 records.
+One for each person paid by the hour, for each week they worked, with a line for each day. The person hands it in when their week is done and their manager approves it, in time for the month's pay run. The sample has 1,527 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -16168,7 +16288,7 @@ One for each person paid by the hour, for each week they worked, with a line for
 
 #### Timesheet Lines
 
-One line for each day worked in a week. The sample has 5,577 records.
+One line for each day worked in a week. The sample has 5,588 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -16210,6 +16330,7 @@ One for each person in each pay run, with its lines. The money figures are store
 | Number | Short text, unique | The payslip's number, given in pay date order: PS-2026-0042, a new run each pay year. |
 | Pay Run | Points at Pay Runs, required | The pay run it belongs to. |
 | Employee | Points at Employees, required | Who is paid. |
+| Pay Date | Date | The day the pay goes into their bank, the same as the pay run's: the payslip prints it, and the Payslip template finds the latest run's payslips by it. |
 | Tax Code | Short text | The tax code used for this payslip, from the person's record. Left empty in the sample. |
 | Hours From | Date | For someone paid by the hour, the Monday of the first week paid. |
 | Hours To | Date | For someone paid by the hour, the Sunday of the last week paid. |
@@ -16224,7 +16345,7 @@ One for each person in each pay run, with its lines. The money figures are store
 
 #### Payslip Lines
 
-The lines of each payslip: the payments first (basic pay, overtime, holiday pay, sick pay), then each deduction. The sample has 2,536 records.
+The lines of each payslip: the payments first (basic pay, overtime, holiday pay, sick pay), then each deduction. The sample has 2,540 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -16259,7 +16380,7 @@ An end-of-year summary of pay for each person paid in a pay year, issued when th
 
 #### Annual Summary Lines
 
-The lines of each annual summary: each kind of pay and each deduction, added up for the year. The sample has 171 records.
+The lines of each annual summary: each kind of pay and each deduction, added up for the year. The sample has 167 records.
 
 | Field | Type | What it holds |
 |---|---|---|
@@ -16355,7 +16476,7 @@ Calculated: Month is `Format([Date], "yyyy-mm")`.
 For each month and department: how many payslips, gross pay, the employer costs on top, the total cost to the business and the net paid. The department is the one each person is in now.
 
 From Payslips, Pay Runs, Employees, Departments. Shows Month, Department, Payslips, Gross, Employer Costs, Total Cost, Net.
-Calculated: Month is `Format([Pay Date], "yyyy-mm")`; Total Cost is `Round([Gross] + [Employer Costs], 2)`.
+Calculated: Month is `Format([Pay Runs].[Pay Date], "yyyy-mm")`; Total Cost is `Round([Gross] + [Employer Costs], 2)`.
 
 #### Pay run totals
 
@@ -16509,20 +16630,21 @@ From the table Start Here, a group for each Task: Step, What to do.
 
 #### Payslip
 
-The payslip for one person and one pay run: their details, the month, the pay date and, for someone paid by the hour, the weeks their hours are from, each payment and each deduction with its year-to-date figure, then gross, deductions and net pay, and the year to date. The tax code is left empty for you to fill. The tax, social insurance and pension rates in this sample are invented examples, named "(example rate)". They are not the rules of any country. Before paying anyone, replace them in Deduction Rates with your own country's current rules or your payroll provider's figures. One for each record of Payslips, on a4 paper, with the Business record at the head.
+The payslip for one person and one pay run: their details, the month, the pay date and, for someone paid by the hour, the weeks their hours are from and the hours paid, each payment and each deduction on its own side with its year-to-date figure, then gross, deductions and net pay, and the year to date. The tax code prints once you type it on the payslip. It prints the latest pay run's payslips: this month's once the pay date has come, last month's until then; print an older one from the Payslips form. The tax, social insurance and pension rates in this sample are invented examples, named "(example rate)". They are not the rules of any country. Before paying anyone, replace them in Deduction Rates with your own country's current rules or your payroll provider's figures. One for each record of Payslips, on a4 paper, with the Business record at the head.
 
 - Heading: Payslip: {Pay Run.Period}
-- Fields: Name, Employee number, Payslip, Job, Department, Pay date, Period from, Period to, Paid, Tax code, Pay type, Pay year, Hours worked from, Hours worked to, Hours paid
+- Fields: Name, Employee number, Payslip, Job, Department, Pay date, Period from, Period to, Paid, Pay type, Pay year, Tax code, Hours worked from, Hours worked to, Hours paid
 - Lines from Payslip Lines: Pay and deductions, Hours, Rate, Payments, Deductions, Year to date
 - Totals: Gross pay, Total deductions, Net pay
 - Fields: Gross pay, year to date, Deductions, year to date, Net pay, year to date
-- Words: Net pay is paid by bank transfer on {Pay Run.Pay Date} to bank code {Employee.Bank Code}, account {Employee.Account Number}. On top of your pay, {Business.Name} pays {Employer Costs} in employer contributions for this period.
+- Words: Net pay is paid by bank transfer on {Pay Date} to bank code {Employee.Bank Code}, account {Employee.Account Number}.
+- Words: On top of your pay, {Business.Name} pays {Employer Costs} in employer contributions for this period.
 - Words: Please check your payslip and tell us within 14 days if anything looks wrong. Keep your payslips: you may need them to show what you earn.
 - Words: {Business.Document Footer}
 
 #### Timesheet
 
-A week's timesheet for one person: each day's start, finish, break and hours, the overtime above their contract hours, and lines for the employee and the manager to sign. One for each record of Timesheets, on a4 paper, with the Business record at the head.
+A week's timesheet for one person: each day's start, finish, break and hours, the overtime above their contract hours when there is any, and lines for the employee and the manager to sign. It prints the timesheets waiting for approval. One for each record of Timesheets, on a4 paper, with the Business record at the head.
 
 - Heading: Timesheet {Number}
 - Fields: Name, Employee number, Department, Week commencing, Contract hours, Status, Submitted, Approved by, Approved
@@ -16534,16 +16656,19 @@ A week's timesheet for one person: each day's start, finish, break and hours, th
 
 #### Employment contract summary
 
-A summary of a person's main terms, to give with the offer letter and sign: the job, start date, pay, hours, holiday, sickness, pension and notice, filled in from their Employees record. The words are a plain example of our own, not legal advice: have them checked for your own country before you use them. It prints for everyone in Employees, leavers too; print it for one person from the Employees form. One for each record of Employees, on a4 paper, with the Business record at the head.
+A summary of a person's main terms, to give with the offer letter and sign: the job, start date, pay, hours, holiday, sickness, pension and notice, filled in from their Employees record, with the hours and pay clauses worded for someone paid by the hour or for a salary. The words are a plain example of our own, not legal advice: have them checked for your own country before you use them. It prints for everyone working here now and those about to start; print a leaver's from the Employees form. One for each record of Employees, on a4 paper, with the Business record at the head.
 
 - Heading: Summary of terms of employment
-- Fields: First name, Family name, Address, Employee number, City, Postcode, Job, Department, Reports to, Starts on, Pay type, Paid, Hourly rate, if paid by the hour, Annual salary, if salaried, Hours a week, Days a week, Holiday a year, days, Notice, weeks
+- Fields: First name, Family name, Address, Employee number, City, Postcode, Job, Department, Starts on, Reports to, Pay type, Paid, Hourly rate, Annual salary, Hours a week, Days a week, Holiday a year, days, Notice, weeks
 - Words: This summary sets out the main terms on which {Business.Name}, of {Business.Address}, {Business.City} {Business.Postcode} ("the employer"), employs {First Name} {Last Name} ("you"). It goes with your offer letter and the staff handbook. Please read it, sign both copies and give one back to us.
 - Words: 1. Your job. You are employed as {Job Title} in the {Department} department, reporting to {Manager}. Your manager may ask you to do other reasonable work that suits your skills, such as helping another department at a busy time.
+- Words: 1. Your job. You are employed as {Job Title} in the {Department} department, reporting to the owners. You may be asked to do other reasonable work that suits your skills, such as helping another department at a busy time.
 - Words: 2. Where you work. You work at {Business.Address}, {Business.City}. We will not ask you to work anywhere else for more than a day without agreeing it with you first.
 - Words: 3. Start and trial period. Your employment starts on {Start Date}. The first three months are a trial period, during which either of us may end the employment with one week's notice. Your manager will meet you before it ends to talk about how it has gone.
-- Words: 4. Hours. Your normal hours are {Hours per Week} hours a week over {Days per Week} days, on a rota your manager gives you at least two weeks ahead. Any shift longer than six hours has an unpaid break of 30 minutes. If you are paid by the hour, time worked above your weekly hours is overtime: it is agreed with your manager beforehand and paid at one and a half times your hourly rate. If you are salaried, your salary covers reasonable extra hours at busy times.
-- Words: 5. Pay. Your pay is shown above: an hourly rate for each hour worked, or an annual salary paid in twelve equal parts. You are paid {Pay Frequency}, by bank transfer, on the last working day of the month. A salary is paid for that month. Pay by the hour is paid a month behind, from your approved timesheets: each month's pay covers the weeks that ended in the month before. Each payslip shows your pay and everything deducted from it: the deductions the law requires, your pension contributions, and anything else you have agreed to in writing.
+- Words: 4. Hours. Your normal hours are {Hours per Week} hours a week over {Days per Week} days, on a rota your manager gives you at least two weeks ahead. Any shift longer than six hours has an unpaid break of 30 minutes. Time worked above your weekly hours is overtime: it is agreed with your manager beforehand and paid at one and a half times your hourly rate.
+- Words: 4. Hours. Your normal hours are {Hours per Week} hours a week over {Days per Week} days. Any working day longer than six hours has an unpaid break of 30 minutes. Your salary covers reasonable extra hours at busy times.
+- Words: 5. Pay. You are paid {Hourly Rate} for each hour worked, {Pay Frequency}, by bank transfer on the last working day of the month. Pay by the hour is paid a month behind, from your approved timesheets: each month's pay covers the weeks that ended in the month before. Each payslip shows your pay and everything deducted from it: the deductions the law requires, your pension contributions, and anything else you have agreed to in writing.
+- Words: 5. Pay. Your salary is {Annual Salary} a year, paid {Pay Frequency} in twelve equal parts, by bank transfer on the last working day of the month, for that month. Each payslip shows your pay and everything deducted from it: the deductions the law requires, your pension contributions, and anything else you have agreed to in writing.
 - Words: 6. Holiday. Your holiday is {Holiday Days} days a year, worked out for the days you work each week. The holiday year runs from 1 January to 31 December; if you join or leave during the year you have a share for the part of the year you work. Ask for holiday on a leave request at least two weeks ahead. At the busiest times of year we may ask you to choose other dates. Up to five unused days may be carried into the next year, and holiday you have earned but not taken when you leave is paid with your last pay.
 - Words: 7. Sickness. If you are ill and cannot work, call your manager before your shift starts, or as soon as you can, and say how long you expect to be off. Sick pay is set out in the staff handbook and is never less than the law requires.
 - Words: 8. Pension. We will offer you a place in the workplace pension scheme where the law requires it, and you may ask to join at any time. What you and we pay in is shown on each payslip.
@@ -16555,26 +16680,29 @@ A summary of a person's main terms, to give with the offer letter and sign: the 
 
 #### Leave request
 
-The form for asking for leave and recording the manager's decision, with the holiday allowance for the year. It prints for every absence, sickness too; print the one you need from the Absences form. One for each record of Absences, on a4 paper, with the Business record at the head.
+The form for asking for leave and recording the manager's decision, with the holiday allowance for the year when it is holiday. It prints the requests still to decide and the leave still to come; sickness and compassionate leave are recorded, not asked for, and print only from the Absences form. One for each record of Absences, on a4 paper, with the Business record at the head.
 
 - Heading: Leave request {Number}
-- Fields: Name, Employee number, Department, Manager, Kind of leave, Asked for on, First day off, Last day off, Working days, Reason
-- Words: Holiday allowance for the year (holiday only):
+- Fields: Name, Employee number, Department, Manager, Kind of leave, Asked for on, First day off, Last day off, Working days, Reason, Paid leave
+- Words: Holiday allowance for the year:
 - Fields: Holiday year, Allowance, days, Carried over, days, Booked so far, days
 - Words: Request. I would like to take the leave shown above. I have checked the rota with my team, and my work will be covered or handed over before I go.
 - Fields: Decision, Decided by, Decided on
+- Words: {Notes}
+- Words: Decision: approved / declined (the manager crosses out one).
 - Words: Once approved, holiday is taken from the allowance for the year and paid as holiday pay. If a request is declined, your manager will tell you why and help you find other dates.
 - Signed by: Employee, Manager
 
 #### Annual pay summary
 
-The end-of-year summary for one person and one pay year: each kind of pay and each deduction added up for the year, and the net pay. Give it to each person after the last pay run of the year. One for each record of Annual Summaries, on a4 paper, with the Business record at the head.
+The end-of-year summary for one person and one pay year: each kind of pay and each deduction added up for the year, and the net pay, with a note for someone who has left. Give it to each person after the last pay run of the year. One for each record of Annual Summaries, on a4 paper, with the Business record at the head.
 
 - Heading: Annual pay summary {Pay Year.Name}
-- Fields: Name, Summary, Employee number, Issued, Address, Pay year from, City, Pay year to, Postcode, Tax code, Payslips in the year, Left on
+- Fields: Name, Summary, Employee number, Issued, Address, Pay year from, City, Pay year to, Postcode, Payslips in the year, Tax code
 - Lines from Annual Summary Lines: Pay and deductions for the year, Pay, Deducted
 - Totals: Total pay, Total deductions, Net pay
 - Words: This summary shows the pay {Business.Name} paid you in the pay year from {Pay Year.Starts} to {Pay Year.Ends}, and everything deducted from it. In the same year we paid {Employer Costs} in employer contributions on top of your pay.
+- Words: {Notes}
 - Words: Please keep it safe: you may be asked for it to show your income, for example for a tax return, a loan or a tenancy. Ask the office if you need another copy.
 - Words: {Business.Document Footer}
 
@@ -16600,7 +16728,7 @@ No. The tax, social insurance and pension rates in this sample are invented exam
 
 **How do I print one person's payslip, or a whole month's?**
 
-For one, open the Payslips form, find the payslip by its Number or the person, and print it with the print template Payslip. For a month, find the run's Number in the query Pay run totals, then open the print template Payslip from Print templates and choose the payslips of that run.
+The print template Payslip holds the latest pay run's payslips, so print it from Print templates for the whole month. For one, or an older one, open the Payslips form, find the payslip by its Number or the person, and print it from there.
 
 **Can I pay some staff weekly?**
 

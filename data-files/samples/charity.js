@@ -27,6 +27,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, FIRST, LAST, money, phoneFor } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const NAME = '[First Name] & " " & [Last Name]';
 // The share of a gift the tax claim brings back: a quarter, as the UK's scheme pays at the basic rate.
@@ -231,41 +234,45 @@ export const spec = {
     ] },
   },
   documents: [
-    // The thank-you letter that is also the receipt, one for each gift.
-    { name: 'Donation receipt', table: 'Donations', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // The thank-you letter that is also the receipt, one for each gift; standing orders are thanked once a year instead.
+    { name: 'Donation receipt', table: 'Donations', where: 'Nz([Regular], 0) = 0', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Thank you for your gift' },
       { type: 'fields', columns: 2, items: [
         { field: 'Person', label: 'To' }, { field: 'Number', label: 'Receipt' },
-        { field: 'Person.Address', label: 'Address' }, { field: 'Gift Date', label: 'Received on' },
+        { field: 'Person.Address', label: 'Address' }, { field: 'Gift Date', label: 'Received on', format: 'd mmmm yyyy' },
         { field: 'Person.City', label: 'Town' }, { field: 'Campaign', label: 'Given to' },
         { field: 'Person.Postcode', label: 'Postcode' }, { field: 'Claimable', label: 'Tax declaration' },
       ] },
       { type: 'text', text: 'Dear {Person.First Name},' },
-      { type: 'text', text: 'Thank you for your gift of {Amount}, which reached us on {Gift Date}. It goes to the {Campaign}: {Campaign.Description}.' },
+      { type: 'text', text: 'Thank you for your gift, which reached us on the day above. It goes to the {Campaign}: {Campaign.Description}.' },
       { type: 'totals', rows: [
-        { label: 'Your gift', expr: '[Amount]' },
-        { label: 'Tax we can claim back on it', expr: `IIf([Claimable] = 1, ${CLAIM}, 0)` },
-        { label: 'What your gift is worth to us', expr: '[Your gift] + [Tax we can claim back on it]', strong: true },
+        { label: 'Your gift', expr: '[Amount]', strong: true },
+        // What the tax claim adds, only for a gift it can be claimed on.
+        { label: 'Tax we can claim back on it', expr: CLAIM, if: '[Claimable]' },
+        { label: 'What your gift is worth to us', expr: '[Your gift] + [Tax we can claim back on it]', strong: true, if: '[Claimable]' },
       ] },
-      { type: 'text', text: 'Where Tax declaration says Yes, you have told us that you pay enough UK income tax for us to claim tax back on your gifts. We will put this one in our next claim, which adds a quarter to it at no cost to you; please tell us if your tax changes. Where it says No, we cannot claim on this gift. If you do pay UK income tax, a short declaration lets us claim on this gift and on your future ones: ask us for the form.' },
+      { type: 'text', text: 'You have told us that you pay enough UK income tax for us to claim tax back on your gifts. We will put this one in our next claim, which adds a quarter to it at no cost to you; please tell us if your tax changes.', if: '[Claimable]' },
+      { type: 'text', text: 'We cannot claim tax back on this gift. If you do pay UK income tax, a short declaration lets us claim on this gift and on your future ones, adding a quarter at no cost to you: ask us for the form.', if: 'Nz([Claimable], 0) = 0' },
       { type: 'text', text: 'Please keep this letter as your receipt. Our newsletter tells you how the money is spent; let us know whether you would like it by post or by e-mail.' },
       { type: 'text', text: 'With warm thanks,' },
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['Treasurer'] },
       { type: 'text', text: 'Registered charity number {Business.Company Number}. {Business.Document Footer}', small: true },
     ] },
-    // A short reminder to a member whose year is ending.
-    { name: 'Renewal reminder', table: 'Memberships', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // A short reminder to a member whose year ends in the next 30 days and who has not renewed: the same members as Renewals due.
+    { name: 'Renewal reminder', table: 'Memberships', where: 'Nz([Renewed], 0) = 0 And DateDiff("d", Date(), [Ends]) >= 0 And DateDiff("d", Date(), [Ends]) <= 30', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Your membership is due for renewal' },
       { type: 'fields', columns: 2, items: [
         { field: 'Person', label: 'To' }, { field: 'Number', label: 'Membership no' },
         { field: 'Person.Address', label: 'Address' }, { field: 'Membership Type', label: 'Membership' },
-        { field: 'Person.City', label: 'Town' }, { field: 'Ends', label: 'Ends on' },
-        { field: 'Person.Postcode', label: 'Postcode' }, { field: 'Membership Type.Fee', label: 'Fee for next year' },
+        { field: 'Person.City', label: 'Town' }, { field: 'Ends', label: 'Ends on', format: 'd mmmm yyyy' },
+        { field: 'Person.Postcode', label: 'Postcode' }, { field: 'Membership Type.Fee', label: 'Fee for next year', format: '#,##0.00' },
       ] },
       { type: 'text', text: 'Dear {Person.First Name},' },
-      { type: 'text', text: 'Your {Membership Type} membership of {Business.Name} comes to an end on {Ends}. We hope you will stay with us for another year. The fee for the year ahead is {Membership Type.Fee}.' },
-      { type: 'text', text: 'Your fee last year was paid by: {Method}. If you pay by standing order, your membership renews itself on the day and there is nothing you need to do, unless your bank details have changed. Otherwise you can pay by card or cash at the hall office, or by bank transfer to {Business.Bank Details}, quoting your membership number, {Number}.' },
+      { type: 'text', text: 'Your {Membership Type} membership of {Business.Name} comes to an end on the day above. We hope you will stay with us for another year, for the fee shown above.' },
+      // How to renew, by how the member paid last year.
+      { type: 'text', text: 'You pay by standing order, so your membership renews itself on the day and there is nothing you need to do, unless your bank details have changed.', if: '[Method] = "Standing order"' },
+      { type: 'text', text: 'You can pay by card or cash at the hall office, or by bank transfer to {Business.Bank Details}, quoting your membership number, {Number}. A standing order renews it each year without a letter: ask us for the form.', if: '[Method] <> "Standing order"' },
       { type: 'text', text: 'Members pay members\' rates for events and the junior sessions, and have a vote at the annual general meeting. Your fee also helps to keep the hall warm and open for everyone who uses it.' },
       { type: 'text', text: 'If you have renewed since this letter was printed, thank you, and please ignore it. If you would rather not renew, you need do nothing, though we would be glad to know why: write to {Business.E-mail} or call {Business.Phone}.' },
       { type: 'text', text: 'With best wishes,' },
@@ -273,26 +280,31 @@ export const spec = {
       { type: 'signatures', labels: ['Membership Secretary'] },
       { type: 'text', text: 'Registered charity number {Business.Company Number}. {Business.Document Footer}', small: true },
     ] },
-    // A card to carry, for members' rates at events.
-    { name: 'Membership card', table: 'Memberships', paper: 'receipt-58', letterhead: { table: 'Business', fields: ['Name', 'Phone'] }, blocks: [
+    // A card to carry, for members' rates at events: memberships still good today, or starting soon, and life memberships.
+    { name: 'Membership card', table: 'Memberships', where: 'Nz([Ends], "") = "" Or DateDiff("d", Date(), [Ends]) >= 0', paper: 'receipt-58', letterhead: { table: 'Business', fields: ['Name', 'Phone'] }, blocks: [
       { type: 'heading', text: 'Membership card' },
       { type: 'fields', columns: 1, items: [
         { field: 'Person', label: 'Member' }, { field: 'Number', label: 'Membership no' }, { field: 'Membership Type', label: 'Membership' },
-        { field: 'Starts', label: 'Valid from' }, { field: 'Ends', label: 'Valid until' },
+        { field: 'Starts', label: 'Valid from', format: 'dd/mm/yyyy' },
+        { field: 'Ends', label: 'Valid until', format: 'dd/mm/yyyy', if: '[Ends]' },
+        // A life membership has no end: its card says so.
+        { field: 'Membership Type', label: 'Valid until', if: 'Nz([Ends], "") = ""' },
       ] },
-      { type: 'text', text: 'Show this card for members\' rates at events. A life membership has no end date.', small: true },
+      { type: 'text', text: 'Show this card for members\' rates at events.', small: true },
       { type: 'text', text: 'If found, please return to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}.', small: true },
     ] },
-    // The ticket for each booking, checked at the door.
-    { name: 'Event ticket', table: 'Event Bookings', paper: 'a5', letterhead: LETTERHEAD, blocks: [
+    // The ticket for each booking still standing, checked at the door.
+    { name: 'Event ticket', table: 'Event Bookings', where: 'Nz([Cancelled], 0) = 0', paper: 'a5', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: '{Event}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Number', label: 'Ticket' }, { field: 'Event.Event Date', label: 'Date' },
+        { field: 'Number', label: 'Ticket' }, { field: 'Event.Event Date', label: 'Date', format: 'dddd d mmmm yyyy' },
         { field: 'Person', label: 'Name' }, { field: 'Event.Start Time', label: 'Starts' },
         { field: 'Tickets', label: 'Admits' }, { field: 'Event.Venue', label: 'Venue' },
-        { field: 'Amount Paid', label: 'Paid' }, { field: 'Booked On', label: 'Booked on' },
-        { field: 'Cancelled', label: 'Cancelled' },
+        { field: 'Booked On', label: 'Booked on', format: 'dd/mm/yyyy' },
+        { field: 'Amount Paid', label: 'Paid', format: '#,##0.00', if: '[Amount Paid] > 0' },
       ] },
+      { type: 'text', text: 'Entry is free.', if: 'Nz([Amount Paid], 0) = 0' },
+      { type: 'text', text: 'This booking has been cancelled, and the ticket is no longer valid.', if: '[Cancelled]' },
       { type: 'text', text: 'Please bring this ticket, printed or on your phone, and give the number at the door. Tickets are refunded only if the event is cancelled.' },
       { type: 'text', text: '{Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}. Registered charity number {Business.Company Number}.', small: true },
     ] },
@@ -301,8 +313,12 @@ export const spec = {
       { type: 'heading', text: 'Certificate of thanks' },
       { type: 'text', text: 'This certificate is presented to' },
       { type: 'heading', text: '{Person}' },
-      { type: 'text', text: 'in thanks for the {Hours} hours given as a volunteer with {Business.Name}, over {Shifts} shifts, in the year from {Year Starting} to {Year Ending}.' },
-      { type: 'fields', columns: 2, items: [{ field: 'Roles', label: 'Roles' }, { field: 'Number', label: 'Certificate' }, { field: 'Main Role', label: 'Most hours in' }, { field: 'Presented On', label: 'Presented on' }] },
+      { type: 'text', text: 'in thanks for the {Hours} hours given as a volunteer with {Business.Name}, over {Shifts} shifts, in the volunteer year below.' },
+      { type: 'fields', columns: 2, items: [
+        { field: 'Year Starting', label: 'From', format: 'd mmmm yyyy' }, { field: 'Year Ending', label: 'To', format: 'd mmmm yyyy' },
+        { field: 'Roles', label: 'Roles' }, { field: 'Main Role', label: 'Most hours in' },
+        { field: 'Number', label: 'Certificate' }, { field: 'Presented On', label: 'Presented on', format: 'd mmmm yyyy', if: '[Presented On]' },
+      ] },
       { type: 'text', text: 'Our work depends on people who give their time freely. Thank you for yours.' },
       { type: 'spacer', size: 32 },
       { type: 'signatures', labels: ['Chair of trustees', 'Volunteer coordinator'] },
@@ -312,17 +328,20 @@ export const spec = {
       { type: 'heading', text: 'Tax claim schedule {Reference}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Reference', label: 'Claim' }, { field: 'Business.Company Number', label: 'Charity number' },
-        { field: 'Gifts Up To', label: 'Gifts up to' }, { field: 'Business.Tax Number', label: 'Tax office reference' },
-        { field: 'Submitted On', label: 'Submitted on' }, { field: 'Received On', label: 'Paid on' },
+        { field: 'Gifts Up To', label: 'Gifts up to', format: 'dd/mm/yyyy' }, { field: 'Business.Tax Number', label: 'Tax office reference' },
+        { field: 'Submitted On', label: 'Submitted on', format: 'dd/mm/yyyy' },
+        { field: 'Received On', label: 'Paid on', format: 'dd/mm/yyyy', if: '[Received On]' },
       ] },
       { type: 'lines', table: 'Donations', link: 'Tax Claim', sort: 'Gift Date', columns: [
-        { field: 'Gift Date', label: 'Date' }, { field: 'Number', label: 'Receipt' }, { field: 'Person.First Name', label: 'First name' },
+        { field: 'Gift Date', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Number', label: 'Receipt' }, { field: 'Person.First Name', label: 'First name' },
         { field: 'Person.Last Name', label: 'Last name' }, { field: 'Person.Address', label: 'House and street' }, { field: 'Person.Postcode', label: 'Postcode' },
         { field: 'Amount', type: 'currency' }, { expr: CLAIM, as: 'Tax Back', label: 'Tax back', type: 'currency' },
       ] },
       { type: 'totals', rows: [
+        { label: 'Gifts listed', expr: '[Donations count]', type: 'integer' },
         { label: 'Gifts', expr: '[Amount]' }, { label: 'Tax back on them', expr: '[Tax Back]' },
         { label: 'Amount claimed', expr: '[Amount Claimed]', strong: true },
+        { label: 'Amount received', expr: '[Amount Received]', if: '[Received On]' },
       ] },
       { type: 'text', text: 'Every gift listed was made by a person who had a tax declaration in place on the day of the gift. Keep this schedule, with the declarations, as long as the tax office asks.', small: true },
     ] },
@@ -529,12 +548,12 @@ export const about = {
     'Grant reports': 'Grant reports still to write, with the amount and the date each is due.',
   },
   documents: {
-    'Donation receipt': 'The thank-you letter for a gift, which is also its receipt: the amount, the day it came, the appeal it goes to, whether the giver has a tax declaration, and what the tax claim adds to it. Every gift has one; print those of the last week or two by choosing them, and leave out standing orders, which are thanked once a year.',
-    'Renewal reminder': 'A short letter to a member whose membership is ending: the fee for next year, how to pay, and what membership gives. Choose the memberships in the Renewals due query to print; a life membership has no end and needs no reminder.',
-    'Membership card': 'A small card for each membership, to show for members\' rates: the member, the membership number, the kind of membership and the dates it is good for. Print it for a new or renewed membership.',
-    'Event ticket': 'Sent or handed to each guest when they book: the event, when and where, how many it admits, what was paid, and a ticket number to check at the door. A cancelled booking prints with Cancelled: Yes.',
-    'Volunteer certificate': 'A certificate of thanks for each volunteer, with the hours and shifts they gave in the volunteer year and the roles they did. Handed out at the annual general meeting, and useful to a volunteer for a job or college application.',
-    'Tax claim schedule': 'The list of gifts that goes with each claim to the tax office: each giver\'s name, house and postcode, the date and amount of each gift and the tax back on it, with the totals. The form your tax office wants may differ: check what it asks for in your own country.',
+    'Donation receipt': 'The thank-you letter for a gift, which is also its receipt: the amount, the day it came, the appeal it goes to, whether the giver has a tax declaration and, when they have, what the tax claim adds to it; without one, a line asking them for the form. It prints for every gift but standing orders, which are thanked once a year (choose one from the Donations form to print it anyway); print those of the last week or two by choosing them.',
+    'Renewal reminder': 'A short letter to a member whose membership ends in the next 30 days and has not been renewed, the same memberships as the Renewals due query: the day it ends, the fee for next year, how to pay (worded for a standing order, which renews itself, or for paying at the office or by transfer), and what membership gives. A life membership has no end and gets no reminder.',
+    'Membership card': 'A small card for each membership, to show for members\' rates: the member, the membership number, the kind of membership and the dates it is good for, or Life for a life membership. It prints for memberships still good today and those starting soon; print it for a new or renewed membership.',
+    'Event ticket': 'Sent or handed to each guest when they book: the event, when and where, how many it admits, what was paid (or that entry is free), and a ticket number to check at the door. It prints for bookings not cancelled; a cancelled one chosen from its form says the ticket is no longer valid.',
+    'Volunteer certificate': 'A certificate of thanks for each volunteer, with the hours and shifts they gave in the volunteer year, its dates, and the roles they did. Handed out at the annual general meeting, and useful to a volunteer for a job or college application.',
+    'Tax claim schedule': 'The list of gifts that goes with each claim to the tax office: each giver\'s name, house and postcode, the date and amount of each gift and the tax back on it, with the number of gifts, the totals, and what was received once the claim is paid. The form your tax office wants may differ: check what it asks for in your own country.',
   },
 
   empty: 'Start with Business: the trust\'s own name, address and charity number, which every letter, card and ticket prints. Then the lookup tables: Membership Types (your fees), Campaigns (at least a General Fund for gifts given to nothing in particular), Volunteer Roles and Funders. Then enter People as you meet them, with what they have agreed to be contacted by. After that, record Memberships, Donations, Events and their Bookings, Volunteer Shifts and Grants as they happen, and write each payment received in Income too. Make a Tax Claim when you send one and set each gift\'s Tax Claim to it. Volunteer Certificates come once a year, after the volunteer year ends on 31 March.',
@@ -558,7 +577,7 @@ export const about = {
     ] },
     { title: 'Send renewal reminders and renew a membership', steps: [
       'Each week, run the query Renewals due: memberships ending in the next 30 days that have not been renewed. The report Renewal reminders prints the same list.',
-      'Open the print template Renewal reminder from Print templates, choose the memberships in that list, and press Print.',
+      'Open the print template Renewal reminder from Print templates: it holds a letter for each membership on that list. Press Print.',
       'When the fee comes in, open the Memberships form, find the old membership and tick Renewed.',
       'Press New for the new year: choose the Person and Membership Type, set Starts to the day after the old Ends and Ends a year on, type the Amount, Paid On and Method, and the next membership number in Number (MEM-2026-0042).',
       'Write the fee in the Income form with Source Membership and the membership number in Reference.',
@@ -603,7 +622,7 @@ export const about = {
     'A renewal is a new Memberships record, not a change to the old one. Tick Renewed on the old one, or the member stays in Renewals due and later in Lapsed members.',
     'Claimable is set from the declaration in place on the day of the gift. Where your scheme lets a new declaration cover earlier gifts, as the UK\'s does for four years, tick Claimable on those gifts too.',
     'The claim of a quarter of each gift is written in three places: the Gifts to claim query, the Donation receipt and the Tax claim schedule. Change all three if your scheme pays a different share.',
-    'A print template prints every record of its table unless you choose some, so choose the gifts, memberships or bookings you mean before pressing Print.',
+    'Some print templates print only the records they are for: the Donation receipt for gifts that are not standing orders, the Renewal reminder for memberships ending in the next 30 days and not renewed, the Membership card for memberships still good, and the Event ticket for bookings not cancelled. A record you choose from its form always prints. The rest print every record, so choose the ones you mean before pressing Print.',
     'The trust is not registered for VAT, so Tax Rate in Business is nought and no document shows VAT. Company Number holds the charity number, printed at the foot of each letter.',
     'The volunteer shifts go back further than the other records, so the whole of the last volunteer year (to 31 March) is there to count for the certificates.',
   ],

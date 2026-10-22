@@ -24,12 +24,13 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, FIRST, LAST, money } from './util.js';
 
+// Its print templates need Office 2.16.0 or later: they say which records they print and when a line shows.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const CLIENT = '[Clients].[First Name] & " " & [Clients].[Last Name]';
 const STYLIST = '[Staff].[First Name] & " " & [Staff].[Last Name]';
 const WHEN = 'Left([Start], 10) & " " & Mid([Start], 12, 5)';
-// A date as the desk writes it: 24/10/2026.
-const UK_DATE = (f) => `Format([${f}], "dd") & "/" & Format([${f}], "mm") & "/" & Format([${f}], "yyyy")`;
 // A receipt line's amount, and the VAT within it: prices are shown with VAT in.
 const AMOUNT = 'Round([Quantity] * [Unit Price], 2)';
 const VAT_IN = `Round(${AMOUNT} - ${AMOUNT} / (1 + [Tax Rate]), 2)`;
@@ -241,28 +242,31 @@ export const spec = {
     { name: 'Receipt', table: 'Receipts', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Website', 'Tax Number'] }, blocks: [
       { type: 'heading', text: 'Receipt {Number}' },
       { type: 'fields', columns: 1, items: [
-        { field: 'Taken', label: 'Date' }, { field: 'Booking.Client', label: 'Client' }, { field: 'Booking.Staff', label: 'Stylist' },
+        { field: 'Taken', label: 'Date', format: 'dd/mm/yyyy hh:nn' }, { field: 'Booking.Client', label: 'Client' }, { field: 'Booking.Staff', label: 'Stylist' },
       ] },
       { type: 'lines', table: 'Receipt Lines', columns: [
         { field: 'Item' }, { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
-        { expr: AMOUNT, as: 'Amount', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number' },
+        { expr: AMOUNT, as: 'Amount', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number', format: '0' },
         { expr: VAT_IN, as: 'VAT In', label: 'VAT', type: 'currency' },
       ] },
+      // The deposit and the voucher come off only when there was one; what was paid today then shows apart from the total.
       { type: 'totals', rows: [
         { label: 'Total', expr: '[Amount]', strong: true }, { label: 'Of which VAT', expr: '[VAT In]' },
-        { label: 'Less deposit paid', expr: '[Deposit Paid]' }, { label: 'Less gift voucher', expr: '[Voucher]' },
-        { label: 'Paid today', expr: '[Total] - [Deposit Paid] - [Voucher]', strong: true },
+        { label: 'Less deposit paid', expr: '[Deposit Paid]', if: '[Deposit Paid]' }, { label: 'Less gift voucher', expr: '[Voucher]', if: '[Voucher]' },
+        { label: 'Paid today', expr: '[Total] - [Deposit Paid] - [Voucher]', strong: true, if: 'Nz([Deposit Paid]) + Nz([Voucher])' },
       ] },
+      { type: 'text', text: 'Gift voucher {Voucher Code} taken in full.', small: true, if: '[Voucher Code]' },
       { type: 'text', text: 'Paid by {Paid By}. VAT number {Business.Tax Number}.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    // The gift voucher, printed on A5 card and put in an envelope.
-    { name: 'Gift voucher', table: 'Gift Vouchers', paper: 'a5', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Website'] }, blocks: [
+    // The gift voucher, printed on A5 card and put in an envelope: for vouchers not yet used and still in date.
+    { name: 'Gift voucher', table: 'Gift Vouchers', paper: 'a5', where: 'Nz([Redeemed On], "") = "" And DateDiff("d", Date(), [Expires]) >= 0', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Website'] }, blocks: [
       { type: 'heading', text: 'Gift voucher' },
-      { type: 'text', text: 'For {For}, from {Bought By}.' },
+      { type: 'text', text: 'For {For}, from {Bought By}.', if: '[Bought By]' },
+      { type: 'text', text: 'For {For}.', if: 'Nz([Bought By], "") = ""' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Value', label: 'Worth' }, { field: 'Code', label: 'Voucher number' },
-        { field: 'Sold On', label: 'Issued' }, { field: 'Expires', label: 'Use by' },
+        { field: 'Value', label: 'Worth', format: '#,##0.00' }, { field: 'Code', label: 'Voucher number' },
+        { field: 'Sold On', label: 'Issued', format: 'd mmmm yyyy' }, { field: 'Expires', label: 'Use by', format: 'd mmmm yyyy' },
       ] },
       { type: 'text', text: 'To spend on any service or product at {Business.Name}. Call {Business.Phone} or book at {Business.Website}, and give the voucher number when you book.' },
       { type: 'spacer', size: 12 },
@@ -273,31 +277,39 @@ export const spec = {
       { type: 'heading', text: 'Commission statement {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Staff', label: 'For' }, { field: 'Month', label: 'Month' },
-        { field: 'Staff.Role', label: 'Role' }, { field: 'Prepared On', label: 'Prepared' },
-        { field: 'Staff.Level', label: 'Level' }, { field: 'Paid On', label: 'Paid with wages on' },
+        { field: 'Staff.Role', label: 'Role' }, { field: 'Prepared On', label: 'Prepared', format: 'dd/mm/yyyy' },
+        { field: 'Staff.Level', label: 'Level' }, { field: 'Paid On', label: 'Paid with wages on', format: 'dd/mm/yyyy', if: '[Paid On]' },
       ] },
       { type: 'lines', table: 'Commission Lines', sort: 'Line', columns: [
         { field: 'Work' }, { field: 'Done', label: 'Done', type: 'integer' }, { field: 'Takings', type: 'currency' },
-        { expr: 'Nz([Rate]) * 100', as: 'Rate %', type: 'number' }, { field: 'Commission', type: 'currency' },
+        { expr: 'Nz([Rate]) * 100', as: 'Rate %', type: 'number', format: '0' }, { field: 'Commission', type: 'currency' },
       ] },
       { type: 'totals', rows: [
         { label: 'Takings', expr: '[Takings]' }, { label: 'Commission due', expr: '[Commission]', strong: true },
       ] },
+      { type: 'text', text: 'To be paid with your wages on the 7th.', if: 'Nz([Paid On], "") = ""' },
       { type: 'text', text: 'Commission is worked out on what clients paid, VAT included, for completed appointments and retail you sold in the month. It is paid with your wages and taxed with them. If anything here looks wrong, please speak to the owner within 14 days.', small: true },
     ] },
-    // The letter (or e-mail) confirming an appointment: every booking prints one; choose the ones to send.
-    { name: 'Appointment confirmation', table: 'Bookings', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website'] }, blocks: [
+    // The letter (or e-mail) confirming an appointment: for bookings still to come and not cancelled.
+    { name: 'Appointment confirmation', table: 'Bookings', paper: 'a4', where: '[Status] = "Booked" And DateDiff("d", Date(), [Start]) >= 0', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website'] }, blocks: [
       { type: 'heading', text: 'Your appointment' },
       { type: 'text', text: 'Dear {Client.First Name},' },
       { type: 'text', text: 'Thank you for booking with us. This is to confirm your appointment, booked on {Booked On}.' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Start', label: 'Date and time' }, { field: 'Staff.First Name', label: 'With' },
-        { field: 'Minutes', label: 'Time set aside (minutes)' }, { field: 'Deposit', label: 'Deposit paid' },
+        { field: 'Start', label: 'Day', format: 'dddd d mmmm yyyy' }, { field: 'Start', label: 'Time', format: 'hh:nn' },
+        { field: 'Staff.First Name', label: 'With' }, { field: 'Minutes', label: 'Time set aside (minutes)' },
+        { field: 'Deposit', label: 'Deposit paid', format: '#,##0.00', if: '[Deposit]' },
       ] },
-      { type: 'lines', table: 'Booking Services', columns: [{ field: 'Service.Name', label: 'Service' }, { field: 'Price', type: 'currency' }] },
-      { type: 'totals', rows: [{ label: 'Price for the visit', expr: '[Price]' }, { label: 'Less deposit paid', expr: 'Nz([Deposit])' }, { label: 'To pay on the day', expr: '[Price] - Nz([Deposit])', strong: true }] },
+      // Each service, and whether it needs a skin test first: the paragraph about the test prints only when one does.
+      { type: 'lines', table: 'Booking Services', columns: [
+        { field: 'Service.Name', label: 'Service' }, { field: 'Service.Patch Test', as: 'Skin Test', label: 'Skin test first', type: 'yesno' }, { field: 'Price', type: 'currency' },
+      ] },
+      { type: 'totals', rows: [
+        { label: 'Price for the visit', expr: '[Price]', strong: true },
+        { label: 'Less deposit paid', expr: '[Deposit]', if: '[Deposit]' }, { label: 'To pay on the day', expr: '[Price] - [Deposit]', strong: true, if: '[Deposit]' },
+      ] },
       { type: 'text', text: 'Prices include VAT. If you would like a different service on the day, the price may change; your stylist will tell you before starting.' },
-      { type: 'text', text: 'Colour, tints and lash lifts need a skin test in the six months before. If you have not had one with us in that time, please call in for a quick test at least 48 hours before your appointment. It takes five minutes.' },
+      { type: 'text', text: 'Your appointment includes colour, a tint or a lash lift, which needs a skin test in the six months before. If you have not had one with us in that time, please call in for a quick test at least 48 hours before your appointment. It takes five minutes.', if: '[Skin Test]' },
       { type: 'text', text: 'Our cancellation policy. If you need to move or cancel, please tell us at least 48 hours before, by phone on {Business.Phone} or by e-mail to {Business.E-mail}, and any deposit is refunded or moved to your new booking. With less notice, or if you do not come, we keep the deposit and may ask for one when you next book. If you are running late, please call: we will do what we can in the time left, or offer you another appointment.' },
       { type: 'text', text: 'We look forward to seeing you.' },
       { type: 'text', text: 'With best wishes, the team at {Business.Name}' },
@@ -449,10 +461,10 @@ export const about = {
     'Till roll': 'The last seven days of receipts, with the total taken and the total paid at the desk, to check against the card machine and the cash.',
   },
   documents: {
-    'Receipt': 'The till receipt for a visit, on an 80 mm roll: the salon\'s name, address and VAT number, the client and stylist, each service and product with the VAT within it, the total, the deposit and any voucher taken off, and what was paid today. Numbered RCP-2026-00042.',
-    'Gift voucher': 'The voucher a buyer takes away, on A5 card: who it is for and from, what it is worth, its number and use-by date, and the terms.',
+    'Receipt': 'The till receipt for a visit, on an 80 mm roll: the salon\'s name, address and VAT number, the client and stylist, each service and product with the VAT within it, the total, and what was paid today after the deposit and any gift voucher came off. The deposit and voucher lines print only when there was one. Numbered RCP-2026-00042.',
+    'Gift voucher': 'The voucher a buyer takes away, on A5 card: who it is for and from, what it is worth, its number and use-by date, and the terms. It prints for vouchers not yet used and still in date; to print one already used or expired, print it from the Gift Vouchers form.',
     'Commission statement': 'Given to each stylist and therapist on commission with their pay: the month\'s services by kind and the retail they sold, the takings, the rate and the commission due. Numbered COM-2026-0042.',
-    'Appointment confirmation': 'A letter or e-mail confirming an appointment: the day and time, who with, the services and their prices, the deposit, and the skin test and cancellation policy. Every booking has one; print or send the one on screen, or choose the week\'s new bookings. Have the cancellation words checked against the consumer rules of your own country.',
+    'Appointment confirmation': 'A letter or e-mail confirming an appointment: the day and time, who with, the services and their prices, the deposit, and the skin test and cancellation policy. It prints for bookings still to come that are not cancelled, and a past one prints from the Bookings form. The paragraph about skin tests prints only when a service in the booking needs one, and the deposit only when one was taken. Have the cancellation words checked against the consumer rules of your own country.',
   },
   tutorial: [
     { title: 'Book an appointment and confirm it', steps: [
@@ -495,7 +507,7 @@ export const about = {
   notes: [
     'Prices are VAT inclusive. A receipt shows the VAT within each line, worked out as the price less the price divided by one plus the rate, rounded to the penny; the receipt\'s VAT is those added up. Change the 0.2 in Services and Products if your rate is different, or make it 0 if you are not registered for VAT.',
     'The services of a visit are kept twice on purpose: in Booking Services, as booked, and in Receipt Lines, as charged and printed. A receipt should not change after it is handed over, so the till keeps its own copy.',
-    'Every booking, past or to come, can print an Appointment confirmation. Choose the booking you want before printing; printing them all gives thousands of letters.',
+    'The Appointment confirmation template prints only bookings still to come that are not cancelled, a few hundred at most, and the Gift voucher template only vouchers not yet used and still in date. Print one from the Bookings or Gift Vouchers form to get it whatever its state.',
     'Commission is worked out on takings with VAT in them, as many salons pay it. To pay it on takings before VAT, divide the price by 1.2 in the commission queries.',
     'The owner takes no commission, so she has no statements. Staff who have left keep their records with Active set to No.',
     'Stock is not counted by Data Files on its own: In Stock goes down as products are sold or used at the basin and up as deliveries arrive. In the sample this was worked out while the records were made; in your own salon, change In Stock when you add a sale or a delivery, or count the shelf each week.',

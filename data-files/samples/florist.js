@@ -22,6 +22,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, FIRST, LAST, money, person, phoneFor } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 // The business's own details at the head of every document.
 const LETTERHEAD = { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website', 'Tax Number'] };
@@ -201,10 +204,11 @@ export const spec = {
     { name: 'Monthly orders', query: 'Orders by month', columns: ['Month', { field: 'Orders', type: 'integer' }, { field: 'Takings', type: 'currency' }, { field: 'Delivery Charges', type: 'currency' }], totals: [{ field: 'Orders', fn: 'sum' }, { field: 'Takings', fn: 'sum' }] },
   ],
   documents: [
-    { name: 'Order confirmation', table: 'Orders', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // A letter for each order a customer placed: not the weekly standing orders, not a cancelled order (it still prints when chosen).
+    { name: 'Order confirmation', table: 'Orders', paper: 'a4', letterhead: LETTERHEAD, where: '[Kind] <> "Contract" And [Status] <> "Cancelled"', blocks: [
       { type: 'fields', columns: 2, items: [
         { field: 'Customer', label: 'To' }, { field: 'Number', label: 'Order' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Taken', label: 'Taken' },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Taken', label: 'Taken', format: 'd mmmm yyyy' },
         { field: 'Customer.City', label: 'Town' }, { field: 'Customer.Postcode', label: 'Postcode' },
       ] },
       { type: 'heading', text: 'Your order {Number}' },
@@ -215,50 +219,59 @@ export const spec = {
         { expr: AMOUNT, as: 'Amount', type: 'currency' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Flowers', expr: '[Amount]' }, { label: 'Delivery', expr: 'Nz([Delivery Charge])' },
-        { label: 'Total', expr: '[Flowers] + [Delivery]', strong: true }, { label: 'VAT included', expr: '[Tax]' },
+        { label: 'Flowers', expr: '[Amount]' }, { label: 'Delivery', expr: '[Delivery Charge]', if: '[Delivery Charge] > 0' },
+        { label: 'Total', expr: '[Total]', strong: true }, { label: 'VAT included', expr: '[Tax]' },
       ] },
       { type: 'fields', columns: 2, items: [
-        { field: 'Kind', label: 'Delivery or collection' }, { field: 'Due Date', label: 'On' },
+        { field: 'Kind', label: 'Delivery or collection' }, { field: 'Due Date', label: 'On', format: 'dddd d mmmm yyyy' },
         { field: 'Recipient', label: 'For' }, { field: 'Slot', label: 'Time' },
-        { field: 'Address', label: 'Address' }, { field: 'City', label: 'Town' }, { field: 'Postcode', label: 'Postcode' }, { field: 'Description', label: 'What we will make' },
+        { field: 'Address', label: 'Address' }, { field: 'City', label: 'Town', if: '[City]' }, { field: 'Postcode', label: 'Postcode', if: '[Postcode]' },
+        { field: 'Description', label: 'What we will make' },
+        { field: 'Payment', label: 'Paid by', if: '[Paid On]' }, { field: 'Paid On', label: 'Paid on', format: 'd mmmm yyyy', if: '[Paid On]' },
       ] },
-      { type: 'text', text: 'The card will read: {Card Message} {Card From}' },
-      { type: 'text', text: 'Paid on {Paid On}: {Payment}.' },
+      { type: 'text', text: 'The card will read: {Card Message} {Card From}', if: '[Card Included]' },
+      { type: 'text', text: 'No card goes with the flowers. If you would like one, call us and tell us what to write.', if: 'Nz([Card Included], 0) = 0' },
+      { type: 'text', text: 'Payment: {Payment}. We take it before the flowers are made.', if: 'Nz([Paid On], "") = ""' },
       { type: 'text', text: 'Flowers are made fresh on the day from what is best at the market, so a stem may differ a little from the picture; the colours and the size will not. If you need to change or cancel the order, tell us by 5pm the day before and we refund you in full. Once the flowers are made we can change the delivery but cannot refund them.' },
+      { type: 'text', text: 'This order was cancelled. If you have paid for it, the money is refunded to the card you paid with.', if: '[Status] = "Cancelled"' },
       { type: 'text', text: 'With best wishes,' },
       { type: 'text', text: '{Taken By}, {Business.Name}' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Gift card message', table: 'Orders', paper: 'a5', blocks: [
+    // A card only for the orders that have one.
+    { name: 'Gift card message', table: 'Orders', paper: 'a5', where: '[Card Included] And [Status] <> "Cancelled"', blocks: [
       { type: 'spacer', size: 32 },
       { type: 'text', text: '{Card Message}' },
       { type: 'spacer', size: 16 },
       { type: 'text', text: '{Card From}' },
     ] },
-    { name: 'Delivery note', table: 'Orders', paper: 'a5', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, blocks: [
+    // Only what goes out in the van: a collection has no delivery note.
+    { name: 'Delivery note', table: 'Orders', paper: 'a5', where: '[Kind] <> "Collection" And [Status] <> "Cancelled"', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, blocks: [
       { type: 'heading', text: 'Delivery note {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Recipient', label: 'For' }, { field: 'Due Date', label: 'Delivery date' },
+        { field: 'Recipient', label: 'For' }, { field: 'Due Date', label: 'Delivery date', format: 'dd/mm/yyyy' },
         { field: 'Address', label: 'Address' }, { field: 'Slot', label: 'Time' },
         { field: 'City', label: 'Town' }, { field: 'Area.Name', label: 'Area' },
-        { field: 'Postcode', label: 'Postcode' }, { field: 'Run.Driver', label: 'Driver' },
-        { field: 'Recipient Phone', label: 'Phone' }, { field: 'Card Included', label: 'Card enclosed' },
+        { field: 'Postcode', label: 'Postcode' }, { field: 'Run.Driver', label: 'Driver', if: '[Run]' },
+        { field: 'Recipient Phone', label: 'Phone', if: '[Recipient Phone]' }, { field: 'Card Included', label: 'Card enclosed', if: '[Card Included]' },
       ] },
       { type: 'lines', table: 'Order Lines', columns: [{ field: 'Product.Name', label: 'Flowers' }, { field: 'Quantity', type: 'integer' }] },
       { type: 'totals', rows: [{ label: 'Items', expr: '[Quantity]', type: 'integer', strong: true }] },
-      { type: 'text', text: 'Someone has sent you flowers from {Business.Name}. To keep them fresh, cut the stems at an angle, put them in clean water and keep them out of direct sun. Change the water every two days.', small: true },
+      { type: 'text', text: 'Someone has sent you flowers from {Business.Name}. To keep them fresh, cut the stems at an angle, put them in clean water and keep them out of direct sun. Change the water every two days.', small: true, if: '[Kind] = "Delivery"' },
+      { type: 'text', text: 'A funeral tribute from {Business.Name}, made to order. Please keep it flat and out of the sun until the service.', small: true, if: '[Kind] = "Funeral"' },
+      { type: 'text', text: 'Your weekly flowers from {Business.Name}. We take away last week\'s arrangement when we bring the new one.', small: true, if: '[Kind] = "Contract"' },
       { type: 'spacer', size: 16 },
       { type: 'signatures', labels: ['Received by', 'Time'] },
     ] },
+    // Every wedding has its quote; what it says about the deposit follows the wedding's Status.
     { name: 'Wedding quote', table: 'Weddings', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Wedding flowers: quote {Quote No}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer', label: 'For' }, { field: 'Quote No', label: 'Quote' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Quoted On', label: 'Date' },
-        { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Valid Until', label: 'Prices hold until' },
-        { field: 'Couple', label: 'The couple' }, { field: 'Wedding Date', label: 'Wedding date' },
-        { field: 'Ceremony Venue', label: 'Ceremony' }, { field: 'Reception Venue', label: 'Reception' },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Quoted On', label: 'Date', format: 'd mmmm yyyy' },
+        { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Valid Until', label: 'Prices hold until', format: 'd mmmm yyyy', if: '[Status] = "Quoted"' },
+        { field: 'Couple', label: 'The couple' }, { field: 'Wedding Date', label: 'Wedding date', format: 'dddd d mmmm yyyy' },
+        { field: 'Ceremony Venue', label: 'Ceremony' }, { field: 'Reception Venue', label: 'Reception', if: '[Reception Venue]' },
         { field: 'Colours', label: 'Colours' },
       ] },
       { type: 'lines', table: 'Wedding Lines', sort: 'Line', columns: [
@@ -267,21 +280,27 @@ export const spec = {
       ] },
       { type: 'totals', rows: [
         { label: 'Total for the flowers', expr: '[Amount]', strong: true }, { label: 'VAT included', expr: '[Line VAT]' },
-        { label: 'Deposit to book (a quarter)', expr: 'Round([Amount] * 0.25 / 10, 0) * 10' },
+        { label: 'Deposit to book (a quarter)', expr: 'Round([Amount] * 0.25 / 10, 0) * 10', if: '[Status] = "Quoted"' },
+        { label: 'Deposit paid', expr: '[Deposit]', if: '[Deposit Paid On]' },
       ] },
-      { type: 'text', text: 'To book, pay the deposit above: we then hold the date for you and send an invoice. The balance is due four weeks before the wedding. Flowers are seasonal: if a flower is not at its best that week we use the closest we can find, and we tell you first.' },
+      { type: 'text', text: 'To book, pay the deposit above: we then hold the date for you and send an invoice. The balance is due four weeks before the wedding. Flowers are seasonal: if a flower is not at its best that week we use the closest we can find, and we tell you first.', if: '[Status] = "Quoted"' },
+      { type: 'text', text: 'Booked: thank you for your deposit. We hold the date for you, and the balance is on your invoice, due four weeks before the wedding. Flowers are seasonal: if a flower is not at its best that week we use the closest we can find, and we tell you first.', if: '[Status] = "Booked"' },
+      { type: 'text', text: 'The flowers for this wedding have been made and delivered. Thank you for choosing us.', if: '[Status] = "Done"' },
+      { type: 'text', text: 'This quote was not taken up. If your plans change, call us and we will quote again at the prices of the day.', if: '[Status] = "Declined"' },
       { type: 'text', text: 'The price includes making everything, delivery on the morning of the wedding, and setting up at the ceremony and the reception. Vases and stands we bring are collected the next working day.' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Wedding invoice', table: 'Weddings', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // An invoice only for a wedding that has one: booked, with its deposit paid.
+    { name: 'Wedding invoice', table: 'Weddings', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Invoice No], "") <> ""', blocks: [
       { type: 'heading', text: 'Invoice {Invoice No}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer', label: 'Invoice to' }, { field: 'Invoice No', label: 'Invoice' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Date' },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' },
         { field: 'Customer.City', label: 'Town' }, { field: 'Quote No', label: 'Your quote' },
-        { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Wedding Date', label: 'Wedding date' },
-        { field: 'Couple', label: 'The couple' }, { field: 'Balance Due On', label: 'Balance due by' },
-        { field: 'Deposit Paid On', label: 'Deposit paid on' }, { field: 'Balance Paid On', label: 'Balance paid on' },
+        { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Wedding Date', label: 'Wedding date', format: 'dd/mm/yyyy' },
+        { field: 'Couple', label: 'The couple' }, { field: 'Deposit Paid On', label: 'Deposit paid on', format: 'dd/mm/yyyy', if: '[Deposit Paid On]' },
+        { field: 'Balance Due On', label: 'Balance due by', format: 'dd/mm/yyyy', if: 'Nz([Balance Paid On], "") = ""' },
+        { field: 'Balance Paid On', label: 'Balance paid on', format: 'dd/mm/yyyy', if: '[Balance Paid On]' },
       ] },
       { type: 'lines', table: 'Wedding Lines', sort: 'Line', columns: [
         { field: 'Description' }, { field: 'Quantity', type: 'integer' }, { field: 'Unit Price', label: 'Each', type: 'currency' },
@@ -289,18 +308,22 @@ export const spec = {
       ] },
       { type: 'totals', rows: [
         { label: 'Total for the flowers', expr: '[Amount]' }, { label: 'VAT included', expr: '[Tax]' },
-        { label: 'Deposit paid', expr: 'Nz([Deposit])' }, { label: 'Balance due', expr: '[Total for the flowers] - [Deposit paid]', strong: true },
+        { label: 'Deposit paid', expr: '[Deposit]', if: '[Deposit]' },
+        { label: 'Balance paid', expr: '[Amount] - Nz([Deposit], 0)', if: '[Balance Paid On]' },
+        { label: 'Balance due', expr: '[Amount] - Nz([Deposit], 0)', strong: true, if: 'Nz([Balance Paid On], "") = ""' },
       ] },
-      { type: 'text', text: 'Please pay the balance by {Balance Due On} to {Business.Bank Details}, quoting {Invoice No}. If you have paid it since this invoice was sent, thank you.' },
+      { type: 'text', text: 'Please pay the balance by the date above to {Business.Bank Details}, quoting {Invoice No}. If you have paid it since this invoice was sent, thank you.', if: 'Nz([Balance Paid On], "") = ""' },
+      { type: 'text', text: 'Paid in full. Thank you, and we hope the day was everything you wished for.', if: '[Balance Paid On]' },
       { type: 'text', text: '{Business.Payment Terms}', small: true },
     ] },
     { name: 'Till receipt', table: 'Till Sales', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Tax Number'] }, blocks: [
       { type: 'heading', text: 'Receipt {Number}' },
-      { type: 'fields', columns: 1, items: [{ field: 'Sold At', label: 'Date' }, { field: 'Served By', label: 'Served by' }, { field: 'Payment', label: 'Paid by' }] },
+      { type: 'fields', columns: 1, items: [{ field: 'Sold At', label: 'Date', format: 'dd/mm/yyyy hh:nn' }, { field: 'Served By', label: 'Served by' }, { field: 'Payment', label: 'Paid by' }] },
       { type: 'lines', table: 'Till Lines', columns: [
         { field: 'Product.Name', label: 'Item' }, { field: 'Quantity', label: 'Qty', type: 'integer' }, { expr: AMOUNT, as: 'Amount', type: 'currency' },
       ] },
-      { type: 'totals', rows: [{ label: 'Total', expr: '[Amount]', strong: true }, { label: 'VAT at 20% included', expr: '[Tax]' }] },
+      { type: 'totals', rows: [{ label: 'Total', expr: '[Amount]', strong: true }, { label: 'VAT at 20% included', expr: '[Tax]', if: '[Tax] > 0' }] },
+      { type: 'text', text: 'VAT number {Business.Tax Number}.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
   ],
@@ -427,11 +450,11 @@ export const about = {
     'Monthly orders': 'Orders and their takings, month by month.',
   },
   documents: {
-    'Order confirmation': 'The letter or e-mail sent when an order is taken: what will be made, for whom, where and when, the card\'s words, what was paid, and how to change or cancel.',
-    'Gift card message': 'The small card that goes with the flowers: the message and who it is from, nothing else.',
-    'Delivery note': 'Goes with the driver: the recipient, the address, the time, whether a card is enclosed and what is being delivered, with no prices, and a line for whoever takes them in to sign.',
-    'Wedding quote': 'Sent after the consultation: the couple, the date and venues, each piece with its price, the total with its VAT, and the deposit to book.',
-    'Wedding invoice': 'Sent when a wedding is booked: the same lines, the deposit paid and the balance due four weeks before the day. A wedding not yet booked prints with no invoice number.',
+    'Order confirmation': 'The letter or e-mail sent when an order is taken: what will be made, for whom, where and when, the card\'s words, what was paid and when, and how to change or cancel. The delivery charge shows only when there is one. It is for the orders customers place, not the weekly standing orders, and not cancelled ones; any order chosen on the Orders form still prints.',
+    'Gift card message': 'The small card that goes with the flowers: the message and who it is from, nothing else. It is only for the orders with Card Included ticked, so a standing order with no card has none.',
+    'Delivery note': 'Goes with the driver: the recipient, the address, the time, that a card is enclosed when there is one, and what is being delivered, with no prices, a line of care for the flowers (or for a funeral tribute, or the weekly arrangement), and a line for whoever takes them in to sign. It is for the orders that go out in the van, not collections or cancelled orders.',
+    'Wedding quote': 'Sent after the consultation: the couple, the date and venues, each piece with its price, the total with its VAT, and the deposit to book. Once the wedding is booked the quote shows the deposit paid instead, and a declined quote says it was not taken up.',
+    'Wedding invoice': 'Sent when a wedding is booked: the same lines, the deposit paid and the balance due four weeks before the day, or the balance paid and a thank you once it has come in. It is for the weddings with an invoice number, the booked ones.',
     'Till receipt': 'The receipt from the till, on an 80 mm roll: what was bought, the total and the VAT within it.',
   },
   tutorial: [
@@ -484,7 +507,7 @@ export const about = {
     'A product\'s recipe is what the margin and the stems to buy are worked out from. Keep it close to what the florists really use; when a bouquet changes, change its recipe lines.',
     'The margin query counts each product\'s price once, on its recipe\'s line 1, and takes the cost of every line from it. Every recipe needs a line 1.',
     'Prices include VAT. The VAT within a price is the price less the price divided by 1.2; each line\'s is worked out to the penny and added up, as the receipt and invoice print it.',
-    'Every order prints from the print templates, whatever its Status: the Gift card message for a standing order with no card prints an empty card, and a cancelled order still has its confirmation. Choose the orders to print, or print the one on screen.',
+    'Each print template prints only the orders it is for: no confirmation for a standing order, no card where none is wanted, no delivery note for a collection, and nothing for a cancelled order. The Wedding invoice prints for booked weddings only. Choose the orders to print, or print the one on screen, which always prints.',
     'Weddings are separate from orders, with their own lines, because they are quoted and paid differently. A quote not yet booked prints a Wedding invoice with no number; print the invoice only once the wedding is booked.',
     'Walk-in sales are in Till Sales and are not given an occasion, so the query Takings by occasion counts orders only.',
   ],

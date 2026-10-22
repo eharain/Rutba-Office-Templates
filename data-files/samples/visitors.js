@@ -23,6 +23,9 @@ const HOST = '[Hosts].[First Name] & " " & [Hosts].[Last Name]';
 const SIGNED_DAY = 'Left([Signed In], 10)';
 const LETTERHEAD = { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail'] };
 
+// The print templates use where, if, format and grouped lines.
+export const minOffice = '2.16.0';
+
 export const spec = {
   negative: {},
   tables: [
@@ -184,26 +187,35 @@ export const spec = {
     { name: 'Drill log', title: 'Evacuation drill log', query: 'Evacuation drills', columns: ['Roll Call', 'Kind', 'Started At', 'Building Clear At', { field: 'Minutes to Clear', type: 'number' }, 'All Accounted', 'Led By', 'Notes'], totals: [{ field: 'Minutes to Clear', fn: 'avg' }] },
     { name: 'Induction renewals', title: 'Contractor inductions expiring in the next 30 days', query: 'Inductions expiring in 30 days', columns: ['Contractor', 'Company', 'Induction', { field: 'Given On', type: 'date' }, { field: 'Valid Until', type: 'date' }, { field: 'Days Left', type: 'integer' }], totals: [{ field: 'Contractor', fn: 'count' }] },
   ],
-  // The print templates: one document for each record of the table named.
+  // The print templates: each prints for the records it is for (its `where`),
+  // and leaves out what does not apply to one record (an `if` on a block, a
+  // field or a total). A record printed from its form always prints.
   documents: [
+    // Passes for the visitors in the building now, and those expected in the next three days.
     { name: 'Visitor pass', table: 'Visits', paper: 'receipt-58', letterhead: { table: 'Business', fields: ['Name'] },
+      where: '[Status] = "On site" Or ([Status] = "Expected" And DateDiff("d", Date(), [Expected On]) >= 0 And DateDiff("d", Date(), [Expected On]) <= 3)',
       blocks: [
         { type: 'heading', text: 'VISITOR' },
         { type: 'heading', text: '{Visitor}' },
+        // The visitor's company under the name; nothing for a private guest.
+        { type: 'text', text: '{Visitor.Company}' },
         { type: 'fields', columns: 1, items: [
-          { field: 'Visitor.Company', label: 'From' }, { field: 'Host', label: 'Visiting' }, { field: 'Host.Tenant.Name', label: 'Company' },
-          { field: 'Host.Tenant.Floor', label: 'Floor' }, { field: 'Expected On', label: 'Date' }, { field: 'Badge', label: 'Badge' },
-          { field: 'Valid Until' }, { field: 'Number', label: 'Pass' },
+          { field: 'Host', label: 'Visiting' }, { field: 'Host.Tenant.Name', label: 'Company' },
+          { field: 'Host.Tenant.Floor', label: 'Floor' }, { field: 'Expected On', label: 'Date', format: 'dd/mm/yyyy' },
+          { field: 'Badge', label: 'Badge', if: '[Badge]' },
+          { field: 'Valid Until', label: 'Valid until', format: 'hh:nn', if: '[Valid Until]' }, { field: 'Number', label: 'Pass' },
+          { field: 'Parking', label: 'Parking space', if: '[Parking]' },
         ] },
         { type: 'text', text: 'Wear this pass where it can be seen and stay with your host. Sign out and hand your badge back at the front desk when you leave.', small: true },
         { type: 'text', text: 'If the fire alarm sounds, leave by the nearest exit, do not use the lifts, and go to {Host.Tenant.Floor.Assembly Point}.', small: true },
       ] },
-    { name: 'Site rules agreement', table: 'Inductions', paper: 'a4', letterhead: LETTERHEAD,
+    // The agreements in force: the latest induction of each contractor, not yet run out.
+    { name: 'Site rules agreement', table: 'Inductions', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Renewed], 0) = 0 And DateDiff("d", Date(), [Valid Until]) >= 0',
       blocks: [
         { type: 'heading', text: 'Site rules and confidentiality agreement for contractors' },
         { type: 'fields', columns: 2, items: [
           { field: 'Visitor', label: 'Contractor' }, { field: 'Visitor.Company', label: 'Company' },
-          { field: 'Given On', label: 'Date' }, { field: 'Number', label: 'Induction' }, { field: 'Valid Until', label: 'Valid until' },
+          { field: 'Given On', label: 'Date', format: 'd mmmm yyyy' }, { field: 'Number', label: 'Induction' }, { field: 'Valid Until', label: 'Valid until', format: 'd mmmm yyyy' },
         ] },
         { type: 'text', text: 'This agreement is made on {Given On} between {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}, which manages the building ("the Building"), and {Visitor} of {Visitor.Company} ("the Contractor"). It covers every visit the Contractor makes to work in the Building until {Valid Until}, when the site induction is taken again and a new agreement signed.' },
         { type: 'text', text: '1. Signing in and out. The Contractor signs in at the front desk on arriving and signs out on leaving, every visit, and wears the contractor badge given out where it can be seen. The badge goes back to the desk at the end of each visit; a lost badge is reported to the desk at once.' },
@@ -219,40 +231,53 @@ export const spec = {
         { type: 'spacer', size: 24 },
         { type: 'signatures', labels: ['Contractor', 'For the Building'] },
       ] },
-    { name: 'Induction certificate', table: 'Inductions', paper: 'a5', letterhead: LETTERHEAD,
+    { name: 'Induction certificate', table: 'Inductions', paper: 'a5', letterhead: LETTERHEAD, where: 'Nz([Renewed], 0) = 0 And DateDiff("d", Date(), [Valid Until]) >= 0',
       blocks: [
         { type: 'heading', text: 'Site induction certificate' },
         { type: 'text', text: 'This certifies that' },
         { type: 'heading', text: '{Visitor}' },
         { type: 'text', text: 'of {Visitor.Company} has completed the site induction for {Business.Name}, {Business.Address}, {Business.City}, on {Given On}, and may work in the building as a contractor, signing in at the front desk on each visit, until {Valid Until}.' },
-        { type: 'fields', columns: 2, items: [{ field: 'Number', label: 'Certificate' }, { field: 'Given By' }, { field: 'Given On' }, { field: 'Valid Until' }] },
+        { type: 'fields', columns: 2, items: [
+          { field: 'Number', label: 'Certificate' }, { field: 'Given By' },
+          { field: 'Given On', format: 'd mmmm yyyy' }, { field: 'Valid Until', format: 'd mmmm yyyy' },
+        ] },
         { type: 'text', text: 'A permit to work from the front desk is still needed for hot work, work at height, electrical isolation, roof access and confined spaces.', small: true },
         { type: 'signatures', labels: ['Given by'] },
       ] },
-    { name: 'Delivery collection slip', table: 'Deliveries', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City'] },
+    // Slips for the deliveries waiting at the desk.
+    { name: 'Delivery collection slip', table: 'Deliveries', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City'] }, where: '[Status] = "Waiting"',
       blocks: [
         { type: 'heading', text: 'Delivery {Number}' },
         { type: 'fields', columns: 1, items: [
           { field: 'Host', label: 'For' }, { field: 'Host.Tenant.Name', label: 'Company' }, { field: 'Host.Tenant.Floor', label: 'Floor' },
-          { field: 'Received At', label: 'Received' }, { field: 'Carrier' }, { field: 'Kind' }, { field: 'Pieces' }, { field: 'Reference' },
-          { field: 'Stored In', label: 'Kept at' }, { field: 'Collected At', label: 'Collected' }, { field: 'Collected By' },
+          { field: 'Received At', label: 'Received', format: 'dd/mm/yyyy hh:nn' }, { field: 'Carrier' }, { field: 'Kind' },
+          { field: 'Pieces', if: 'Nz([Pieces]) > 1' }, { field: 'Reference', if: '[Reference]' },
+          { field: 'Stored In', label: 'Kept at' },
+          { field: 'Collected At', label: 'Collected', format: 'dd/mm/yyyy hh:nn', if: '[Collected At]' }, { field: 'Collected By', if: '[Collected By]' },
         ] },
-        { type: 'text', text: 'Received at the front desk. Please sign when you collect it. Anything not collected within 14 days goes back to the carrier.', small: true },
-        { type: 'signatures', labels: ['Collected by'] },
+        { type: 'text', text: 'Received at the front desk. Please sign when you collect it. Anything not collected within 14 days goes back to the carrier.', small: true, if: 'Nz([Collected At], "") = ""' },
+        { type: 'signatures', labels: ['Collected by'], if: 'Nz([Collected At], "") = ""' },
+        { type: 'text', text: 'Collected from the front desk on the day and by the person shown above.', small: true, if: '[Collected At]' },
       ] },
+    // Every drill and alarm, its list by floor with a count under each.
     { name: 'Fire roll call', table: 'Roll Calls', paper: 'a4', letterhead: LETTERHEAD,
       blocks: [
         { type: 'heading', text: 'Fire roll call {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Kind' }, { field: 'Led By', label: 'Roll call taken by' }, { field: 'Started At', label: 'Alarm at' },
-          { field: 'Building Clear At', label: 'Building clear at' }, { field: 'Minutes to Clear' }, { field: 'All Accounted' },
+          { field: 'Kind' }, { field: 'Led By', label: 'Roll call taken by' }, { field: 'Started At', label: 'Alarm at', format: 'dd/mm/yyyy hh:nn' },
+          { field: 'Building Clear At', label: 'Building clear at', format: 'hh:nn' }, { field: 'Minutes to Clear', format: '0.0' }, { field: 'All Accounted', label: 'All accounted for' },
         ] },
-        { type: 'lines', table: 'Roll Call Lines', sort: 'Floor', columns: [
+        { type: 'lines', table: 'Roll Call Lines', sort: 'Floor', group: 'Floor', subtotals: ['People'], columns: [
           { field: 'Floor', as: 'Floor', type: 'text' }, { field: 'Kind' }, { field: 'Name' }, { field: 'Company' },
-          { field: 'People', type: 'integer' }, { expr: 'IIf([Accounted], "Yes", "Not found")', as: 'Accounted For' },
+          { field: 'People', type: 'integer' }, { expr: 'IIf([Accounted], "Yes", "Not found")', as: 'Accounted For', type: 'text' },
         ] },
         { type: 'totals', rows: [{ label: 'People counted', expr: '[People]', type: 'integer', strong: true }] },
-        { type: 'text', text: '{Notes}' },
+        // When someone was not found: the list of them, on its own.
+        { type: 'text', text: 'Not found at the assembly point:', if: 'Nz([All Accounted], 0) = 0' },
+        { type: 'lines', table: 'Roll Call Lines', as: 'Not found', sort: 'Floor', where: 'Nz([Accounted], 0) = 0', if: 'Nz([All Accounted], 0) = 0', columns: [
+          { field: 'Floor', as: 'Floor', type: 'text' }, { field: 'Kind' }, { field: 'Name' }, { field: 'Company' },
+        ] },
+        { type: 'text', text: '{Notes}', if: '[Notes]' },
         { type: 'text', text: 'Visitors and contractors are listed by name from the front desk\'s sign-in records; each tenant\'s fire warden counts their own staff.', small: true },
         { type: 'signatures', labels: ['Fire marshal', 'Building manager'] },
       ] },
@@ -383,11 +408,11 @@ export const about = {
     'Induction renewals': 'Contractors whose induction runs out in the next 30 days.',
   },
   documents: {
-    'Visitor pass': 'Printed on a label roll when a visitor signs in: their name and company, whom they are seeing, the floor, the date, the badge number, when the pass runs out and where to go if the alarm sounds.',
-    'Site rules agreement': 'Signed by each contractor at the site induction, once a year: signing in, permits to work, working safely, fire, waste and noise, and keeping what they see in the tenants\' offices to themselves. Have the wording checked for your own building and country.',
-    'Induction certificate': 'Given to a contractor after the site induction, on A5: who they are, the date and when it runs out.',
-    'Delivery collection slip': 'Printed when a delivery comes in and stuck to it, on a till roll: whom it is for, the floor, the carrier and reference, where it is kept, and a line to sign on collection.',
-    'Fire roll call': 'The record of a drill or alarm: when it started and when the building was clear, then every visitor and contractor on the list and each tenant\'s staff count, floor by floor, and whether all were found.',
+    'Visitor pass': 'Printed on a label roll when a visitor signs in: their name and company, whom they are seeing, the floor, the date, the badge number once one is given, the time the pass runs out, a parking space when one is booked, and where to go if the alarm sounds. It prints for the visitors in the building now and those expected in the next three days, so passes for booked visitors can be ready.',
+    'Site rules agreement': 'Signed by each contractor at the site induction, once a year: signing in, permits to work, working safely, fire, waste and noise, and keeping what they see in the tenants\' offices to themselves. It prints for the inductions in force (the latest for each contractor, not yet run out). Have the wording checked for your own building and country.',
+    'Induction certificate': 'Given to a contractor after the site induction, on A5: who they are, the date and when it runs out. It prints for the inductions in force.',
+    'Delivery collection slip': 'Printed when a delivery comes in and stuck to it, on a till roll: whom it is for, the floor, the carrier, the reference and the number of pieces where there are several, where it is kept, and a line to sign on collection. It prints for the deliveries waiting at the desk; printed from the form after collection, it says who collected it and when.',
+    'Fire roll call': 'The record of a drill or alarm: when it started and when the building was clear, then every visitor and contractor on the list and each tenant\'s staff count, under a heading for each floor with the people counted on it, and whether all were found. When someone was not found, they are listed again on their own.',
   },
   empty: 'Start with Business, the building\'s own name and address, which every document prints. Then Floors, from the ground floor up, then Tenants on each floor and the Hosts who work for them, and the Badges in the tray. Visitors are added the first time they come or are booked, and each arrival is a Visit. Contractors need an Induction before they start work, and a Permit for risky work. Deliveries are entered as they arrive. Each drill or alarm is a Roll Call with its lines.',
   adapt: [
@@ -445,7 +470,7 @@ export const about = {
   notes: [
     'In the building now looks at visits signed in today or yesterday that have no Signed Out time. Someone who left without signing out stays on it until the desk sets their Signed Out or their Status; check it before trusting it in an evacuation.',
     'The query and report work from the clock: Expected today and tomorrow and In the building now change through the day as visitors come and go, so the sample shows the building as it was when the file was made.',
-    'A print template prints every record of its table, so choose the visit, delivery or induction you want before pressing Print, or it prints them all.',
+    'Each print template prints only the records it is for: passes for the visitors in the building and those expected in the next three days, agreements and certificates for the inductions in force, and slips for the deliveries waiting. The Fire roll call prints every drill and alarm. A record printed from its own form always prints.',
     'Contractors in the sample take a new induction on their first visit after the last one ran out. The older induction is kept, with Renewed ticked, so the history stays.',
     'Badges here are reused: the same badge appears on many visits. A badge not handed back is Missing for a month and then Written off, and a new number is added.',
     'Only what the desk needs about a visitor is kept: a name, a company and a car registration. Do not add home addresses, dates of birth or ID numbers; delete old visits when you no longer need them (see the ways to adapt the sample).',

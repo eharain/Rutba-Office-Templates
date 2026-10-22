@@ -34,6 +34,15 @@ const MARGIN_VAT = 'IIf([Sales].[Price] > [Purchase Price], Round(([Sales].[Pric
 const MARGIN = `Round([Sales].[Price] - [Purchase Price] - Nz([Buying Fee]) - Nz([Prep Cost]) - ${MARGIN_VAT}, 2)`;
 // The VAT within a tax-inclusive amount.
 const VAT_IN = 'Round([Amount] - [Amount] / (1 + Nz([Tax Rate])), 2)';
+// Dates and figures as the dealer prints them: 22/10/2026 on an invoice, 22 October 2026 in a letter or the
+// agreement, mileage as 105,082 and money as 1,234.50.
+const DATE = 'dd/mm/yyyy';
+const LONG_DATE = 'd mmmm yyyy';
+const MILES = '#,##0';
+const MONEY = '#,##0.00';
+
+// The print templates need the 2.16 engine: records chosen by a condition, blocks shown when they apply, formats.
+export const minOffice = '2.16.0';
 
 export const spec = {
   // Where a value below nought is right: a car that sold at a loss, a reserved car's handover already passed.
@@ -221,57 +230,66 @@ export const spec = {
     { name: 'Finance commission', query: 'Finance commission by month', group: 'Month', columns: ['Lender', { field: 'Agreements', type: 'integer' }, { field: 'Amount Financed', type: 'currency' }, { field: 'Commission', type: 'currency' }], totals: [{ field: 'Commission', fn: 'sum' }, { field: 'Amount Financed', fn: 'sum' }] },
   ],
   documents: [
-    { name: 'Vehicle sales invoice', table: 'Sales', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For cars handed over: a reserved sale has no invoice number yet.
+    { name: 'Vehicle sales invoice', table: 'Sales', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Invoice No], "") <> ""', blocks: [
       { type: 'heading', text: 'Sales invoice {Invoice No}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer', label: 'Sold to' }, { field: 'Invoice No', label: 'Invoice number' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Handover', label: 'Date of sale' },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Handover', label: 'Date of sale', format: DATE },
         { field: 'Customer.City', label: 'Town' }, { field: 'Order No', label: 'Order' },
         { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Salesperson', label: 'Sold by' },
       ] },
       { type: 'fields', columns: 3, items: [
         { field: 'Vehicle.Registration', label: 'Registration' }, { field: 'Vehicle.Make', label: 'Make' }, { field: 'Vehicle.Model', label: 'Model' },
-        { field: 'Vehicle.First Registered', label: 'First registered' }, { field: 'Vehicle.Mileage', label: 'Recorded mileage' }, { field: 'Vehicle.Colour', label: 'Colour' },
+        { field: 'Vehicle.First Registered', label: 'First registered', format: DATE }, { field: 'Vehicle.Mileage', label: 'Recorded mileage', format: MILES }, { field: 'Vehicle.Colour', label: 'Colour' },
         { field: 'Vehicle.Fuel', label: 'Fuel' }, { field: 'Vehicle.Stock No', label: 'Stock number' }, { field: 'VAT Scheme', label: 'VAT' },
       ] },
       { type: 'lines', table: 'Sale Lines', sort: 'Line', columns: [
-        { field: 'Description' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number' },
+        { field: 'Description' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number', format: '0' },
         { expr: VAT_IN, as: 'VAT Included', label: 'VAT included', type: 'currency' }, { field: 'Amount', type: 'currency' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Total price', expr: '[Amount]' }, { label: 'Of which VAT', expr: '[VAT]' },
-        { label: 'Less part-exchange allowance', expr: '[Part-Ex Allowance]' }, { label: 'Less deposit paid', expr: '[Deposit]' },
-        { label: 'Paid by finance', expr: '[Finance Amount]' }, { label: 'Balance paid at handover', expr: '[Total price] - [Less part-exchange allowance] - [Less deposit paid] - [Paid by finance]', strong: true },
+        { label: 'Total price', expr: '[Amount]' }, { label: 'Of which VAT', expr: '[VAT]', if: 'Nz([VAT]) <> 0' },
+        { label: 'Less part-exchange allowance', expr: '[Part-Ex Allowance]', if: 'Nz([Part-Ex Allowance]) <> 0' },
+        { label: 'Less deposit paid', expr: '[Deposit]', if: 'Nz([Deposit]) <> 0' },
+        { label: 'Paid by finance', expr: '[Finance Amount]', if: 'Nz([Finance Amount]) <> 0' },
+        { label: 'Balance paid at handover', expr: '[Total price] - Nz([Less part-exchange allowance]) - Nz([Less deposit paid]) - Nz([Paid by finance])', strong: true },
       ] },
-      { type: 'text', text: 'VAT: {VAT Scheme}. A used car bought from a private seller or under the margin scheme is sold under the margin scheme: the VAT is within the price, paid by us on our margin, and is not shown or reclaimable. On a VAT-qualifying car the VAT within the price is shown above and a VAT-registered buyer may reclaim it. Warranties are exempt from VAT.', small: true },
+      // The VAT words for the car's own scheme.
+      { type: 'text', text: 'VAT: Margin scheme. This car is sold under the margin scheme: the VAT is within the price, paid by us on our margin, and is not shown or reclaimable. Warranties are exempt from VAT; VAT on any extras is shown above.', small: true, if: '[VAT Scheme] = "Margin scheme"' },
+      { type: 'text', text: 'VAT: VAT qualifying. The VAT within the price of this car is shown above, and a VAT-registered buyer may reclaim it. Warranties are exempt from VAT.', small: true, if: '[VAT Scheme] <> "Margin scheme"' },
       { type: 'text', text: '{Business.Payment Terms} Bank: {Business.Bank Details}.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Sales agreement', table: 'Sales', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For sales that stand: a cancelled sale's agreement prints from the Sales form.
+    { name: 'Sales agreement', table: 'Sales', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] <> "Cancelled"', blocks: [
       { type: 'heading', text: 'Vehicle order and sales agreement {Order No}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer', label: 'Buyer' }, { field: 'Order No', label: 'Order number' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Agreed On', label: 'Date of order' },
-        { field: 'Customer.City', label: 'Town' }, { field: 'Handover', label: 'Handover on or about' },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Agreed On', label: 'Date of order', format: LONG_DATE },
+        { field: 'Customer.City', label: 'Town' }, { field: 'Handover', label: 'Handover on or about', format: LONG_DATE },
         { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Customer.Phone', label: 'Phone' },
       ] },
       { type: 'fields', columns: 3, items: [
         { field: 'Vehicle.Registration', label: 'Registration' }, { field: 'Vehicle.Make', label: 'Make' }, { field: 'Vehicle.Model', label: 'Model' },
-        { field: 'Vehicle.Year', label: 'Year' }, { field: 'Vehicle.Mileage', label: 'Recorded mileage' }, { field: 'Vehicle.Colour', label: 'Colour' },
-        { field: 'Vehicle.MOT Expiry', label: 'MOT until' }, { field: 'Vehicle.Keys', label: 'Keys' }, { field: 'Vehicle.Service History', label: 'Service history' },
+        { field: 'Vehicle.Year', label: 'Year' }, { field: 'Vehicle.Mileage', label: 'Recorded mileage', format: MILES }, { field: 'Vehicle.Colour', label: 'Colour' },
+        { field: 'Vehicle.MOT Expiry', label: 'MOT until', format: LONG_DATE }, { field: 'Vehicle.Keys', label: 'Keys' }, { field: 'Vehicle.Service History', label: 'Service history' },
       ] },
       { type: 'lines', table: 'Sale Lines', sort: 'Line', columns: [{ field: 'Description', label: 'What is bought' }, { field: 'Amount', type: 'currency' }] },
       { type: 'totals', rows: [
-        { label: 'Total price', expr: '[Amount]', strong: true }, { label: 'Part-exchange allowance', expr: '[Part-Ex Allowance]' },
-        { label: 'Deposit paid today', expr: '[Deposit]' }, { label: 'To be paid by finance', expr: '[Finance Amount]' },
-        { label: 'Balance due at handover', expr: '[Total price] - [Part-exchange allowance] - [Deposit paid today] - [To be paid by finance]', strong: true },
+        { label: 'Total price', expr: '[Amount]', strong: true }, { label: 'Part-exchange allowance', expr: '[Part-Ex Allowance]', if: 'Nz([Part-Ex Allowance]) <> 0' },
+        { label: 'Deposit paid today', expr: '[Deposit]', if: 'Nz([Deposit]) <> 0' }, { label: 'To be paid by finance', expr: '[Finance Amount]', if: 'Nz([Finance Amount]) <> 0' },
+        { label: 'Balance due at handover', expr: '[Total price] - Nz([Part-exchange allowance]) - Nz([Deposit paid today]) - Nz([To be paid by finance])', strong: true },
       ] },
       { type: 'text', text: 'This agreement is made on {Agreed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Seller") and {Customer} of {Customer.Address}, {Customer.City} {Customer.Postcode} ("the Buyer").' },
       { type: 'text', text: '1. The vehicle. The Seller agrees to sell and the Buyer agrees to buy the vehicle described above, registration {Vehicle.Registration}, with the extras listed, for the total price above. The mileage shown is the reading on the day of this order; the Seller is not aware of anything suggesting it is wrong.' },
-      { type: 'text', text: '2. Deposit. The Buyer has paid a deposit of {Deposit} today, and the Seller holds the vehicle for the Buyer until the handover date. The deposit is part of the price.' },
+      { type: 'text', text: '2. Deposit. The Buyer has paid a deposit of {Deposit} today, and the Seller holds the vehicle for the Buyer until the handover date. The deposit is part of the price.', if: 'Nz([Deposit]) > 0' },
+      { type: 'text', text: '2. Deposit. No deposit has been paid. The Seller holds the vehicle for the Buyer until the handover date.', if: 'Nz([Deposit]) <= 0' },
       { type: 'text', text: '3. Payment. The balance due at handover is paid by bank transfer or debit card before the vehicle is driven away. The vehicle remains the Seller\'s property until the whole price has been paid.' },
-      { type: 'text', text: '4. Part-exchange. Where a vehicle is taken in part-exchange, the allowance above is given on the understanding that it is the Buyer\'s to sell, that it is handed over in the condition and with no more than 500 miles more than when it was valued, with its keys and registration document, and that any finance owing on it has been declared. The Seller settles declared finance with the lender and takes the amount settled from the allowance.' },
-      { type: 'text', text: '5. Finance. Where part of the price is paid by finance, the finance agreement is between the Buyer and the lender, not the Seller. This sale depends on the lender accepting the Buyer; if it does not, either party may cancel this agreement and the deposit is returned in full.' },
+      { type: 'text', text: '4. Part-exchange. No vehicle is taken in part-exchange on this sale.', if: 'Nz([Part-Ex Allowance]) <= 0' },
+      { type: 'text', if: 'Nz([Part-Ex Allowance]) > 0', text: '4. Part-exchange. Where a vehicle is taken in part-exchange, the allowance above is given on the understanding that it is the Buyer\'s to sell, that it is handed over in the condition and with no more than 500 miles more than when it was valued, with its keys and registration document, and that any finance owing on it has been declared. The Seller settles declared finance with the lender and takes the amount settled from the allowance.' },
+      { type: 'text', text: '5. Finance. Part of the price is paid by finance. The finance agreement is between the Buyer and the lender, not the Seller. This sale depends on the lender accepting the Buyer; if it does not, either party may cancel this agreement and the deposit is returned in full.', if: 'Nz([Finance Amount]) > 0' },
+      { type: 'text', text: '5. Finance. No part of the price is paid by finance.', if: 'Nz([Finance Amount]) <= 0' },
       { type: 'text', text: '6. Cancelling. If the Buyer cancels for any other reason before handover, the Seller may keep from the deposit the reasonable costs it has already met for this sale, such as work done to the vehicle at the Buyer\'s request, and returns the rest within 14 days.' },
       { type: 'text', text: '7. Handover. The vehicle will be ready on or about {Handover}, valeted, with its keys, service records and registration document, and an MOT certificate running until {Vehicle.MOT Expiry}.' },
       { type: 'text', text: '8. Warranty. The warranty shown above starts on the day of handover. What it covers is set out on its certificate, given at handover.' },
@@ -280,15 +298,17 @@ export const spec = {
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['For the Seller', 'The Buyer'] },
     ] },
-    { name: 'Part-exchange valuation', table: 'Part Exchanges', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For offers still open; one accepted, declined or expired prints from the Part Exchanges form.
+    { name: 'Part-exchange valuation', table: 'Part Exchanges', paper: 'a4', letterhead: LETTERHEAD, where: '[Outcome] = "Open"', blocks: [
       { type: 'fields', columns: 2, items: [
         { field: 'Customer', label: 'To' }, { field: 'Number', label: 'Our reference' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Valued On', label: 'Date' },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Valued On', label: 'Date', format: LONG_DATE },
         { field: 'Customer.City', label: 'Town' }, { field: 'Customer.Postcode', label: 'Postcode' },
       ] },
       { type: 'heading', text: 'Your part-exchange valuation' },
       { type: 'text', text: 'Dear {Customer.First Name},' },
-      { type: 'text', text: 'Thank you for letting us look at your {Year} {Make} {Model}, registration {Registration}, when you visited us on {Valued On}. We have checked it over and driven it, and taken account of its {Mileage} recorded miles and its {Condition} condition. What we noted: {Notes}' },
+      { type: 'text', text: 'Thank you for letting us look at your {Year} {Make} {Model}, registration {Registration}, when you visited us on {Valued On}. We have checked it over and driven it, and taken account of its {Mileage} recorded miles and its {Condition} condition.', if: 'Nz([Notes], "") = ""' },
+      { type: 'text', text: 'Thank you for letting us look at your {Year} {Make} {Model}, registration {Registration}, when you visited us on {Valued On}. We have checked it over and driven it, and taken account of its {Mileage} recorded miles and its {Condition} condition. What we noted: {Notes}', if: 'Nz([Notes], "") <> ""' },
       { type: 'text', text: 'We can offer you {Offered} for it as a part-exchange against any car from our stock.' },
       { type: 'text', text: 'This offer stands until {Valid Until}, as long as the car is in the same condition when you bring it in, with no more than 500 miles more on it, both keys if it came with two, its registration document and its service records. If there is finance owing on the car, please tell us how much: we settle it with your lender and take what we pay from the allowance.' },
       { type: 'text', text: 'If you have any questions, or would like to talk about a car from our stock, call us on {Business.Phone} or reply to {Business.E-mail}.' },
@@ -296,15 +316,16 @@ export const spec = {
       { type: 'spacer', size: 24 },
       { type: 'text', text: '{Valued By}, {Business.Name}' },
     ] },
-    { name: 'Warranty certificate', table: 'Warranties', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For cover still running; an expired certificate prints from the Warranties form.
+    { name: 'Warranty certificate', table: 'Warranties', paper: 'a4', letterhead: LETTERHEAD, where: 'DateDiff("d", Date(), [Ends]) >= 0', blocks: [
       { type: 'heading', text: 'Warranty certificate {Certificate No}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Sale.Customer', label: 'Warranty holder' }, { field: 'Certificate No', label: 'Certificate' },
         { field: 'Sale.Customer.Address', label: 'Address' }, { field: 'Plan.Name', label: 'Plan' },
-        { field: 'Sale.Customer.Postcode', label: 'Postcode' }, { field: 'Starts', label: 'Cover starts' },
-        { field: 'Sale.Vehicle.Registration', label: 'Registration' }, { field: 'Ends', label: 'Cover ends' },
-        { field: 'Sale.Vehicle.Make', label: 'Make' }, { field: 'Mileage at Start', label: 'Mileage at start' },
-        { field: 'Sale.Vehicle.Model', label: 'Model' }, { field: 'Plan.Claim Limit', label: 'Most paid on one claim' },
+        { field: 'Sale.Customer.Postcode', label: 'Postcode' }, { field: 'Starts', label: 'Cover starts', format: DATE },
+        { field: 'Sale.Vehicle.Registration', label: 'Registration' }, { field: 'Ends', label: 'Cover ends', format: DATE },
+        { field: 'Sale.Vehicle.Make', label: 'Make' }, { field: 'Mileage at Start', label: 'Mileage at start', format: MILES },
+        { field: 'Sale.Vehicle.Model', label: 'Model' }, { field: 'Plan.Claim Limit', label: 'Most paid on one claim', format: MONEY },
       ] },
       { type: 'text', text: 'What is covered. {Plan.Cover}' },
       { type: 'text', text: 'How to claim. Before any repair is started, call {Business.Name} on {Business.Phone} with this certificate\'s number. We will tell you where to take the car and agree the work with the garage. Repairs started without our agreement cannot be paid for.' },
@@ -313,17 +334,18 @@ export const spec = {
       { type: 'spacer', size: 16 },
       { type: 'signatures', labels: ['For the Seller'] },
     ] },
-    { name: 'Window card', table: 'Vehicles', paper: 'a5', letterhead: { table: 'Business', fields: ['Name', 'Phone', 'Website'] }, blocks: [
+    // For the cars on the forecourt: one in preparation, reserved or sold has no card in its window.
+    { name: 'Window card', table: 'Vehicles', paper: 'a5', letterhead: { table: 'Business', fields: ['Name', 'Phone', 'Website'] }, where: '[Status] = "For sale"', blocks: [
       { type: 'heading', text: '{Year} {Make} {Model}' },
       { type: 'fields', columns: 3, items: [
-        { field: 'Mileage', label: 'Miles' }, { field: 'Fuel' }, { field: 'Transmission', label: 'Gearbox' },
+        { field: 'Mileage', label: 'Miles', format: MILES }, { field: 'Fuel' }, { field: 'Transmission', label: 'Gearbox' },
         { field: 'Colour' }, { field: 'Body' }, { field: 'Doors' },
-        { field: 'Owners', label: 'Owners' }, { field: 'Service History', label: 'Service history' }, { field: 'MOT Expiry', label: 'MOT until' },
+        { field: 'Owners', label: 'Owners' }, { field: 'Service History', label: 'Service history' }, { field: 'MOT Expiry', label: 'MOT until', format: 'mmmm yyyy' },
       ] },
       { type: 'lines', table: 'Vehicle Features', columns: [{ field: 'Feature', label: 'Key features' }] },
       { type: 'totals', rows: [{ label: 'Our price', expr: '[Asking Price]', strong: true }] },
       { type: 'text', text: 'Part-exchange welcome. Finance arranged. At least three months\' warranty on every car. {Registration}, stock number {Stock No}.', small: true },
-          ] },
+    ] },
   ],
 };
 
@@ -452,11 +474,11 @@ export const about = {
     'Finance commission': 'Commission earned from each lender, month by month.',
   },
   documents: {
-    'Vehicle sales invoice': 'The invoice given at handover: the car with its registration, mileage and first registration date, the warranty and extras, the total, the part-exchange allowance, the deposit and finance taken off, and the balance paid. It says whether the car is sold under the margin scheme or is VAT qualifying. A reserved car prints without an invoice number until it is handed over.',
-    'Sales agreement': 'The order the customer signs when the deal is agreed and the deposit paid: the parties, the car, what is bought, the deposit, finance and balance, and plainly worded terms on payment, part-exchange, finance, cancelling, handover and warranty. Have it checked against the law of your own country before you use it.',
-    'Part-exchange valuation': 'The letter sent after valuing a customer\'s car: the car, what was noted, the allowance offered, and how long the offer stands.',
-    'Warranty certificate': 'Given at handover with every car: the holder, the car, the plan, when it starts and ends, the claim limit, what is covered and how to claim.',
-    'Window card': 'The card in the car\'s window on the forecourt: the year, make and model, its mileage and details, its key features and the price. Print it again after a price change.',
+    'Vehicle sales invoice': 'The invoice given at handover: the car with its registration, mileage and first registration date, the warranty and extras, the total, the part-exchange allowance, the deposit and finance taken off, and the balance paid. It says whether the car is sold under the margin scheme or is VAT qualifying, in words for that scheme, and leaves out a part-exchange, deposit or finance the sale did not have. It prints for sales with an invoice number, those handed over.',
+    'Sales agreement': 'The order the customer signs when the deal is agreed and the deposit paid: the parties, the car, what is bought, the deposit, finance and balance, and plainly worded terms on payment, part-exchange, finance, cancelling, handover and warranty, the deposit, part-exchange and finance clauses worded for what the sale has. It prints for every sale not cancelled. Have it checked against the law of your own country before you use it.',
+    'Part-exchange valuation': 'The letter sent after valuing a customer\'s car: the car, what was noted, the allowance offered, and how long the offer stands. It prints for valuations still Open.',
+    'Warranty certificate': 'Given at handover with every car: the holder, the car, the plan, when it starts and ends, the claim limit, what is covered and how to claim. It prints for warranties still running.',
+    'Window card': 'The card in the car\'s window on the forecourt: the year, make and model, its mileage and details, its key features and the price. It prints for cars For sale only. Print it again after a price change.',
   },
   tutorial: [
     { title: 'Buy a car and put it on sale', steps: [
@@ -507,8 +529,7 @@ export const about = {
     'The margin in the queries is the car\'s own: what it sold for, less what it cost, the buying fee, its preparation and the VAT on the margin. Warranty profit and finance commission are counted in their own queries, and overheads (wages, rent, advertising) are not in this database.',
     'VAT on used cars: most are sold under the margin scheme, where VAT is a sixth of the margin, paid by the dealer and not shown on the invoice. A VAT-qualifying car shows its VAT on the invoice, but because the dealer reclaims the VAT it paid when buying, what it owes comes to the same sixth of the margin, so the margin query treats both alike. Check the rules for your own country with your accountant.',
     'Prep Cost on a car is kept by hand: add each job\'s cost when you enter it in Preparation. The query Preparation by vehicle puts the two side by side.',
-    'Every sale is printed by the print templates, whatever its Status: a reserved sale\'s invoice has no number yet, and a cancelled sale still has its agreement. Choose the record to print, or print the one on screen.',
-    'The Window card prints every car on file, sold ones too. Choose the cars on sale (the query Stock by days in stock lists them) and print those.',
+    'Each print template prints only the records it is for: invoices for sales handed over, agreements for sales not cancelled, valuation letters for offers still open, certificates for warranties still running, and window cards for cars For sale. Any record prints from its own form, whatever its Status.',
     'A part-exchange comes into stock as a new record in Vehicles, with its allowance as the purchase price and no supplier. Its valuation points at the sale it was taken against and at the new stock record.',
     'Numbers (orders, invoices, certificates, valuations, stock numbers) are typed in date order, a new run each year: look at the last one in the form and add one.',
   ],

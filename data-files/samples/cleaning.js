@@ -21,6 +21,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, money, person, phoneFor } from './util.js';
 
+// Its print templates need Office 2.16.0 or later: they say which records they print and when a line shows.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const CLEANER = '[Cleaners].[First Name] & " " & [Cleaners].[Last Name]';
 const CHARGE = 'Round(Nz([Hours Charged]) * [Charge Rate], 2)';
@@ -218,16 +221,19 @@ export const spec = {
   ],
   // What the company prints: one document per record of the table named, its lines from the records that point at it.
   documents: [
-    { name: 'Cleaning contract', table: 'Contracts', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For contracts in force; an ended one prints from the Contracts form and says when it ended.
+    { name: 'Cleaning contract', table: 'Contracts', paper: 'a4', where: '[Status] = "Active"', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Cleaning contract {Number}' },
+      { type: 'text', text: 'This contract ended on {Ended On}.', if: '[Ended On]' },
+      { type: 'text', text: 'Notice to end this contract was given on {Notice Given On}.', if: '[Notice Given On] And Nz([Ended On], "") = ""' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client.Name', label: 'Client' }, { field: 'Site.Name', label: 'Site' },
         { field: 'Client.Contact Name', label: 'Contact' }, { field: 'Site.Address', label: 'Site address' },
         { field: 'Client.Address', label: 'Client address' }, { field: 'Site.Postcode', label: 'Site postcode' },
-        { field: 'Start Date', label: 'Starts' }, { field: 'End Date', label: 'Runs to' },
+        { field: 'Start Date', label: 'Starts', format: 'd mmmm yyyy' }, { field: 'End Date', label: 'Runs to', format: 'd mmmm yyyy' },
         { field: 'Days', label: 'Visit days' }, { field: 'Start Time', label: 'Starting at' },
-        { field: 'Hours per Visit', label: 'Hours a visit' }, { field: 'Rate', label: 'Rate an hour, before VAT' },
-        { field: 'Monthly Estimate', label: 'About a month, before VAT' }, { field: 'Notice Days', label: 'Notice, days' },
+        { field: 'Hours per Visit', label: 'Hours a visit' }, { field: 'Rate', label: 'Rate an hour, before VAT', format: '#,##0.00' },
+        { field: 'Monthly Estimate', label: 'About a month, before VAT', format: '#,##0.00' }, { field: 'Notice Days', label: 'Notice, days' },
       ] },
       { type: 'text', text: 'THIS CONTRACT is between {Business.Name} of {Business.Address}, {Business.City} ("we", "us") and {Client.Name} of {Client.Address}, {Client.City} ("you"), for the cleaning of {Site.Name}, {Site.Address}, {Site.City} {Site.Postcode} ("the site").' },
       { type: 'text', text: '1. The cleaning. We will clean the site on {Days}, starting at about {Start Time}, for {Hours per Visit} hours each visit ({Visits per Week} visits a week, where 0.5 means every other week), doing the work in the schedule below. If you want something added or changed, tell us and we will agree it with you in writing, with any change to the hours.' },
@@ -248,49 +254,55 @@ export const spec = {
       { type: 'heading', text: 'Invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client.Name', label: 'Bill to' }, { field: 'Number', label: 'Invoice' },
-        { field: 'Client.Contact Name', label: 'For the attention of' }, { field: 'Invoice Date', label: 'Date' },
-        { field: 'Client.Address', label: 'Address' }, { field: 'Due Date', label: 'Payment due' },
-        { field: 'Client.City', label: 'City' }, { field: 'Period', label: 'For' },
-        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Site.Name', label: 'Site' },
-        { field: 'Contract.Number', label: 'Contract' }, { field: 'Site.Address', label: 'Site address' },
+        { field: 'Client.Contact Name', label: 'For the attention of' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Client.Address', label: 'Address' }, { field: 'Due Date', label: 'Payment due', format: 'dd/mm/yyyy' },
+        { field: 'Client.City', label: 'City' }, { field: 'Period', label: 'For', if: '[Period]' },
+        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Site.Name', label: 'Site', if: '[Site]' },
+        { field: 'Contract.Number', label: 'Contract', if: '[Contract]' }, { field: 'Job.Number', label: 'Job', if: '[Job]' },
+        { field: 'Site.Address', label: 'Site address', if: '[Site]' },
       ] },
       { type: 'lines', table: 'Invoice Lines', columns: [
-        { field: 'Date' }, { field: 'Description' }, { field: 'Quantity', label: 'Hours or qty', type: 'number' }, { field: 'Unit Price', label: 'Rate', type: 'currency' },
+        { field: 'Date', format: 'dd/mm/yyyy' }, { field: 'Description' }, { field: 'Quantity', label: 'Hours or qty', type: 'number' }, { field: 'Unit Price', label: 'Rate', type: 'currency' },
         { expr: LINE, as: 'Amount', type: 'currency' }, { expr: LINE_VAT, as: 'VAT', type: 'currency' },
       ] },
       { type: 'totals', rows: [{ label: 'Net', expr: '[Amount]' }, { label: 'VAT at 20%', expr: '[VAT]' }, { label: 'Total due', expr: '[Net] + [VAT at 20%]', strong: true }] },
-      { type: 'text', text: 'Please pay by {Due Date}. {Business.Payment Terms} Pay to {Business.Bank Details}, quoting {Number}. VAT registration {Business.Tax Number}.', small: true },
+      { type: 'text', text: 'Please pay by {Due Date}. {Business.Payment Terms} Pay to {Business.Bank Details}, quoting {Number}. VAT registration {Business.Tax Number}.', small: true, if: 'Nz([Paid On], "") = ""' },
+      { type: 'text', text: 'Paid on {Paid On}, thank you. VAT registration {Business.Tax Number}.', small: true, if: '[Paid On]' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Quote', table: 'Jobs', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For one-off jobs quoted and waiting for an answer, or booked and still to do.
+    { name: 'Quote', table: 'Jobs', paper: 'a4', where: '[Status] = "Quoted" Or [Status] = "Booked"', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Quote {Number}: {Kind}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client.Name', label: 'For' }, { field: 'Number', label: 'Quote' },
-        { field: 'Site.Address', label: 'Address of the job' }, { field: 'Quoted On', label: 'Date' },
-        { field: 'Site.City', label: 'City' }, { field: 'Valid Until', label: 'Price holds until' },
+        { field: 'Site.Address', label: 'Address of the job' }, { field: 'Quoted On', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Site.City', label: 'City' }, { field: 'Valid Until', label: 'Price holds until', format: 'dd/mm/yyyy' },
         { field: 'Site.Postcode', label: 'Postcode' }, { field: 'Estimated Hours', label: 'Time on site, hours' },
+        { field: 'Booked For', label: 'Booked for', format: 'dddd d mmmm yyyy', if: '[Booked For]' },
       ] },
       { type: 'lines', table: 'Job Items', columns: [
         { field: 'Description' }, { field: 'Quantity', type: 'number' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
         { expr: LINE, as: 'Amount', type: 'currency' }, { expr: LINE_VAT, as: 'VAT', type: 'currency' },
       ] },
       { type: 'totals', rows: [{ label: 'Net', expr: '[Amount]' }, { label: 'VAT at 20%', expr: '[VAT]' }, { label: 'Total', expr: '[Net] + [VAT at 20%]', strong: true }] },
-      { type: 'text', text: 'The price covers our cleaners, products and machines. Please make sure there is water and power at the property and that it is empty of furniture where the job says so. To book, call us on {Business.Phone} or reply to this quote with the day you would like. We invoice when the job is done; payment is due within seven days.' },
+      { type: 'text', text: 'The price covers our cleaners, products and machines. Please make sure there is water and power at the property and that it is empty of furniture where the job says so. To book, call us on {Business.Phone} or reply to this quote with the day you would like. We invoice when the job is done; payment is due within seven days.', if: '[Status] = "Quoted"' },
+      { type: 'text', text: 'Thank you for booking. The price covers our cleaners, products and machines. Please make sure there is water and power at the property on the day and that it is empty of furniture where the job says so. We invoice when the job is done; payment is due within seven days.', if: '[Status] <> "Quoted"' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
     { name: 'Payslip', table: 'Payslips', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode'] }, blocks: [
       { type: 'heading', text: 'Payslip {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Cleaner', label: 'Name' }, { field: 'Period', label: 'Pay period' },
-        { field: 'Cleaner.Payroll Ref', label: 'Payroll reference' }, { field: 'Pay Date', label: 'Paid on' },
-        { field: 'Period Start', label: 'From' }, { field: 'Period End', label: 'To' },
+        { field: 'Cleaner.Payroll Ref', label: 'Payroll reference' }, { field: 'Pay Date', label: 'Paid on', format: 'dd/mm/yyyy' },
+        { field: 'Period Start', label: 'From', format: 'dd/mm/yyyy' }, { field: 'Period End', label: 'To', format: 'dd/mm/yyyy' },
       ] },
       { type: 'lines', table: 'Payslip Lines', columns: [{ field: 'Description' }, { field: 'Hours', type: 'number' }, { field: 'Rate', type: 'currency' }, { field: 'Amount', type: 'currency' }] },
       { type: 'totals', rows: [{ label: 'Hours worked', expr: '[Hours]', type: 'number' }, { label: 'Gross pay', expr: '[Amount]', strong: true }] },
       { type: 'text', text: 'This shows your hours and gross pay for the period. Income tax, National Insurance and any pension are worked out by payroll from the gross pay and shown on the payroll\'s own payslip, with your pay after deductions.', small: true },
       { type: 'text', text: 'Holiday pay is paid as 12.07 percent of the pay for the hours you work, with each month\'s pay. Questions about your hours: call the office on {Business.Phone}.', small: true },
     ] },
-    { name: 'Site visit sheet', table: 'Contracts', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Phone'] }, blocks: [
+    // For the sites of contracts in force.
+    { name: 'Site visit sheet', table: 'Contracts', paper: 'a4', where: '[Status] = "Active"', letterhead: { table: 'Business', fields: ['Name', 'Phone'] }, blocks: [
       { type: 'heading', text: 'Visit sheet: {Site.Name}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client.Name', label: 'Client' }, { field: 'Number', label: 'Contract' },
@@ -443,11 +455,11 @@ export const about = {
     'Monthly revenue': 'One line a month with the invoiced contracts, jobs and totals.',
   },
   documents: {
-    'Cleaning contract': 'The contract for a record in Contracts, for the client to sign: the parties and the site, the days, times and hours, the rate and an average month, the schedule of tasks, invoicing and payment, supplies, cleaners, keys, complaints, insurance, renewal and notice. It is a plain starting point written for this sample, not legal advice: have it checked for your own country before you use it.',
-    'Invoice': 'The VAT invoice for a record in Invoices: for a contract, every visit of the month with its date, hours and rate, and any washroom supplies; for a one-off job, its items. Then the net, VAT and total due, and how to pay. Numbered INV-2026-0042.',
-    'Quote': 'The quote for a one-off job, for a record in Jobs: the address, each priced item, the net, VAT and total, how long the price holds and how to book. Numbered JOB-2026-0031.',
+    'Cleaning contract': 'The contract for a record in Contracts, for the client to sign. It prints for contracts in force; an ended one prints from the Contracts form and says when it ended. In it: the parties and the site, the days, times and hours, the rate and an average month, the schedule of tasks, invoicing and payment, supplies, cleaners, keys, complaints, insurance, renewal and notice. It is a plain starting point written for this sample, not legal advice: have it checked for your own country before you use it.',
+    'Invoice': 'The VAT invoice for a record in Invoices: for a contract, every visit of the month with its date, hours and rate, and any washroom supplies; for a one-off job, its items. Then the net, VAT and total due, and how to pay, or the day it was paid. Numbered INV-2026-0042.',
+    'Quote': 'The quote for a one-off job, for a record in Jobs: the address, each priced item, the net, VAT and total, how long the price holds and how to book. It prints for jobs quoted and not yet answered, and for jobs booked and still to do, which say the day booked. Numbered JOB-2026-0031.',
     'Payslip': 'A cleaner\'s monthly payslip from Payslips: contract hours and job hours at their rates, holiday pay, and the gross pay. Deductions are left to payroll, which issues its own payslip with the pay after tax.',
-    'Site visit sheet': 'A sheet for each contract\'s site, printed for the cleaner to take: the address, access notes, the days and hours, every task with a box to tick, room for times and notes, and lines for the cleaner and the client to sign.',
+    'Site visit sheet': 'A sheet for each contract\'s site, printed for the cleaner to take: the address, access notes, the days and hours, every task with a box to tick, room for times and notes, and lines for the cleaner and the client to sign. It prints for contracts in force.',
   },
   tutorial: [
     { title: 'Take on a new contract client', steps: [
@@ -502,7 +514,7 @@ export const about = {
     'Numbers are typed, not made for you: contracts CON-, invoices INV-, jobs JOB- and payslips PAY-, each a new run each year and each used once.',
     'Payslips show hours and gross pay only. Tax, National Insurance and pension depend on each person\'s own position, so they are left to payroll.',
     'In Stock on Supplies is what the Supply Movements add up to. Change stock by adding a movement and then bringing In Stock to match, never by typing over it alone.',
-    'Each print template prints for every record of its table unless you choose one. Choose the contract, invoice, job or payslip you want before pressing Print; ended contracts and declined quotes print too.',
+    'Each print template prints only the records it is for: contracts and visit sheets for contracts in force, quotes for jobs waiting for an answer or booked, and every invoice and payslip. Printed from a form, the record on screen prints whatever its state, an ended contract or a declined quote too.',
   ],
   faq: [
     { q: 'How do I see who is cleaning where tomorrow?', a: 'Run the query Rota, next 7 days, or print the report Rota. Both list the booked visits of the next seven days by cleaner, day and start time, with the address.' },

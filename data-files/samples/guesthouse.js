@@ -26,6 +26,9 @@ const BOOKED = '[Status] = "Booked"';
 // The business's own details at the head of every document.
 const LETTERHEAD = { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website'] };
 
+// The print templates use where, if, format and a count of lines.
+export const minOffice = '2.16.0';
+
 export const spec = {
   negative: {},
   tables: [
@@ -229,74 +232,96 @@ export const spec = {
     { name: 'Tariff card', title: 'Room rates', query: 'Tariff', group: 'Room Type', columns: ['Season', 'Months', 'Plan', { field: 'Weeknight Rate', type: 'currency' }, { field: 'Weekend Rate', type: 'currency' }] },
     { name: 'Commission by site', title: 'Commission statements by booking site', query: 'Commission by month', group: 'Site', columns: ['Statement', 'Month', { field: 'Stays', type: 'integer' }, { field: 'Room Takings', type: 'currency' }, { field: 'Commission', type: 'currency' }, { field: 'Paid On', type: 'date' }], totals: [{ field: 'Room Takings', fn: 'sum' }, { field: 'Commission', fn: 'sum' }] },
   ],
+  // The print templates: each prints for the records it is for (its `where`),
+  // and leaves out what does not apply to one record (an `if` on a block, a
+  // field or a total). A record printed from its form always prints.
   documents: [
-    { name: 'Booking confirmation', table: 'Bookings', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // New direct bookings: taken with us (no site commission) in the last 14 days, for a stay still ahead.
+    { name: 'Booking confirmation', table: 'Bookings', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Commission Rate]) = 0 And [Status] = "Confirmed" And DateDiff("d", [Booked On], Date()) >= 0 And DateDiff("d", [Booked On], Date()) <= 14 And DateDiff("d", Date(), [Arrival]) >= 1', blocks: [
       { type: 'heading', text: 'Booking confirmation {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Guest', label: 'Guest', type: 'text' }, { field: 'Number', label: 'Booking' },
-        { field: 'Guest.Address', label: 'Address' }, { field: 'Booked On', label: 'Booked on' },
-        { field: 'Guest.City', label: 'Town' }, { field: 'Arrival', label: 'Arriving' },
-        { field: 'Guest.Postcode', label: 'Postcode' }, { field: 'Departure', label: 'Leaving' },
+        { field: 'Guest.Address', label: 'Address' }, { field: 'Booked On', label: 'Booked on', format: 'd mmmm yyyy' },
+        { field: 'Guest.City', label: 'Town' }, { field: 'Arrival', label: 'Arriving', format: 'dddd d mmmm yyyy' },
+        { field: 'Guest.Postcode', label: 'Postcode' }, { field: 'Departure', label: 'Leaving', format: 'dddd d mmmm yyyy' },
         { field: 'Guest.Country', label: 'Country' }, { field: 'Nights', label: 'Nights' },
         { field: 'Room.Number', label: 'Room' }, { field: 'Room.Name', label: 'Room name' },
         { field: 'Room.Room Type.Name', label: 'Room type' }, { field: 'Rate Plan', label: 'Rate' },
-        { field: 'Adults', label: 'Adults' }, { field: 'Children', label: 'Children' },
+        { field: 'Adults', label: 'Adults' }, { field: 'Children', label: 'Children', if: 'Nz([Children]) > 0' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Room charge for the stay', expr: '[Room Total]' }, { label: 'Deposit asked for', expr: 'Nz([Deposit Due])' },
-        { label: 'Deposit received', expr: 'Nz([Deposit Paid])' }, { label: 'Balance due on departure', expr: '[Room Total] - Nz([Deposit Paid])', strong: true },
+        { label: 'Room charge for the stay', expr: '[Room Total]' },
+        { label: 'Deposit asked for', expr: '[Deposit Due]', if: 'Nz([Deposit Due]) > 0' },
+        { label: 'Deposit received', expr: '[Deposit Paid]', if: 'Nz([Deposit Paid]) > 0' },
+        { label: 'Balance due on departure', expr: '[Room Total] - Nz([Deposit Paid])', strong: true },
       ] },
       { type: 'text', text: 'Dear {Guest.First Name},' },
       { type: 'text', text: 'Thank you for booking with us. This letter confirms room {Room.Number}, {Room.Name}, arriving on {Arrival} and leaving on {Departure}, at the rate shown above. Our rates include VAT. Where the rate is bed and breakfast, breakfast is included for the guests booked; on a room only rate it can be added on the morning.' },
-      { type: 'text', text: 'Deposit. To hold a room booked with us directly we ask for a deposit of the first night. What we have received so far is shown above. If it is not yet paid, please pay it within three days of this letter, by card on {Business.Phone} or by bank transfer to {Business.Bank Details}, quoting {Number}. The balance and anything charged to the room are paid when you leave.' },
+      // The deposit, worded for where it stands: received, still to pay, or not asked for.
+      { type: 'text', text: 'Deposit. Thank you for your deposit, which holds the room for you. The balance and anything charged to the room are paid when you leave.', if: 'Nz([Deposit Due]) > 0 And Nz([Deposit Paid]) >= Nz([Deposit Due])' },
+      { type: 'text', text: 'Deposit. To hold a room booked with us directly we ask for a deposit of the first night, shown above. Please pay it within three days of this letter, by card on {Business.Phone} or by bank transfer to {Business.Bank Details}, quoting {Number}. The balance and anything charged to the room are paid when you leave.', if: 'Nz([Deposit Paid]) < Nz([Deposit Due])' },
+      { type: 'text', text: 'Payment. As you booked so close to your stay, we ask for no deposit: the room and anything charged to it are paid when you leave.', if: 'Nz([Deposit Due]) = 0' },
       { type: 'text', text: 'Arriving and leaving. Check-in is from 3 pm to 8 pm. If you will be later than 8 pm, please ring us and we will leave your key in the lock box by the front door. On the day you leave the room is needed by 10.30 am, and you are welcome to leave your bags with us. A late check-out until 1 pm can be arranged for a small charge when the room is not needed.' },
       { type: 'text', text: 'Cancelling. If you cancel seven days or more before you arrive, we return your deposit in full. If you cancel later than that, we keep the deposit unless we let the room to someone else. If you do not arrive and have not told us, the first night is charged.' },
+      { type: 'text', text: 'You asked us: {Requests}', if: '[Requests]' },
       { type: 'text', text: 'Finding us. We are at {Business.Address}, {Business.City} {Business.Postcode}, the white house with blue window frames facing the bandstand. By car, follow the signs for the seafront and turn left along the Esplanade. We have four parking spaces behind the house, to be booked with your room, and there is a long-stay car park on Station Road two minutes away. From the railway station it is a ten-minute walk downhill towards the sea.' },
       { type: 'text', text: 'Breakfast is served from 8 am to 9.30 am, and from 9 am to 10 am on Sundays. Please tell us of any allergy or diet before you come. If there is anything else we can do, write to {Business.E-mail} or ring us. We look forward to welcoming you.' },
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['With best wishes, for the guest house'] },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Guest bill', table: 'Bills', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // The bills of the last 14 days.
+    { name: 'Guest bill', table: 'Bills', paper: 'a4', letterhead: LETTERHEAD, where: 'DateDiff("d", [Bill Date], Date()) >= 0 And DateDiff("d", [Bill Date], Date()) <= 14', blocks: [
       { type: 'heading', text: 'Bill and VAT invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Booking.Guest', label: 'Guest' }, { field: 'Number', label: 'Invoice number' },
-        { field: 'Booking.Guest.Address', label: 'Address' }, { field: 'Bill Date', label: 'Date' },
+        { field: 'Booking.Guest.Address', label: 'Address' }, { field: 'Bill Date', label: 'Date', format: 'dd/mm/yyyy' },
         { field: 'Booking.Guest.City', label: 'Town' }, { field: 'Booking.Number', label: 'Booking' },
         { field: 'Booking.Guest.Postcode', label: 'Postcode' }, { field: 'Booking.Room.Number', label: 'Room' },
-        { field: 'Booking.Guest.Country', label: 'Country' }, { field: 'Booking.Arrival', label: 'Arrived' },
-        { field: 'Booking.Rate Plan', label: 'Rate' }, { field: 'Booking.Departure', label: 'Left' },
+        { field: 'Booking.Guest.Country', label: 'Country' }, { field: 'Booking.Arrival', label: 'Arrived', format: 'dd/mm/yyyy' },
+        { field: 'Booking.Rate Plan', label: 'Rate' }, { field: 'Booking.Departure', label: 'Left', format: 'dd/mm/yyyy' },
       ] },
       { type: 'lines', table: 'Charges', link: 'Bill', sort: 'Date', columns: [
-        { field: 'Date' }, { field: 'Description' }, { field: 'Quantity', type: 'integer' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
-        { expr: AMOUNT, as: 'Line Amount', label: 'Amount', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT Rate', label: 'VAT %', type: 'number' },
+        { field: 'Date', format: 'dd/mm/yyyy' }, { field: 'Description' }, { field: 'Quantity', type: 'integer' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
+        { expr: AMOUNT, as: 'Line Amount', label: 'Amount', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT Rate', label: 'VAT %', format: '0' },
         { expr: 'Round([Line Amount] - [Line Amount] / (1 + Nz([Tax Rate])), 2)', as: 'Line VAT', label: 'VAT within', type: 'currency' },
       ] },
       { type: 'totals', rows: [
         { label: 'Total for your stay', expr: '[Line Amount]' }, { label: 'Of which VAT', expr: '[Line VAT]' },
-        { label: 'Total before VAT', expr: '[Total for your stay] - [Of which VAT]' }, { label: 'Less deposit paid', expr: 'Nz([Deposit])' },
-        { label: 'Balance paid on departure', expr: '[Total for your stay] - Nz([Deposit])', strong: true },
+        { label: 'Total before VAT', expr: 'Round([Total for your stay] - [Of which VAT], 2)' },
+        { label: 'Less deposit paid', expr: '[Deposit]', if: 'Nz([Deposit]) > 0' },
+        { label: 'Balance paid on departure', expr: 'Round([Total for your stay] - Nz([Deposit]), 2)', strong: true },
       ] },
-      { type: 'text', text: 'Balance paid by {Paid By}. Prices include VAT at the rate shown on each line. VAT registration {Business.Tax Number}.', small: true },
+      { type: 'text', text: 'Balance paid by {Paid By}. Thank you.', small: true, if: '[Paid By]' },
+      { type: 'text', text: 'Prices include VAT at the rate shown on each line. VAT registration {Business.Tax Number}.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Receipt', table: 'Payments', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, blocks: [
+    // The payments of the last 7 days.
+    { name: 'Receipt', table: 'Payments', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, where: 'DateDiff("d", [Date], Date()) >= 0 And DateDiff("d", [Date], Date()) <= 7', blocks: [
       { type: 'heading', text: 'Receipt {Number}' },
       { type: 'fields', columns: 1, items: [
-        { field: 'Date' }, { field: 'Booking.Guest', label: 'Received from' }, { field: 'Booking.Number', label: 'Booking' },
-        { field: 'Booking.Room.Number', label: 'Room' }, { field: 'Booking.Arrival', label: 'Arrival' }, { field: 'Booking.Departure', label: 'Departure' },
+        { field: 'Date', format: 'dd/mm/yyyy' }, { field: 'Booking.Guest', label: 'Received from' }, { field: 'Booking.Number', label: 'Booking' },
+        { field: 'Booking.Room.Number', label: 'Room' }, { field: 'Booking.Arrival', label: 'Arrival', format: 'dd/mm/yyyy' }, { field: 'Booking.Departure', label: 'Departure', format: 'dd/mm/yyyy' },
         { field: 'Kind', label: 'For' }, { field: 'Method', label: 'Paid by' },
+        { field: 'Refunded On', label: 'Refunded on', format: 'dd/mm/yyyy', if: 'Nz([Refund]) > 0' },
       ] },
-      { type: 'totals', rows: [{ label: 'Amount received', expr: '[Amount]', strong: true }] },
-      { type: 'text', text: 'Thank you. Your VAT invoice is the bill you are given when you leave.', small: true },
+      { type: 'totals', rows: [
+        { label: 'Amount received', expr: '[Amount]', strong: true },
+        { label: 'Refunded', expr: '[Refund]', if: 'Nz([Refund]) > 0' },
+        { label: 'Kept', expr: 'Round([Amount] - [Refund], 2)', if: 'Nz([Refund]) > 0' },
+      ] },
+      { type: 'text', text: 'Thank you. Your VAT invoice is the bill you are given when you leave.', small: true, if: 'Nz([Refund]) = 0' },
+      { type: 'text', text: 'Your deposit was paid back, as you cancelled in time. Thank you, and we hope to see you another time.', small: true, if: 'Nz([Refund]) > 0' },
     ] },
-    { name: 'Registration card', table: 'Bookings', paper: 'a5', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, blocks: [
+    // The cards for the guests arriving today and tomorrow.
+    { name: 'Registration card', table: 'Bookings', paper: 'a5', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone'] }, where: '[Status] <> "Cancelled" And DateDiff("d", Date(), [Arrival]) >= 0 And DateDiff("d", Date(), [Arrival]) <= 1', blocks: [
       { type: 'heading', text: 'Registration card' },
       { type: 'fields', columns: 2, items: [
         { field: 'Number', label: 'Booking' }, { field: 'Room.Number', label: 'Room' },
-        { field: 'Arrival', label: 'Arriving' }, { field: 'Departure', label: 'Leaving' },
+        { field: 'Arrival', label: 'Arriving', format: 'dd/mm/yyyy' }, { field: 'Departure', label: 'Leaving', format: 'dd/mm/yyyy' },
         { field: 'Adults', label: 'Adults' }, { field: 'Children', label: 'Children' },
       ] },
+      // A card to fill in: an empty line is for the guest to write on.
       { type: 'fields', columns: 2, items: [
         { field: 'Guest', label: 'Full name', type: 'text' }, { field: 'Guest.Nationality', label: 'Nationality' },
         { field: 'Guest.Passport Number', label: 'Passport number' }, { field: 'Guest.Passport Issued By', label: 'Passport issued by' },
@@ -305,29 +330,35 @@ export const spec = {
         { field: 'Guest.Phone', label: 'Phone' }, { field: 'Guest.E-mail', label: 'E-mail' },
         { field: 'Car Registration', label: 'Car registration' }, { field: 'Expected Arrival', label: 'Expected at' },
       ] },
-      { type: 'text', text: 'Passport details are filled in only for guests from countries where we are asked to record them, and left blank for others. Please write the name and nationality of any other guest over 16 sharing the room on the line below.' },
-      { type: 'text', text: 'Other guests: ..................................................................................' },
+      { type: 'text', text: 'Passport details are filled in only for guests from countries where we are asked to record them, and left blank for others. Please write the name and nationality of any other guest over 16 sharing the room on the line below.', if: 'Nz([Adults]) > 1' },
+      { type: 'text', text: 'Other guests: ..................................................................................', if: 'Nz([Adults]) > 1' },
+      { type: 'text', text: 'Passport details are filled in only for guests from countries where we are asked to record them, and left blank for others.', if: 'Nz([Adults]) <= 1' },
       { type: 'text', text: 'I confirm these details are correct. Breakfast is from 8 am to 9.30 am, rooms are needed by 10.30 am on the day you leave, and we ask for quiet after 11 pm.', small: true },
       { type: 'spacer', size: 16 },
       { type: 'signatures', labels: ['Guest signature', 'Date'] },
     ] },
-    { name: 'Commission statement', table: 'Commission Statements', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // This month's statements, made on the first of the month for the month before.
+    { name: 'Commission statement', table: 'Commission Statements', paper: 'a4', letterhead: LETTERHEAD, where: 'DateDiff("m", [Statement Date], Date()) = 0', blocks: [
       { type: 'heading', text: 'Commission statement {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Source.Name', label: 'To' }, { field: 'Number', label: 'Statement' },
-        { field: 'Source.Address', label: 'Address' }, { field: 'Statement Date', label: 'Date' },
+        { field: 'Source.Address', label: 'Address' }, { field: 'Statement Date', label: 'Date', format: 'dd/mm/yyyy' },
         { field: 'Source.City', label: 'City' }, { field: 'Month', label: 'Stays ending in' },
         { field: 'Source.Postcode', label: 'Postcode' }, { field: 'Source.Account Ref', label: 'Our account' },
-        { field: 'Source.Country', label: 'Country' }, { field: 'Paid On', label: 'Paid on' },
+        { field: 'Source.Country', label: 'Country' }, { field: 'Paid On', label: 'Paid on', format: 'dd/mm/yyyy', if: '[Paid On]' },
       ] },
       { type: 'lines', table: 'Bookings', link: 'Statement', sort: 'Departure', columns: [
         { field: 'Number', label: 'Booking' }, { field: 'Site Reference', label: 'Your reference' }, { field: 'Guest', type: 'text' },
-        { field: 'Arrival' }, { field: 'Departure' }, { field: 'Nights', type: 'integer' },
-        { field: 'Room Total', label: 'Room takings', type: 'currency' }, { expr: 'Nz([Commission Rate]) * 100', as: 'Rate %', type: 'number' },
+        { field: 'Arrival', format: 'dd/mm/yyyy' }, { field: 'Departure', format: 'dd/mm/yyyy' }, { field: 'Nights', type: 'integer' },
+        { field: 'Room Total', label: 'Room takings', type: 'currency' }, { expr: 'Nz([Commission Rate]) * 100', as: 'Rate %', format: '0' },
         { field: 'Commission', type: 'currency' },
       ] },
-      { type: 'totals', rows: [{ label: 'Room takings', expr: '[Room Total]' }, { label: 'Commission owed', expr: '[Commission]', strong: true }] },
-      { type: 'text', text: 'These are the stays booked through you that ended in {Month}, with the commission on each at the rate we agreed. We will pay the commission owed by bank transfer within 14 days of this statement. Please tell us of any difference before then, quoting {Number}.' },
+      { type: 'totals', rows: [
+        { label: 'Stays', expr: '[Bookings count]', type: 'integer' },
+        { label: 'Room takings', expr: '[Room Total]' }, { label: 'Commission owed', expr: '[Commission]', strong: true },
+      ] },
+      { type: 'text', text: 'These are the stays booked through you that ended in {Month}, with the commission on each at the rate we agreed. We will pay the commission owed by bank transfer within 14 days of this statement. Please tell us of any difference before then, quoting {Number}.', if: 'Nz([Paid On], "") = ""' },
+      { type: 'text', text: 'These are the stays booked through you that ended in {Month}, with the commission on each at the rate we agreed. The commission owed was paid by bank transfer on the day shown above, quoting {Number}.', if: '[Paid On]' },
       { type: 'text', text: '{Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}. {Business.E-mail}', small: true },
     ] },
   ],
@@ -456,11 +487,11 @@ export const about = {
     'Commission by site': 'Each booking site\'s statements over the last year, with the total commission paid to it.',
   },
   documents: {
-    'Booking confirmation': 'The letter sent when a booking is taken: the dates, the room, the rate, the deposit received and the balance, check-in and check-out times, the cancellation terms and how to find the house. Print it from the Bookings form for the booking on screen; the template prints every booking when run alone, including those from booking sites.',
-    'Guest bill': 'The bill and VAT invoice given on leaving: each night and each extra as a line with the VAT within it, the total, the deposit taken off and the balance paid. Numbered INV-2026-0042.',
-    Receipt: 'A till-roll receipt for each payment: a deposit, a balance or a no-show charge. A deposit paid back is kept on the payment\'s record (Refunded On and Refund), not on the receipt, which is printed when the money is taken.',
-    'Registration card': 'The card a guest fills in and signs on arrival: name, nationality, passport where it must be recorded and blank otherwise, home address, car registration and signature. Print it from the Bookings form for the day\'s arrivals; run alone it prints every booking.',
-    'Commission statement': 'Sent to each booking site at the start of the month: the stays it sent that ended last month, with their references, and the commission owed. Numbered COM-2026-0012.',
+    'Booking confirmation': 'The letter sent when a booking is taken with us directly: the dates, the room, the rate, the deposit and the balance, check-in and check-out times, the cancellation terms, any request the guest made and how to find the house. Its deposit paragraph says thank you once the deposit is in, asks for it while it is not, and says none is needed for a booking made close to the stay. It prints for direct bookings taken in the last 14 days for a stay still ahead; booking sites send their own confirmations. Print any other booking from the Bookings form.',
+    'Guest bill': 'The bill and VAT invoice given on leaving: each night and each extra as a line with the VAT within it, the total, the deposit taken off when there was one and the balance paid. Numbered INV-2026-0042. It prints the bills of the last 14 days; print an older one from the Bills form.',
+    Receipt: 'A till-roll receipt for each payment: a deposit, a balance or a no-show charge. A deposit paid back shows on its receipt, with the day and the amount refunded, and only then. It prints the payments of the last 7 days; print an older one from the Payments form.',
+    'Registration card': 'The card a guest fills in and signs on arrival: name, nationality, passport where it must be recorded and blank otherwise, home address, car registration and signature, with a line for the other guests when more than one adult is booked. It prints for the bookings arriving today and tomorrow, so the cards are ready at the desk.',
+    'Commission statement': 'Sent to each booking site at the start of the month: the stays it sent that ended last month, with their references, how many there were and the commission owed, and once paid, the day it was paid. Numbered COM-2026-0012. It prints this month\'s statements.',
   },
   tutorial: [
     { title: 'Take a booking on the phone', steps: [
@@ -480,7 +511,7 @@ export const about = {
     { title: 'Start the day', steps: [
       'Print the report Housekeeping sheet for whoever cleans the rooms: departures first, then stayovers, then arrivals.',
       'Open the query Arrivals in the next 7 days, or print the report Arrivals list, to see who comes today, at what time and with what requests.',
-      'Print the Registration card for each of today\'s arrivals from the Bookings form, so they are ready on the desk.',
+      'Open the print template Registration card from Print templates and press Print: it holds the cards for today\'s and tomorrow\'s arrivals, so they are ready on the desk.',
       'Open the Rooms form and set Housekeeping for each room as the cleaning is done: Vacant clean, Inspected, Occupied, Due out or Out of order. The query Room status shows them all.',
     ] },
     { title: 'Check a guest in', steps: [
@@ -521,7 +552,7 @@ export const about = {
     'Commission is worked out on the room charge alone, not on extras, at the rate held on the booking. Cancelled bookings and no-shows carry none in the sample. Booking sites\' own terms differ; set the rate and the rules to match yours.',
     'Cancellation and no-show charges carry no VAT in the sample. How they are taxed depends on your country and your terms: ask your accountant.',
     'The passport number is kept only for guests whose nationality calls for it and is left empty for the rest, as the registration card is printed. Every name, address, passport number, car registration and booking reference in the sample is invented.',
-    'Print templates print one document for every record of their table. Print a single one from its form (the booking, bill or payment on screen), or choose the ones you want.',
+    'Each print template prints only the records it is for: confirmations for new direct bookings, the bills of the last 14 days, the receipts of the last 7, registration cards for today\'s and tomorrow\'s arrivals and this month\'s commission statements. A record printed from its own form (the booking, bill or payment on screen) always prints.',
   ],
   faq: [
     { q: 'How do I find a room for a caller?', a: 'Open the query Rooms free tonight and this weekend. For other dates, open the Room Nights table and filter it on Night and Status Free; the Tariff query gives the price.' },

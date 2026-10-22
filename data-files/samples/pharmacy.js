@@ -21,6 +21,11 @@ import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, FIRST, LAST, money, per
 
 const ref = (table) => ({ type: 'integer', points: table });
 const LETTERHEAD = { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] };
+// Dates on the documents as the shop writes them: 22/10/2026, and 22/10/2026 14:05 on a receipt.
+const DATE = 'dd/mm/yyyy';
+
+// The print templates need the 2.16 engine: records chosen by a condition, blocks shown when they apply, formats.
+export const minOffice = '2.16.0';
 // A till line's money, as the receipt works it out: prices include VAT, and the VAT within is rounded on each line.
 const GROSS = 'Round([Sale Lines].[Quantity] * [Unit Price], 2)';
 const VAT_IN = `Round(${GROSS} - ${GROSS} / (1 + Nz([Sale Lines].[Tax Rate])), 2)`;
@@ -205,7 +210,7 @@ export const spec = {
     { name: 'Till receipt', table: 'Sales', paper: 'receipt-80', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Receipt {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'When', label: 'Date' }, { field: 'Till' }, { field: 'Served By.First Name', label: 'Served by' }, { field: 'Payment', label: 'Paid by' },
+        { field: 'When', label: 'Date', format: 'dd/mm/yyyy hh:nn' }, { field: 'Till' }, { field: 'Served By.First Name', label: 'Served by' }, { field: 'Payment', label: 'Paid by' },
       ] },
       { type: 'lines', table: 'Sale Lines', link: 'Sale', columns: [
         { field: 'Product.Name', label: 'Item' }, { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
@@ -213,20 +218,22 @@ export const spec = {
         { expr: 'IIf(Nz([Pharmacist Check], 0) = 1, "P", "")', as: 'P', label: ' ' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Total', expr: '[Amount]', strong: true }, { label: 'Paid', expr: '[Paid]' }, { label: 'Change', expr: '[Change]' },
+        // Cash handed over and the change for a cash sale only; a card pays the total.
+        { label: 'Total', expr: '[Amount]', strong: true }, { label: 'Cash', expr: '[Paid]', if: '[Payment] = "Cash"' }, { label: 'Change', expr: '[Change]', if: '[Payment] = "Cash"' },
         { label: 'VAT included', expr: '[VAT]' },
       ] },
       { type: 'text', text: 'P: a pharmacy medicine, sold after a word with the pharmacist.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Purchase order', table: 'Supplier Orders', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For orders still to send or to come; one already received prints from its form.
+    { name: 'Purchase order', table: 'Supplier Orders', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Submitted"', blocks: [
       { type: 'heading', text: 'Purchase order {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Supplier.Name', label: 'To' }, { field: 'Number', label: 'Order number' },
-        { field: 'Supplier.Address', label: 'Address' }, { field: 'Ordered On', label: 'Date' },
-        { field: 'Supplier.City', label: 'Town' }, { field: 'Expected', label: 'Deliver by' },
+        { field: 'Supplier.Address', label: 'Address' }, { field: 'Ordered On', label: 'Date', format: DATE },
+        { field: 'Supplier.City', label: 'Town' }, { field: 'Expected', label: 'Deliver by', format: DATE },
         { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Supplier.Account No', label: 'Our account' },
-        { field: 'Ordered By', label: 'Ordered by' }, { field: 'Status' },
+        { field: 'Ordered By', label: 'Ordered by' }, { field: 'Received On', label: 'Received', format: DATE, if: 'Nz([Received On], "") <> ""' },
       ] },
       { type: 'lines', table: 'Supplier Order Lines', link: 'Order', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Product' }, { field: 'Product.Pack', label: 'Pack' },
@@ -237,10 +244,12 @@ export const spec = {
       { type: 'text', text: 'Please quote {Number} and our account number on your delivery note and invoice. Medicines with less than six months before their expiry date by agreement only.', small: true },
       { type: 'text', text: 'Deliver to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode}.', small: true },
     ] },
-    { name: 'Delivery round sheet', table: 'Delivery Rounds', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For the rounds still to go out: a driver takes today's and the next days'. A round done prints from its form.
+    { name: 'Delivery round sheet', table: 'Delivery Rounds', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Planned"', blocks: [
       { type: 'heading', text: 'Delivery round {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Delivery Date', label: 'Date' }, { field: 'Driver' }, { field: 'Area' }, { field: 'Stops' }, { field: 'Status' },
+        { field: 'Delivery Date', label: 'Date', format: 'dddd dd/mm/yyyy' }, { field: 'Driver' }, { field: 'Area' }, { field: 'Stops' },
+        { field: 'Status', if: '[Status] <> "Planned"' },
       ] },
       { type: 'lines', table: 'Deliveries', link: 'Round', sort: 'Stop', columns: [
         { field: 'Stop' }, { field: 'Customer', type: 'text' }, { field: 'Customer.Address', label: 'Address' }, { field: 'Customer.Postcode', label: 'Postcode' },
@@ -255,17 +264,17 @@ export const spec = {
       { type: 'heading', text: 'Expiry return {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Supplier.Name', label: 'To' }, { field: 'Number', label: 'Return number' },
-        { field: 'Supplier.Address', label: 'Address' }, { field: 'Raised On', label: 'Date' },
+        { field: 'Supplier.Address', label: 'Address' }, { field: 'Raised On', label: 'Date', format: DATE },
         { field: 'Supplier.City', label: 'Town' }, { field: 'Supplier.Account No', label: 'Our account' },
-        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Status' },
+        { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Collected On', label: 'Collected', format: DATE, if: 'Nz([Collected On], "") <> ""' },
       ] },
       { type: 'text', text: 'The goods below have reached, or are about to reach, their expiry date, or arrived damaged. They are unopened and are returned for credit under your returns terms.' },
       { type: 'lines', table: 'Waste', link: 'Return', columns: [
         { field: 'Batch.Product.Code', label: 'Code' }, { field: 'Batch.Product.Name', label: 'Product' }, { field: 'Batch.Batch No', label: 'Batch' },
-        { field: 'Batch.Expiry Date', label: 'Expiry' }, { field: 'Quantity', type: 'integer' }, { field: 'Unit Cost', type: 'currency' },
+        { field: 'Batch.Expiry Date', label: 'Expiry', format: DATE }, { field: 'Quantity', type: 'integer' }, { field: 'Unit Cost', type: 'currency' },
         { expr: 'Round([Quantity] * [Unit Cost], 2)', as: 'Value', type: 'currency' },
       ] },
-      { type: 'totals', rows: [{ label: 'Units', expr: '[Quantity]', type: 'integer' }, { label: 'Credit claimed', expr: '[Value]', strong: true }] },
+      { type: 'totals', rows: [{ label: 'Lines', expr: '[Waste count]', type: 'integer' }, { label: 'Units', expr: '[Quantity]', type: 'integer' }, { label: 'Credit claimed', expr: '[Value]', strong: true }] },
       { type: 'text', text: 'Please send a credit note quoting {Number} and our account number.', small: true },
       { type: 'signatures', labels: ['Packed by', 'Collected by'] },
     ] },
@@ -418,10 +427,10 @@ export const about = {
     'Daily takings': 'The last fortnight\'s till, a line a day, with cash and card, for cashing up and banking.',
   },
   documents: {
-    'Till receipt': 'The receipt the till prints for each sale, on an 80 mm roll: each item with its price, the total, what was paid and the change, and the VAT included. Pharmacy-only lines are marked P. Numbered RCP-2026-00042.',
-    'Purchase order': 'Sent to a supplier: the lines to send, the pack, quantity and cost, and the day they are wanted, with the pharmacy\'s account number. Numbered PO-2026-0042. Every order prints, received ones too; print the one on screen from the Supplier Orders form.',
-    'Delivery round sheet': 'The sheet a driver takes out: one for each driver on each day, with each stop in order, the address, the phone, what to know at the door, the bag reference, and a column for the customer to sign.',
-    'Expiry return note': 'Goes in the box of out-of-date stock sent back to a wholesaler: each product, batch, expiry date and quantity, and the credit claimed at cost. It is the statement the supplier\'s credit note is checked against. Numbered RTN-2026-0007.',
+    'Till receipt': 'The receipt the till prints for each sale, on an 80 mm roll: the date and time, each item with its price, the total, the cash handed over and the change for a cash sale, and the VAT included. Pharmacy-only lines are marked P. Numbered RCP-2026-00042.',
+    'Purchase order': 'Sent to a supplier: the lines to send, the pack, quantity and cost, and the day they are wanted, with the pharmacy\'s account number. Numbered PO-2026-0042. It prints for orders still Submitted; one already received prints from the Supplier Orders form, with the day it came in.',
+    'Delivery round sheet': 'The sheet a driver takes out: one for each driver on each day still to come, with each stop in order, the address, the phone, what to know at the door, the bag reference, and a column for the customer to sign. It prints for Planned rounds only; a round already done prints from the Delivery Rounds form.',
+    'Expiry return note': 'Goes in the box of out-of-date stock sent back to a wholesaler: each product, batch, expiry date and quantity, the number of lines, and the credit claimed at cost. It is the statement the supplier\'s credit note is checked against. Numbered RTN-2026-0007.',
   },
   tutorial: [
     { title: 'Serve a customer and print the receipt', steps: [
@@ -458,7 +467,7 @@ export const about = {
     { title: 'Plan and run the delivery rounds', steps: [
       'Open the Delivery Customers form to see who is due: each customer\'s Round Day, Area and how often (Every Weeks).',
       'Open the Delivery Rounds form and press New for each driver\'s round: the next RND number, the Delivery Date, the Driver and the Area. Add each stop in Deliveries with the Stop number, the Customer, the Prescription Ref and the Bags. Mark those prescriptions For Delivery.',
-      'Print the Delivery round sheet template for each round, or the Delivery list report for both days at once.',
+      'Print the Delivery round sheet template: it prints a sheet for each round still Planned. Or print the Delivery list report for both days at once.',
       'When the driver is back, set each stop\'s Status to Delivered with Delivered At and Received By, or to Not in, card left and add it to the next day\'s round. Set the round\'s Status to Done, and the delivered prescriptions to Delivered.',
     ] },
     { title: 'Cash up and look at the month', steps: [
@@ -473,7 +482,7 @@ export const about = {
     'Prices in Products and Sale Lines include VAT, as shelf prices do. The VAT on a receipt is worked out within each line, rounded to the penny, and added up. Period products carry no VAT and stop smoking products 5 percent in the UK; check the rates where you are.',
     'The Prescriptions table is a collection log, not a dispensary record. Keep it to initials, a reference and a count of items, and keep anything clinical out of this file.',
     'Which lines need a pharmacist\'s check, and any limit on packs in one sale, are set on each product. The sample\'s choices are examples only; follow the rules where you work.',
-    'Each print template prints every record of its table: every sale has a receipt and every round a sheet. Print the one on screen from its form, or choose the records to print.',
+    'Each print template prints only the records it is for: every sale has a receipt, but purchase orders print while they are Submitted and round sheets while the round is Planned. Any record prints from its own form, whatever it is.',
     'The dispensary\'s own income, from prescriptions, is not in this file: the takings are the counter\'s.',
   ],
   faq: [

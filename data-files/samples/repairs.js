@@ -23,6 +23,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, money, person, phoneFor } from './util.js';
 
+// Its print templates need Office 2.16.0 or later: they say which records they print and when a line shows.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const CUSTOMER = '[Customers].[First Name] & " " & [Customers].[Last Name]';
 const TECHNICIAN = '[Staff].[First Name] & " " & [Staff].[Last Name]';
@@ -86,9 +89,9 @@ export const spec = {
       { name: 'Quantity', type: 'integer', default: 1 }, { name: 'Unit Cost', type: 'currency' }, { name: 'Ordered On', type: 'date' },
       { name: 'Expected', type: 'date' }, { name: 'Received On', type: 'date' }, { name: 'Status', type: 'text', default: 'On order' },
     ] },
-    // The parts and labour on each job, one line each; once invoiced, a line also points at its invoice.
+    // The parts and labour on each job, one line each; its invoice lists them through the job.
     { name: 'Job Lines', fields: [
-      { name: 'Job', ...ref('Jobs'), required: true }, { name: 'Invoice', ...ref('Invoices') }, { name: 'Kind', type: 'text', default: 'Part' },
+      { name: 'Job', ...ref('Jobs'), required: true }, { name: 'Kind', type: 'text', default: 'Part' },
       { name: 'Part', ...ref('Parts') }, { name: 'Description', type: 'text' }, { name: 'Quantity', type: 'number', default: 1 },
       { name: 'Unit Price', type: 'currency' }, { name: 'Tax Rate', type: 'number', default: 0.2 }, { name: 'Done On', type: 'date' },
     ] },
@@ -241,22 +244,28 @@ export const spec = {
   ],
   // The print templates: one document for each record of the table named.
   documents: [
-    { name: 'Booking-in receipt', table: 'Jobs', paper: 'a5',
+    // At the counter as the device comes in: for jobs still in the shop, the ones a customer may still hold a receipt for.
+    { name: 'Booking-in receipt', table: 'Jobs', paper: 'a5', where: 'Nz([Collected], "") = ""',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail'] },
       blocks: [
         { type: 'heading', text: 'Booking-in receipt {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Job number' }, { field: 'Booked In', label: 'Booked in' },
+          { field: 'Number', label: 'Job number' }, { field: 'Booked In', label: 'Booked in', format: 'dd/mm/yyyy' },
           { field: 'Device.Customer', label: 'Customer' }, { field: 'Device.Customer.Phone', label: 'Phone' },
-          { field: 'Promised', label: 'Ready by' }, { field: 'Technician', label: 'Technician' },
+          { field: 'Promised', label: 'Ready by', format: 'dd/mm/yyyy' }, { field: 'Technician', label: 'Technician' },
         ] },
         { type: 'fields', columns: 2, items: [
           { field: 'Device.Kind', label: 'Device' }, { field: 'Device.Make', label: 'Make' }, { field: 'Device.Model', label: 'Model' },
           { field: 'Device.Serial', label: 'Serial number' }, { field: 'Device.Colour', label: 'Colour' }, { field: 'Left With It', label: 'Left with it' },
         ] },
-        { type: 'fields', columns: 1, items: [{ field: 'Fault', label: 'Fault as described' }, { field: 'Quote', label: 'Quoted price, VAT included' }] },
+        { type: 'fields', columns: 1, items: [
+          { field: 'Fault', label: 'Fault as described' }, { field: 'Quote', label: 'Quoted price, VAT included', format: '#,##0.00', if: '[Quote]' },
+          { field: 'Deposit', label: 'Deposit paid', format: '#,##0.00', if: '[Deposit]' },
+        ] },
+        { type: 'text', text: 'This is a return under the warranty of job {Warranty Of}: there is nothing to pay for putting right the same fault.', if: '[Warranty Of]' },
         { type: 'text', text: 'Our terms, in short:', small: true },
-        { type: 'text', text: '1. If no price is quoted above, we will check the device and tell you the price before we do any work. If we cannot repair it, there is nothing to pay.', small: true },
+        { type: 'text', text: '1. We will check the device and tell you the price before we do any work. If we cannot repair it, there is nothing to pay.', small: true, if: 'Nz([Quote], 0) = 0' },
+        { type: 'text', text: '1. The price quoted above is for the repair described. If we find another fault once the work starts, we will ask you before doing anything more.', small: true, if: '[Quote]' },
         { type: 'text', text: '2. Please keep a copy of your photos and files. We take care with your data, but a repair can lose it, and we cannot be held to blame for that.', small: true },
         { type: 'text', text: '3. When a part has to be ordered in for you, we take its price as a deposit. It comes off your bill, and is kept only if you cancel after the part has arrived.', small: true },
         { type: 'text', text: '4. The ready-by date is our best estimate. We will tell you if it moves, and tell you by your chosen way when the device is ready.', small: true },
@@ -265,12 +274,13 @@ export const spec = {
         { type: 'signatures', labels: ['Customer', 'Booked in by'] },
         FOOT,
       ] },
-    { name: 'Quote', table: 'Quotes', paper: 'a4',
+    // The written quote: for quotes still waiting for an answer. One answered prints from its form and says the answer.
+    { name: 'Quote', table: 'Quotes', paper: 'a4', where: 'Nz([Answer], "") = ""',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] },
       blocks: [
         { type: 'heading', text: 'Quote {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Quote' }, { field: 'Quoted On', label: 'Date' }, { field: 'Valid Until', label: 'Valid until' }, { field: 'Job', label: 'Job number', type: 'text' },
+          { field: 'Number', label: 'Quote' }, { field: 'Quoted On', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Valid Until', label: 'Valid until', format: 'dd/mm/yyyy' }, { field: 'Job', label: 'Job number', type: 'text' },
           { field: 'Job.Device.Customer', label: 'For' }, { field: 'Job.Device.Customer.Phone', label: 'Phone' },
           { field: 'Job.Device.Make', label: 'Make' }, { field: 'Job.Device.Model', label: 'Model' }, { field: 'Job.Device.Serial', label: 'Serial number' },
         ] },
@@ -282,57 +292,66 @@ export const spec = {
         { type: 'totals', rows: [
           { label: 'Net of VAT', expr: 'Round([Amount] - [VAT], 2)' }, { label: 'VAT', expr: '[VAT]' }, { label: 'Total', expr: '[Amount]', strong: true },
         ] },
+        { type: 'text', text: '{Answer} on {Answered On}.', if: '[Answer]' },
         { type: 'text', text: 'This is the price for the repair described above, VAT included, and it holds until {Valid Until}. If we find another fault once the work starts, we will ask you before doing anything more.' },
-        { type: 'text', text: 'To go ahead, reply to this quote or call us on {Business.Phone}, quoting {Number}. If you would rather not, there is a charge of half an hour at our bench rate for the diagnosis, and you can collect the device as it is.' },
+        { type: 'text', text: 'To go ahead, reply to this quote or call us on {Business.Phone}, quoting {Number}. If you would rather not, there is a charge of half an hour at our bench rate for the diagnosis, and you can collect the device as it is.', if: 'Nz([Answer], "") = ""' },
         FOOT,
       ] },
+    // Every invoice raised, with the job's own lines, found through the job.
     { name: 'Invoice', table: 'Invoices', paper: 'a4',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] },
       blocks: [
         { type: 'heading', text: 'VAT invoice {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date and tax point' }, { field: 'Due Date', label: 'Due' }, { field: 'Job', label: 'Job number', type: 'text' },
-          { field: 'Job.Device.Customer', label: 'Customer' }, { field: 'Account.Name', label: 'Account' },
+          { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date and tax point', format: 'dd/mm/yyyy' },
+          { field: 'Due Date', label: 'Due', format: 'dd/mm/yyyy', if: '[Account]' }, { field: 'Job', label: 'Job number', type: 'text' },
+          { field: 'Job.Device.Customer', label: 'Customer' }, { field: 'Account.Name', label: 'Account', if: '[Account]' },
           { field: 'Job.Device.Customer.Address', label: 'Address' }, { field: 'Job.Device.Customer.Postcode', label: 'Postcode' },
           { field: 'Job.Device.Make', label: 'Make' }, { field: 'Job.Device.Model', label: 'Model' }, { field: 'Job.Device.Serial', label: 'Serial number' },
         ] },
-        { type: 'lines', table: 'Job Lines', link: 'Invoice', columns: [
+        { type: 'lines', table: 'Job Lines', on: { Job: 'Job' }, columns: [
           { field: 'Kind', label: 'Item' }, { field: 'Description' }, { field: 'Quantity', label: 'Qty or hours', type: 'number' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
-          { expr: GROSS, as: 'Amount', type: 'currency' }, { field: 'Tax Rate', label: 'VAT rate', type: 'number' }, { expr: VAT_IN, as: 'VAT', label: 'VAT included', type: 'currency' },
+          { expr: GROSS, as: 'Amount', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number', format: '0' }, { expr: VAT_IN, as: 'VAT', label: 'VAT included', type: 'currency' },
         ] },
         { type: 'totals', rows: [
           { label: 'Net of VAT', expr: 'Round([Amount] - [VAT], 2)' }, { label: 'VAT', expr: '[VAT]' }, { label: 'Total', expr: '[Amount]', strong: true },
-          { label: 'Deposit paid', expr: 'Nz([Deposit])' }, { label: 'Balance due', expr: 'Round([Total] - [Deposit paid], 2)', strong: true },
+          { label: 'Deposit paid', expr: '[Deposit]', if: '[Deposit]' }, { label: 'Balance due', expr: 'Round([Total] - [Deposit], 2)', strong: true, if: '[Deposit]' },
         ] },
-        { type: 'text', text: '{Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.', small: true },
+        { type: 'text', text: 'Paid in full on {Paid On}, thank you.', small: true, if: '[Paid On]' },
+        { type: 'text', text: '{Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.', small: true, if: 'Nz([Paid On], "") = ""' },
         FOOT,
       ] },
-    { name: 'Collection receipt', table: 'Jobs', paper: 'receipt-80',
+    // Handed over with the device: for jobs collected.
+    { name: 'Collection receipt', table: 'Jobs', paper: 'receipt-80', where: 'Nz([Collected], "") <> ""',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Phone', 'Tax Number'] },
       blocks: [
         { type: 'heading', text: 'Collection receipt' },
         { type: 'fields', columns: 1, items: [
-          { field: 'Number', label: 'Job' }, { field: 'Collected', label: 'Collected' }, { field: 'Device.Customer', label: 'Customer' },
-          { field: 'Device.Make', label: 'Make' }, { field: 'Device.Model', label: 'Model' }, { field: 'Device.Serial', label: 'Serial' }, { field: 'Outcome', label: 'Outcome' }, { field: 'Warranty Until', label: 'Guaranteed until' },
+          { field: 'Number', label: 'Job' }, { field: 'Collected', label: 'Collected', format: 'dd/mm/yyyy' }, { field: 'Device.Customer', label: 'Customer' },
+          { field: 'Device.Make', label: 'Make' }, { field: 'Device.Model', label: 'Model' }, { field: 'Device.Serial', label: 'Serial' }, { field: 'Outcome', label: 'Outcome' },
+          { field: 'Warranty Until', label: 'Guaranteed until', format: 'dd/mm/yyyy', if: '[Warranty Until]' },
         ] },
         { type: 'lines', table: 'Job Lines', link: 'Job', columns: [
           { field: 'Description' }, { expr: GROSS, as: 'Amount', type: 'currency' }, { expr: VAT_IN, as: 'VAT', type: 'currency' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Total', expr: '[Amount]', strong: true }, { label: 'VAT included', expr: '[VAT]' }, { label: 'Deposit paid', expr: 'Nz([Deposit])' },
-          { label: 'Paid today', expr: 'IIf([Paid], Round([Total] - [Deposit paid], 2), 0)' },
-          { label: 'Still to pay', expr: 'IIf([Paid], 0, Round([Total] - [Deposit paid], 2))', strong: true },
+          { label: 'Total', expr: '[Amount]', strong: true }, { label: 'VAT included', expr: '[VAT]', if: '[VAT]' }, { label: 'Deposit paid', expr: '[Deposit]', if: '[Deposit]' },
+          { label: 'Paid today', expr: 'Round([Total] - Nz([Deposit]), 2)', strong: true, if: '[Paid] And [Total] - Nz([Deposit]) > 0' },
+          { label: 'Still to pay', expr: 'Round([Total] - Nz([Deposit]), 2)', strong: true, if: 'Not [Paid] And [Total] - Nz([Deposit]) > 0' },
         ] },
-        { type: 'text', text: 'Handed back with: {Left With It}.', small: true },
+        { type: 'text', text: 'Nothing to pay: the work was under warranty.', small: true, if: '[Warranty Of] And Nz([Total], 0) = 0' },
+        { type: 'text', text: 'Handed back with: {Left With It}.', small: true, if: 'Nz([Left With It], "Nothing") <> "Nothing"' },
         { type: 'signatures', labels: ['Received in working order'] },
         FOOT,
       ] },
-    { name: 'Warranty certificate', table: 'Warranties', paper: 'a5',
+    // Given with each repair: for warranties still running, the 90 days from the repair.
+    { name: 'Warranty certificate', table: 'Warranties', paper: 'a5', where: 'DateDiff("d", [Issued], Date()) <= 90',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail'] },
       blocks: [
         { type: 'heading', text: 'Repair warranty {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Certificate' }, { field: 'Job', label: 'Job number', type: 'text' }, { field: 'Issued', label: 'Repaired on' }, { field: 'Job.Warranty Until', label: 'Covered until' },
+          { field: 'Number', label: 'Certificate' }, { field: 'Job', label: 'Job number', type: 'text' },
+          { field: 'Issued', label: 'Repaired on', format: 'd mmmm yyyy' }, { field: 'Job.Warranty Until', label: 'Covered until', format: 'd mmmm yyyy' },
           { field: 'Job.Device.Customer', label: 'Customer' }, { field: 'Job.Device.Kind', label: 'Device' }, { field: 'Job.Device.Make', label: 'Make' },
           { field: 'Job.Device.Model', label: 'Model' }, { field: 'Job.Device.Serial', label: 'Serial number' },
         ] },
@@ -344,22 +363,27 @@ export const spec = {
         { type: 'signatures', labels: ['For the shop'] },
         FOOT,
       ] },
+    // Each business account's unpaid invoices, oldest first, with what is owed so far and what is overdue.
     { name: 'Account statement', table: 'Accounts', paper: 'a4',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Tax Number'] },
       blocks: [
         { type: 'heading', text: 'Statement of account' },
         { type: 'fields', columns: 2, items: [
           { field: 'Name', label: 'Account' }, { field: 'Contact', label: 'For the attention of' }, { field: 'Address' }, { field: 'City' },
-          { field: 'Postcode' }, { field: 'Payment Days', label: 'Days to pay' }, { field: 'Credit Limit', label: 'Credit limit' },
+          { field: 'Postcode' }, { field: 'Payment Days', label: 'Days to pay' }, { field: 'Credit Limit', label: 'Credit limit', format: '#,##0.00', if: '[Credit Limit]' },
         ] },
-        { type: 'lines', table: 'Invoices', link: 'Account', sort: 'Invoice Date', columns: [
-          { field: 'Number', label: 'Invoice' }, { field: 'Job', label: 'Job', type: 'text' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Due Date', label: 'Due' },
-          { field: 'Total', label: 'Amount', type: 'currency' }, { field: 'Paid On', label: 'Paid on' },
-          { expr: 'IIf(Nz([Paid On], "") = "", [Balance], 0)', as: 'Owing', type: 'currency' },
-          { expr: 'IIf(Nz([Paid On], "") = "" And [Due Date] < Date(), [Balance], 0)', as: 'Overdue', type: 'currency' },
+        { type: 'lines', table: 'Invoices', link: 'Account', sort: 'Invoice Date', where: 'Nz([Paid On], "") = ""', columns: [
+          { field: 'Number', label: 'Invoice' }, { field: 'Job', label: 'Job', type: 'text' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Due Date', label: 'Due', format: 'dd/mm/yyyy' },
+          { expr: OVERDUE, as: 'Days Over', label: 'Days overdue', type: 'integer' },
+          { field: 'Balance', label: 'Owing', type: 'currency' }, { running: 'Balance', as: 'Owed So Far', label: 'Owed so far' },
+          { expr: 'IIf([Due Date] < Date(), [Balance], 0)', as: 'Overdue', type: 'currency' },
         ] },
-        { type: 'totals', rows: [{ label: 'Of which overdue', expr: '[Overdue]' }, { label: 'Balance owing', expr: '[Owing]', strong: true }] },
-        { type: 'text', text: 'Invoices are due {Payment Days} days from their date. Please pay by bank transfer to {Business.Bank Details}, quoting the invoice numbers. If you have paid in the last few days, thank you, and please ignore what is shown as owing.', small: true },
+        { type: 'totals', rows: [
+          { label: 'Statement date', expr: 'Date()', format: 'dd/mm/yyyy' },
+          { label: 'Of which overdue', expr: '[Overdue]', if: '[Overdue]' }, { label: 'Balance owing', expr: '[Balance]', strong: true },
+        ] },
+        { type: 'text', text: 'Nothing is owing on this account today. Thank you.', if: '[Invoices count] = 0' },
+        { type: 'text', text: 'Invoices are due {Payment Days} days from their date. Please pay by bank transfer to {Business.Bank Details}, quoting the invoice numbers. If you have paid in the last few days, thank you, and please ignore what is shown as owing.', small: true, if: '[Invoices count]' },
         FOOT,
       ] },
   ],
@@ -482,7 +506,7 @@ export const about = {
     } },
     'Job Lines': { about: 'The parts and labour on each job, one line each, at the price charged with VAT included. They are the lines of the job\'s invoice and its collection receipt.', fields: {
       'Job': 'The job the line belongs to.',
-      'Invoice': 'The invoice the line is on, once the job is invoiced. Empty before then, and on jobs that cost nothing.',
+
       'Kind': 'Part or Labour.',
       'Part': 'The part fitted or waiting to be fitted. Empty on a labour line.',
       'Description': 'What the line is: the part\'s name, or the work done, as the invoice prints it.',
@@ -571,12 +595,12 @@ export const about = {
     'VAT by month': 'Net sales, VAT and invoiced totals for each month with the grand totals, to fill in the VAT return or hand to the accountant.',
   },
   documents: {
-    'Booking-in receipt': 'Printed at the counter when a device is booked in, on A5, one copy for the customer: the job number, the device and its serial, the fault as described, what was left with it, the price if one was quoted, the ready-by date, the shop\'s terms in short and two lines to sign. It prints from Jobs, so print the job on screen.',
-    'Quote': 'The written quote sent after diagnosis: the parts and labour, the VAT inside them, the total and how long the price holds, with how to say yes. One for each record in Quotes.',
-    'Invoice': 'The VAT invoice raised when the work is finished: the parts and labour lines with the VAT in each, the net, VAT and total, the deposit already paid and the balance due. One for each record in Invoices.',
-    'Collection receipt': 'The till receipt handed over with the device: the work done and its price, VAT included, the deposit, what was paid today and a line to sign that the device came back in working order. It prints from Jobs, so print the job on screen as it is collected; a job not yet collected prints with what is still to pay.',
-    'Warranty certificate': 'The 90-day warranty given with every repair: the device, the dates, what it covers and what it does not, and how to claim. One for each record in Warranties. Have the wording checked against the consumer law of your own country.',
-    'Account statement': 'Sent to each business account at the month end: every invoice raised to the account with the day it was paid, what is still owing and how much of that is overdue. One for each record in Accounts.',
+    'Booking-in receipt': 'Printed at the counter when a device is booked in, on A5, one copy for the customer: the job number, the device and its serial, the fault as described, what was left with it, the price if one was quoted, the ready-by date, the shop\'s terms in short and two lines to sign. It prints for jobs not yet collected; the price and deposit print only when there is one, and a warranty return says so.',
+    'Quote': 'The written quote sent after diagnosis: the parts and labour, the VAT inside them, the total and how long the price holds, with how to say yes. It prints for quotes not yet answered; printed from the Quotes form, an answered one says the answer and when.',
+    'Invoice': 'The VAT invoice raised when the work is finished: the parts and labour lines with the VAT in each, the net, VAT and total, and the deposit and balance due when a deposit was paid. A paid invoice says so; an unpaid one says how to pay. One for each record in Invoices, its lines found through its job.',
+    'Collection receipt': 'The till receipt handed over with the device: the work done and its price, VAT included, the deposit, what was paid today and a line to sign that the device came back in working order. It prints for jobs collected, with what was paid today or what is still to pay on an account.',
+    'Warranty certificate': 'The 90-day warranty given with every repair: the device, the dates, what it covers and what it does not, and how to claim. It prints for warranties still running, the 90 days after the repair. Have the wording checked against the consumer law of your own country.',
+    'Account statement': 'Sent to each business account at the month end: the invoices still unpaid, oldest first, with the days each is overdue, a running total of what is owed, how much of it is overdue and the day of the statement. One for each record in Accounts.',
   },
   tutorial: [
     { title: 'Book a device in and print the receipt', steps: [
@@ -599,7 +623,7 @@ export const about = {
     { title: 'Finish a repair, invoice it and give the warranty', steps: [
       'On the Jobs form, add the job\'s lines in Job Lines: the part fitted (Kind Part, the part, its name in Description, Quantity 1 and its price) and the labour (Kind Labour, what was done, the hours in Quantity and the rate in Unit Price). Fill in Done On on each.',
       'Set the job\'s Status to Ready and Outcome to Repaired, type today in Finished, the total of the lines in Charge, and in Warranty Until the day 90 days on.',
-      'Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job, choose the account if it is business work, and fill in Invoice Date, Due Date, Net, Tax, Total, Deposit and Balance. Then on each of the job\'s lines choose the new invoice in Invoice.',
+      'Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job, choose the account if it is business work, and fill in Invoice Date, Due Date, Net, Tax, Total, Deposit and Balance. The invoice lists the job\'s lines on its own, found through the job.',
       'Open the Warranties form, press New, type the next number (WTY-2026-...), choose the job and say in Covers what was fitted and done.',
       'Open the print templates Invoice and Warranty certificate, choose the new records, and press Save as PDF to e-mail them, or Print to put them in the bag with the device.',
       'Ring or text the customer: the query Ready for collection is the list, with how each wants to be told.',
@@ -611,7 +635,7 @@ export const about = {
     ] },
     { title: 'Send the business accounts their statements', steps: [
       'At the month end, open the report Account invoices due to see what each business owes, and how late.',
-      'Open the print template Account statement from Print templates. It makes one statement for each record in Accounts; choose the accounts that owe something, and press Save as PDF to e-mail each one to the address on its Accounts record.',
+      'Open the print template Account statement from Print templates. It makes one statement for each record in Accounts, listing only the invoices still unpaid; choose the accounts that owe something, and press Save as PDF to e-mail each one to the address on its Accounts record.',
       'When a business pays, open the Payments form, record each invoice paid with Kind On account and Method Bank transfer, fill in Paid On on the invoice, and tick Paid on the job.',
     ] },
     { title: 'Reorder parts and do the VAT', steps: [
@@ -623,14 +647,14 @@ export const about = {
   notes: [
     'Prices are typed with VAT included, as the customer sees them: a phone screen at 79.00 is 65.83 and 13.17 VAT. The VAT is worked out inside each line and rounded to the penny, then added up, so an invoice\'s Tax is the sum of its lines and not 20 percent of its total worked out once.',
     'The numbers on jobs, quotes, invoices, warranties and receipts (JOB-, QUO-, INV-, WTY-, RCP-) are typed, not made by Data Files. Keep each run in date order and start again at 0001 each January. The record number (ID) is separate and is what Part Orders shows in For Job.',
-    'An invoice\'s lines are the job\'s own lines, Job Lines, pointed at the invoice once it is raised. Do not add lines to a job after its invoice is made; raise a second invoice for extra work.',
-    'A print template prints every record of its table. The Booking-in receipt and the Collection receipt print from Jobs and the Account statement from Accounts, so choose the record you want (or print from the form with it on screen) rather than printing them all.',
-    'The Account statement lists every invoice the business has ever had, the paid ones with the day they were paid; the Owing column counts only those still unpaid.',
+    'An invoice\'s lines are the job\'s own lines, Job Lines, found through the job the invoice is for. Raise one invoice for a job, once every part and hour is on it; extra work found later goes on a new job.',
+    'Each print template prints only the records it is for: the Booking-in receipt for jobs still in the shop, the Collection receipt for jobs collected, the Quote for quotes not yet answered and the Warranty certificate for warranties still running. Every invoice and every account prints. Printed from a form, the record on screen prints whatever its state.',
+    'The Account statement lists only the invoices still unpaid, oldest first, with the days each is overdue and a running total of what is owed. An account that owes nothing prints a line saying so.',
     'A job that is beyond economic repair, a warranty return and a declined quote still have lines, at nought or at the diagnosis charge, so the bench time is recorded even when nothing is charged.',
     'Customers who bring work for a business point at its Accounts record. The invoice is made out to the account and its balance is paid by transfer, not at the counter, so Accounts to chase is the list to watch.',
   ],
   faq: [
-    { q: 'How do I print an older invoice or quote?', a: 'Open the print template Invoice (or Quote) and choose the record you want by its number; every invoice ever raised is there. To find the number, look the job up on the Jobs form or in the query Job board.' },
+    { q: 'How do I print an older invoice or quote?', a: 'Open the print template Invoice and choose the invoice by its number; every invoice ever raised is there. The Quote template holds only quotes not yet answered, so print an answered one from the Quotes form with it on screen. To find the number, look the job up on the Jobs form or in the query Job board.' },
     { q: 'A customer has lost their receipt. How do I find their device?', a: 'Open the Customers form and find them by name or phone, then look at their devices and jobs. The query Ready for collection lists every finished device still on the shelf with its customer.' },
     { q: 'Is this device still under warranty?', a: 'Open the query Under warranty and look for the customer or the serial. If the job is there, its Days Left is how long the cover has to run. Book the return in as a new job with Warranty Of set to the first job and nothing to pay.' },
     { q: 'Why does the invoice say less VAT than 20 percent of the total?', a: 'The prices include VAT, so the VAT is one sixth of each line, not a fifth: 20 percent of the price without VAT. On a total of 112.75 the VAT is 18.79.' },
@@ -996,7 +1020,7 @@ export function fill(base, { r, cal, days = 450 }) {
 
   /** A line on the job, a part or labour, at its price with VAT included. */
   const line = (job, kind, part, description, quantity, price, done) => {
-    const row = keep('Job Lines', { Job: job, Invoice: null, Kind: kind, Part: part ? part.id : null, Description: description, Quantity: quantity, 'Unit Price': price, 'Tax Rate': VAT, 'Done On': done == null ? null : cal.day(done) });
+    const row = keep('Job Lines', { Job: job, Kind: kind, Part: part ? part.id : null, Description: description, Quantity: quantity, 'Unit Price': price, 'Tax Rate': VAT, 'Done On': done == null ? null : cal.day(done) });
     job.lines.push(row);
     return row;
   };
@@ -1018,7 +1042,6 @@ export function fill(base, { r, cal, days = 450 }) {
         Number: numberFor('INV', d), Job: job, Account: a, 'Invoice Date': cal.day(d), 'Due Date': cal.day(a ? d + a.payDays : d),
         ...t, Deposit: deposit, Balance: money(t.Total - deposit), 'Paid On': null,
       });
-      for (const l of job.lines) l.Invoice = job.invoice;
     }
     collectIn(job, d);
   };

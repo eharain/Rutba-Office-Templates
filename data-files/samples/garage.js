@@ -23,6 +23,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, money, person, phoneFor } from './util.js';
 
+// Its print templates need Office 2.16.0 or later: they say which records they print and when a line shows.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const CUSTOMER = '[Customers].[First Name] & " " & [Customers].[Last Name]';
 const TECHNICIAN = '[Staff].[First Name] & " " & [Staff].[Last Name]';
@@ -90,7 +93,7 @@ export const spec = {
     ] },
     // The labour, parts and MOT fee on each job card; once invoiced, a line also points at its invoice.
     { name: 'Job Lines', fields: [
-      { name: 'Job Card', ...ref('Job Cards'), required: true }, { name: 'Invoice', ...ref('Invoices') }, { name: 'Technician', ...ref('Staff') },
+      { name: 'Job Card', ...ref('Job Cards'), required: true }, { name: 'Technician', ...ref('Staff') },
       { name: 'Part', ...ref('Parts') }, { name: 'Kind', type: 'text', default: 'Labour' }, { name: 'Description', type: 'text' },
       { name: 'Quantity', type: 'number', default: 1 }, { name: 'Unit Price', type: 'currency' }, { name: 'Unit Cost', type: 'currency' },
       { name: 'Tax Rate', type: 'number', default: 0.2 }, { name: 'Done On', type: 'date' },
@@ -236,61 +239,71 @@ export const spec = {
   ],
   // The print templates: one document for each record of the table named.
   documents: [
-    { name: 'Estimate', table: 'Estimates', paper: 'a4', letterhead: LETTERHEAD,
+    // The written estimate: for estimates not yet answered or still in date. One answered says so.
+    { name: 'Estimate', table: 'Estimates', paper: 'a4', where: 'Nz([Answer], "") = "" Or DateDiff("d", Date(), [Valid Until]) >= 0', letterhead: LETTERHEAD,
       blocks: [
         { type: 'heading', text: 'Estimate {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Estimate' }, { field: 'Estimate Date', label: 'Date' }, { field: 'Valid Until', label: 'Valid until' },
+          { field: 'Number', label: 'Estimate' }, { field: 'Estimate Date', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Valid Until', label: 'Valid until', format: 'dd/mm/yyyy' },
           { field: 'Vehicle.Customer', label: 'For' }, { field: 'Vehicle.Customer.Address', label: 'Address' }, { field: 'Vehicle.Customer.Postcode', label: 'Postcode' },
           { field: 'Vehicle', label: 'Registration' }, { field: 'Vehicle.Make', label: 'Make' }, { field: 'Vehicle.Model', label: 'Model' }, { field: 'Vehicle.Mileage', label: 'Mileage' },
         ] },
         { type: 'fields', columns: 1, items: [{ field: 'Work', label: 'Work to be done' }] },
         { type: 'lines', table: 'Estimate Lines', columns: [
           { field: 'Kind', label: 'Item' }, { field: 'Description' }, { field: 'Quantity', label: 'Qty or hours', type: 'number' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
-          { expr: NET, as: 'Net', type: 'currency' }, { field: 'Tax Rate', label: 'VAT rate', type: 'number' }, { expr: VAT, as: 'VAT', type: 'currency' },
+          { expr: NET, as: 'Net', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT Rate', label: 'VAT %', type: 'number', format: '0' }, { expr: VAT, as: 'VAT', type: 'currency' },
         ] },
         { type: 'totals', rows: [{ label: 'Net', expr: '[Net]' }, { label: 'VAT', expr: '[VAT]' }, { label: 'Estimated total', expr: '[Net] + [VAT]', strong: true }] },
+        { type: 'text', text: '{Answer} on {Answered On}.', if: '[Answer]' },
         { type: 'text', text: 'This estimate is our price for the work above, and holds until {Valid Until}. If we find anything else once the work starts, we will ring you before we do it: nothing more is done without your say-so.' },
-        { type: 'text', text: 'To book the work in, call us on {Business.Phone} quoting {Number}.' },
+        { type: 'text', text: 'To book the work in, call us on {Business.Phone} quoting {Number}.', if: 'Nz([Answer], "") = ""' },
         FOOT,
       ] },
-    { name: 'Job card', table: 'Job Cards', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Phone'] },
+    // Kept with the keys while the vehicle is in: for job cards not yet invoiced.
+    { name: 'Job card', table: 'Job Cards', paper: 'a4', where: '[Status] <> "Invoiced"', letterhead: { table: 'Business', fields: ['Name', 'Phone'] },
       blocks: [
         { type: 'heading', text: 'Job card {Number}' },
         { type: 'fields', columns: 3, items: [
-          { field: 'Number', label: 'Job card' }, { field: 'Opened', label: 'Opened' }, { field: 'Technician', label: 'Technician', type: 'text' },
+          { field: 'Number', label: 'Job card' }, { field: 'Opened', label: 'Opened', format: 'dd/mm/yyyy' }, { field: 'Technician', label: 'Technician', type: 'text' },
           { field: 'Vehicle', label: 'Registration' }, { field: 'Vehicle.Make', label: 'Make' }, { field: 'Vehicle.Model', label: 'Model' },
           { field: 'Vehicle.Fuel', label: 'Fuel' }, { field: 'Vehicle.Year', label: 'Year' }, { field: 'Mileage In', label: 'Mileage in' },
           { field: 'Vehicle.Customer', label: 'Customer' }, { field: 'Vehicle.Customer.Phone', label: 'Phone' }, { field: 'Vehicle.Tyre Size', label: 'Tyres' },
+          { field: 'Status', label: 'Status' }, { field: 'Closed', label: 'Closed', format: 'dd/mm/yyyy', if: '[Closed]' },
+          { field: 'Booking.Courtesy Car', label: 'Courtesy car', if: '[Booking]' },
         ] },
-        { type: 'fields', columns: 1, items: [{ field: 'Work Requested', label: 'Work requested' }, { field: 'Notes', label: 'Notes' }] },
+        { type: 'fields', columns: 1, items: [{ field: 'Work Requested', label: 'Work requested' }, { field: 'Notes', label: 'Notes', if: '[Notes]' }] },
         { type: 'lines', table: 'Job Lines', link: 'Job Card', columns: [
           { field: 'Kind' }, { field: 'Description', label: 'Work done or part fitted' }, { field: 'Part.Code', label: 'Part' },
-          { field: 'Quantity', label: 'Qty or hours', type: 'number' }, { field: 'Technician', label: 'By', type: 'text' }, { field: 'Done On', label: 'Date' },
+          { field: 'Quantity', label: 'Qty or hours', type: 'number' }, { field: 'Technician', label: 'By', type: 'text' }, { field: 'Done On', label: 'Date', format: 'dd/mm/yyyy' },
         ] },
         { type: 'text', text: 'Before work starts: check the mileage, note any damage and warning lights, and fit seat and floor covers. Any work beyond what is asked for above is authorised by the customer first, and the call is noted here.', small: true },
         { type: 'spacer', size: 24 },
         { type: 'signatures', labels: ['Technician', 'Road test and quality check'] },
       ] },
+    // Every invoice, with the job card's own lines, found through the job card.
     { name: 'Invoice', table: 'Invoices', paper: 'a4', letterhead: LETTERHEAD,
       blocks: [
         { type: 'heading', text: 'VAT invoice {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date and tax point' }, { field: 'Due Date', label: 'Due' },
-          { field: 'Job Card', label: 'Job card' }, { field: 'Job Card.Vehicle.Customer', label: 'Customer' }, { field: 'Account.Name', label: 'Trade account' },
+          { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date and tax point', format: 'dd/mm/yyyy' }, { field: 'Due Date', label: 'Due', format: 'dd/mm/yyyy', if: '[Account]' },
+          { field: 'Job Card', label: 'Job card' }, { field: 'Job Card.Vehicle.Customer', label: 'Customer' }, { field: 'Account.Name', label: 'Trade account', if: '[Account]' },
           { field: 'Job Card.Vehicle.Customer.Address', label: 'Address' }, { field: 'Job Card.Vehicle.Customer.Postcode', label: 'Postcode' },
           { field: 'Job Card.Vehicle', label: 'Registration' }, { field: 'Job Card.Vehicle.Make', label: 'Make' }, { field: 'Job Card.Vehicle.Model', label: 'Model' },
           { field: 'Job Card.Mileage In', label: 'Mileage' },
         ] },
-        { type: 'lines', table: 'Job Lines', link: 'Invoice', columns: [
+        { type: 'lines', table: 'Job Lines', on: { 'Job Card': 'Job Card' }, columns: [
           { field: 'Kind', label: 'Item' }, { field: 'Description' }, { field: 'Quantity', label: 'Qty or hours', type: 'number' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
-          { expr: NET, as: 'Net', type: 'currency' }, { field: 'Tax Rate', label: 'VAT rate', type: 'number' }, { expr: VAT, as: 'VAT', type: 'currency' },
+          { expr: NET, as: 'Net', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT Rate', label: 'VAT %', type: 'number', format: '0' }, { expr: VAT, as: 'VAT', type: 'currency' },
         ] },
         { type: 'totals', rows: [{ label: 'Net', expr: '[Net]' }, { label: 'VAT', expr: '[VAT]' }, { label: 'Total', expr: '[Net] + [VAT]', strong: true }] },
-        { type: 'text', text: 'The MOT test fee carries no VAT. {Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.', small: true },
+        // A line at a lower rate than the business's own is the MOT fee, which carries no VAT.
+        { type: 'text', text: 'The MOT test fee carries no VAT.', small: true, if: '[VAT Rate] < [Job Lines count] * Nz([Business.Tax Rate]) * 100' },
+        { type: 'text', text: 'Paid on {Paid On} by {Method}, thank you.', small: true, if: '[Paid On]' },
+        { type: 'text', text: '{Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.', small: true, if: 'Nz([Paid On], "") = ""' },
         FOOT,
       ] },
-    { name: 'Reminder letter', table: 'Reminders', paper: 'a4', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website'] },
+    // The letter four weeks before an MOT or service: for reminders not yet sent.
+    { name: 'Reminder letter', table: 'Reminders', paper: 'a4', where: 'Nz([Sent On], "") = ""', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website'] },
       blocks: [
         { type: 'fields', columns: 1, items: [
           { field: 'Vehicle.Customer', label: 'To' }, { field: 'Vehicle.Customer.Address', label: 'Address' }, { field: 'Vehicle.Customer.City', label: 'Town' },
@@ -299,28 +312,34 @@ export const spec = {
         { type: 'heading', text: '{Vehicle}: {Kind} due on {Due}' },
         { type: 'text', text: 'Dear {Vehicle.Customer.First Name} {Vehicle.Customer.Last Name},' },
         { type: 'text', text: 'Our records show that your {Vehicle.Make} {Vehicle.Model}, registration {Vehicle}, is due its {Kind} on {Due}. We are writing in good time so that you can book a day that suits you.' },
-        { type: 'text', text: 'An MOT can be done up to a month before the due date without losing any time on the certificate, and if your service is due too we can do both on the same visit. A courtesy car can be booked if you need one, and we can collect the car from a local address.' },
+        { type: 'text', text: 'An MOT can be done up to a month before the due date without losing any time on the certificate, and if your service is due too we can do both on the same visit. A courtesy car can be booked if you need one, and we can collect the car from a local address.', if: 'Left([Kind], 3) = "MOT"' },
+        { type: 'text', text: 'A service on time keeps the warranty and the service history in order, and we will tell you about anything else we find before doing it. A courtesy car can be booked if you need one, and we can collect the car from a local address.', if: 'Left([Kind], 3) <> "MOT"' },
         { type: 'text', text: 'To book, ring us on {Business.Phone}, write to {Business.E-mail}, or call in. If the car has been sold, or the work done elsewhere, just let us know and we will update our records.' },
         { type: 'text', text: 'Yours sincerely,' },
         { type: 'spacer', size: 24 },
         { type: 'signatures', labels: ['Service desk'] },
         FOOT,
       ] },
+    // Each trade account's unpaid invoices, oldest first, with what is owed so far and what is overdue.
     { name: 'Trade statement', table: 'Accounts', paper: 'a4', letterhead: LETTERHEAD,
       blocks: [
         { type: 'heading', text: 'Statement of account' },
         { type: 'fields', columns: 2, items: [
           { field: 'Name', label: 'Account' }, { field: 'Contact', label: 'For the attention of' }, { field: 'Address' }, { field: 'City' },
-          { field: 'Postcode' }, { field: 'Payment Days', label: 'Days to pay' }, { field: 'Credit Limit', label: 'Credit limit' },
+          { field: 'Postcode' }, { field: 'Payment Days', label: 'Days to pay' }, { field: 'Credit Limit', label: 'Credit limit', format: '#,##0.00', if: '[Credit Limit]' },
         ] },
-        { type: 'lines', table: 'Invoices', link: 'Account', sort: 'Invoice Date', columns: [
-          { field: 'Number', label: 'Invoice' }, { field: 'Job Card.Vehicle', label: 'Registration' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Due Date', label: 'Due' },
-          { field: 'Total', label: 'Amount', type: 'currency' }, { field: 'Paid On', label: 'Paid on' },
-          { expr: 'IIf(Nz([Paid On], "") = "", [Total], 0)', as: 'Owing', type: 'currency' },
-          { expr: 'IIf(Nz([Paid On], "") = "" And [Due Date] < Date(), [Total], 0)', as: 'Overdue', type: 'currency' },
+        { type: 'lines', table: 'Invoices', link: 'Account', sort: 'Invoice Date', where: 'Nz([Paid On], "") = ""', columns: [
+          { field: 'Number', label: 'Invoice' }, { field: 'Job Card.Vehicle', label: 'Registration' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Due Date', label: 'Due', format: 'dd/mm/yyyy' },
+          { expr: OVERDUE, as: 'Days Over', label: 'Days overdue', type: 'integer' },
+          { field: 'Total', label: 'Owing', type: 'currency' }, { running: 'Total', as: 'Owed So Far', label: 'Owed so far' },
+          { expr: 'IIf([Due Date] < Date(), [Total], 0)', as: 'Overdue', type: 'currency' },
         ] },
-        { type: 'totals', rows: [{ label: 'Of which overdue', expr: '[Overdue]' }, { label: 'Balance owing', expr: '[Owing]', strong: true }] },
-        { type: 'text', text: 'Invoices are due {Payment Days} days from their date. Please pay by bank transfer to {Business.Bank Details}, quoting the invoice numbers. If you have paid in the last few days, thank you, and please ignore what is shown as owing.', small: true },
+        { type: 'totals', rows: [
+          { label: 'Statement date', expr: 'Date()', format: 'dd/mm/yyyy' },
+          { label: 'Of which overdue', expr: '[Overdue]', if: '[Overdue]' }, { label: 'Balance owing', expr: '[Total]', strong: true },
+        ] },
+        { type: 'text', text: 'Nothing is owing on this account today. Thank you.', if: '[Invoices count] = 0' },
+        { type: 'text', text: 'Invoices are due {Payment Days} days from their date. Please pay by bank transfer to {Business.Bank Details}, quoting the invoice numbers. If you have paid in the last few days, thank you, and please ignore what is shown as owing.', small: true, if: '[Invoices count]' },
         FOOT,
       ] },
   ],
@@ -451,7 +470,6 @@ export const about = {
     } },
     'Job Lines': { about: 'The labour, parts and MOT fee on each job card, without VAT. When the job is invoiced, each line points at the invoice, and they are its lines.', fields: {
       'Job Card': 'The job card the line belongs to.',
-      'Invoice': 'The invoice the line is on. Empty until the job is invoiced.',
       'Technician': 'Who did the work, on a labour or MOT line; it is what the technician hours are counted from.',
       'Part': 'The part fitted, on a part line.',
       'Kind': 'Labour, Part or MOT.',
@@ -563,11 +581,11 @@ export const about = {
     'Trade invoices due': 'Unpaid trade invoices, a section for each account, with days overdue and the total owed.',
   },
   documents: {
-    'Estimate': 'The written estimate for a repair: the vehicle, the work, the labour and parts with VAT, the total and how long it holds. One for each record in Estimates.',
-    'Job card': 'Printed when a vehicle arrives and kept with its keys: the vehicle, mileage and work asked for, then the work done and parts fitted with who did them, and two lines to sign. Prices are left off, as the workshop does not need them. One for each record in Job Cards; print the one on screen.',
-    'Invoice': 'The VAT invoice for a job card: the labour, parts and MOT fee with the VAT on each line, the net, VAT and total, and how to pay. One for each record in Invoices.',
-    'Reminder letter': 'The letter sent four weeks before an MOT or service is due: short and friendly, with the registration, the due date and how to book. One for each record in Reminders; print those in the query Reminders to send. Have the wording checked for your own country.',
-    'Trade statement': 'Sent to each trade account at the month end: every invoice raised to the account with the day it was paid, what is still owing and how much is overdue. One for each record in Accounts.',
+    'Estimate': 'The written estimate for a repair: the vehicle, the work, the labour and parts with VAT, the total and how long it holds. It prints for estimates not yet answered or still in date; an answered one says the answer and when.',
+    'Job card': 'Printed when a vehicle arrives and kept with its keys: the vehicle, mileage and work asked for, then the work done and parts fitted with who did them, and two lines to sign. Prices are left off, as the workshop does not need them. It prints for job cards not yet invoiced, the vehicles in the workshop; a closed one prints from the Job Cards form.',
+    'Invoice': 'The VAT invoice for a job card: the labour, parts and MOT fee with the VAT on each line, the net, VAT and total, and how to pay, or when it was paid. The note that the MOT fee carries no VAT prints only when there is one. One for each record in Invoices, its lines found through its job card.',
+    'Reminder letter': 'The letter sent four weeks before an MOT or service is due: short and friendly, with the registration, the due date and how to book. It prints for reminders not yet sent, with a paragraph for an MOT or for a service. Have the wording checked for your own country.',
+    'Trade statement': 'Sent to each trade account at the month end: the invoices still unpaid, oldest first, with the days each is overdue, a running total of what is owed, how much of it is overdue and the day of the statement. One for each record in Accounts.',
   },
   tutorial: [
     { title: 'Take a booking', steps: [
@@ -590,7 +608,7 @@ export const about = {
     { title: 'Record a service, then invoice the job', steps: [
       'On the job card, add a line in Job Lines for each part fitted (Kind Part, the part, its name, how many, its price and cost) and for the labour (Kind Labour, the technician, the hours and the rate). Fill in Done On on each.',
       'Open the Services form and press New: choose the vehicle and job card, the kind of service and the mileage, and when the next is due. Put the same date in the vehicle\'s Service Due.',
-      'Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job card and the trade account if there is one, and fill in Invoice Date, Due Date, Net, Tax and Total. Then on each of the job card\'s lines choose the invoice in Invoice. Close the job card: Status Invoiced and Closed today.',
+      'Open the Invoices form and press New. Type the next number (INV-2026-...), choose the job card and the trade account if there is one, and fill in Invoice Date, Due Date, Net, Tax and Total. The invoice lists the job card\'s lines on its own. Close the job card: Status Invoiced and Closed today.',
       'Open the print template Invoice, choose the invoice, and press Print or Save as PDF. When the customer pays, fill in Paid On and Method.',
     ] },
     { title: 'Give an estimate', steps: [
@@ -602,7 +620,7 @@ export const about = {
     { title: 'Send next month\'s reminders', steps: [
       'Near the end of each month, open the query MOTs due next month and the query Services due next 30 days.',
       'For each vehicle, add a record on the Reminders form: the vehicle, the Kind (MOT, service, or MOT and service), the Due date and the Method from the customer\'s Remind By.',
-      'Open the query Reminders to send to check them, then open the print template Reminder letter, choose the reminders not yet sent, and press Print. Fill in Sent On on each.',
+      'Open the query Reminders to send to check them, then open the print template Reminder letter, which holds the reminders not yet sent, and press Print. Fill in Sent On on each.',
       'When a customer books from a reminder, tick Booked on it.',
     ] },
     { title: 'Month end: trade statements, hours and VAT', steps: [
@@ -615,10 +633,10 @@ export const about = {
   notes: [
     'Prices are kept without VAT and VAT is added on each line and rounded to the penny, then the lines are added up. An invoice\'s Tax is that sum, so it can differ by a penny from 20 percent of the net worked out once.',
     'The MOT fee is a line of its own with a Tax Rate of 0: the test carries no VAT. Repairs to put a failure right are ordinary labour and part lines at the full rate.',
-    'An invoice\'s lines are the job card\'s own lines, pointed at the invoice once it is raised. Add all the work to the job card before you invoice it.',
+    'An invoice\'s lines are the job card\'s own lines, found through the job card it is for. Add all the work to the job card before you invoice it; there is one invoice for each job card.',
     'The numbers on job cards, invoices, estimates and MOT tests (JC-, INV-, EST-, MT-) are typed, not made by Data Files. Keep each run in date order and start again at 0001 each January. A real test centre records the national MOT test number in Test Number.',
     'MOT Due and Service Due on a vehicle are kept by hand when a test or service is done here. A test passed up to a month before the due date keeps the same date and adds a year; a later test starts a new year from the test.',
-    'A print template prints every record of its table. Choose the record you want: the job card on screen, the reminders not yet sent, the accounts that owe something.',
+    'Each print template prints only the records it is for: job cards not yet invoiced, estimates not answered or still in date, reminders not yet sent, every invoice and every trade account. A Trade statement lists only unpaid invoices. Printed from a form, the record on screen prints whatever its state.',
     'Every registration in this sample is invented, with a Q among its last three letters so it cannot be a real car\'s. Your own records will have real registrations: keep the file safe, as they identify your customers\' vehicles.',
   ],
   faq: [
@@ -626,7 +644,7 @@ export const about = {
     { q: 'How do I find whose MOT is due so I can send reminders?', a: 'Open the query MOTs due next month, or the report MOT reminder list to print it. Add a Reminders record for each, and print the Reminder letter.' },
     { q: 'A car failed its MOT. What do I record?', a: 'The failed test with its failures as MOT Items of Kind Fail. Put the work on the job card, then add a retest with Retest Of pointing at the failed test, and tick Fixed on each failure. Advisories stay unticked until they are done; the query Advisories not fixed lists them.' },
     { q: 'Why is there no VAT on the MOT line?', a: 'The MOT test fee carries no VAT, so its line has a Tax Rate of 0. Everything else on the invoice is at the standard rate.' },
-    { q: 'How do I print an older invoice or job card?', a: 'Open the print template and choose the record by its number; every invoice and job card ever made is there.' },
+    { q: 'How do I print an older invoice or job card?', a: 'Open the print template Invoice and choose the invoice by its number; every invoice ever made is there. The Job card template holds only cards still open, so print a closed one from the Job Cards form with it on screen.' },
     { q: 'How do I see how busy each technician is?', a: 'Open the query Technician hours last 30 days for hours sold, or the query Open job cards for what each has in the workshop now.' },
     { q: 'Can I start with my own garage instead of Quarrybank?', a: 'Yes. Make the database empty from the sample, fill in the Business record with your own name, address, VAT number and bank details, then add your parts and staff. Every document prints with your details.' },
   ],
@@ -934,7 +952,7 @@ export function fill(base, { r, cal, days = 400 }) {
     let finish = d;
     let hold = null;
     const notes = [];
-    const labour = (description, hours, at = d, who = tech) => lines.push({ 'Job Card': card, Invoice: null, Technician: who, Part: null, Kind: 'Labour', Description: description, Quantity: hours, 'Unit Price': RATE, 'Unit Cost': null, 'Tax Rate': VAT_RATE, at });
+    const labour = (description, hours, at = d, who = tech) => lines.push({ 'Job Card': card, Technician: who, Part: null, Kind: 'Labour', Description: description, Quantity: hours, 'Unit Price': RATE, 'Unit Cost': null, 'Tax Rate': VAT_RATE, at });
     /** A part for the job: off the shelf, from the factor the same day, or ordered in (a day or two). Answers the day it is here. */
     const fit = (code, qty, at = d) => {
       const p = partFor(code, v);
@@ -947,7 +965,7 @@ export function fill(base, { r, cal, days = 400 }) {
         here = back ? at + 9 : lead ? open(at + lead) : at;
         keep('Part Orders', { Supplier: p.supplier.id, Part: p.id, 'Job Card': card, Quantity: qty, 'Unit Cost': p.cost, 'Ordered On': day(at), Expected: day(back ? open(at + lead) : here), 'Received On': here <= 0 ? day(here) : null, Status: here <= 0 ? 'Received' : 'On order' });
       }
-      lines.push({ 'Job Card': card, Invoice: null, Technician: null, Part: p.id, Kind: 'Part', Description: p.name, Quantity: qty, 'Unit Price': p.price, 'Unit Cost': p.cost, 'Tax Rate': VAT_RATE, at: here });
+      lines.push({ 'Job Card': card, Technician: null, Part: p.id, Kind: 'Part', Description: p.name, Quantity: qty, 'Unit Price': p.price, 'Unit Cost': p.cost, 'Tax Rate': VAT_RATE, at: here });
       if (here > finish) { finish = here; hold = 'Awaiting parts'; }
       return here;
     };
@@ -960,7 +978,7 @@ export function fill(base, { r, cal, days = 400 }) {
       // A pass up to a month early keeps the due date and adds a year; otherwise a year from the test.
       const pass = (t) => { t.expires = t.d >= v.mot - 30 && t.d <= v.mot ? plusYear(v.mot) : plusYear(t.d) - 1; moveMot(v, t.expires); };
       if (!failed) pass(test);
-      lines.push({ 'Job Card': card, Invoice: null, Technician: tech, Part: null, Kind: 'MOT', Description: 'MOT test', Quantity: 1, 'Unit Price': MOT_FEE, 'Unit Cost': null, 'Tax Rate': 0, at: d });
+      lines.push({ 'Job Card': card, Technician: tech, Part: null, Kind: 'MOT', Description: 'MOT test', Quantity: 1, 'Unit Price': MOT_FEE, 'Unit Cost': null, 'Tax Rate': 0, at: d });
       const electric = v.fuel === 'Electric';
       for (const a of r.some(ADVISORIES.filter((x) => !electric || x[1] !== 'EXH-RBX'), r.weighted([[0, 4], [1, 4], [2, 2], [3, 1]]))) {
         const row = keep('MOT Items', { 'MOT Test': test, Kind: 'Advisory', Item: a[0], Fixed: false, 'Fixed On': null });
@@ -1172,12 +1190,11 @@ export function fill(base, { r, cal, days = 400 }) {
     while (v.svc < -30) v.svc = plusYear(v.svc);
   }
 
-  // Invoices, numbered in date order once every job is known; the lines point at them.
+  // Invoices, numbered in date order once every job is known.
   invoices.sort((a, b) => a.d - b.d || a.seq - b.seq);
   for (const inv of invoices) {
     const t = totalsOf(inv.lines);
     inv.row = keep('Invoices', { Number: numberFor('INV', inv.d), 'Job Card': inv.card, Account: inv.a, 'Invoice Date': day(inv.d), 'Due Date': day(inv.a ? inv.d + inv.a.payDays : inv.d), ...t, 'Paid On': day(inv.paid), Method: inv.paid == null ? null : inv.method });
-    for (const l of inv.lines) l.Invoice = inv.row;
   }
   // MOT tests, numbered in date order; only the tests done by today.
   tests.sort((a, b) => a.d - b.d);

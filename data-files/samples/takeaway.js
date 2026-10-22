@@ -20,6 +20,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, FIRST, LAST, money } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const LINE = 'Round([Quantity] * [Unit Price], 2)';
 // Minutes since midnight of a stored date and time (2026-10-21T19:45:00 is 1185).
@@ -216,67 +219,78 @@ export const spec = {
       { table: 'Menu Items', field: 'Active', total: 'where', criteria: ['Yes'] },
     ] },
   },
-  // The print templates: one document for each record of the table named, its lines from the records pointing at it.
+  // The print templates: a document for each record of the table named that the template is for, its lines from the records pointing at it.
   documents: [
-    { name: 'Customer receipt', table: 'Orders', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Website', 'Tax Number'] },
+    // For every order not cancelled; a cancelled one still prints when it is chosen on the Orders form.
+    { name: 'Customer receipt', table: 'Orders', paper: 'receipt-80', where: '[Status] <> "Cancelled"', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Website', 'Tax Number'] },
       blocks: [
         { type: 'heading', text: 'Order {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Placed', label: 'Ordered' }, { field: 'Channel', label: 'Ordered by' }, { field: 'Method', label: 'Collection or delivery' },
-          { field: 'Due', label: 'Due' }, { field: 'Customer', label: 'Name' }, { field: 'Payment' },
+          { field: 'Placed', label: 'Ordered', format: 'dd/mm/yyyy hh:nn' }, { field: 'Channel', label: 'Ordered by' }, { field: 'Method', label: 'Collection or delivery' },
+          { field: 'Due', label: 'Due', format: 'ddd hh:nn' }, { field: 'Customer', label: 'Name', if: '[Customer]' }, { field: 'Payment' },
         ] },
         { type: 'lines', table: 'Order Lines', sort: 'Line', columns: [
           { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Menu Item.Name', label: 'Item' }, { field: 'Size.Name', label: 'Size' },
           { field: 'Notes' }, { expr: LINE, as: 'Price', type: 'currency' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Food and drink', expr: '[Price]' }, { label: 'Delivery', expr: '[Delivery Charge]' },
+          { label: 'Food and drink', expr: '[Price]' }, { label: 'Delivery', expr: '[Delivery Charge]', if: '[Delivery Charge] > 0' },
           { label: 'Total', expr: '[Total]', strong: true }, { label: 'VAT included', expr: '[Tax]' },
+          { label: 'Cash to pay', expr: '[Total]', if: 'Nz([Paid], 0) = 0 And [Status] <> "Cancelled"' },
         ] },
+        { type: 'text', text: 'Free delivery: your order is over the zone\'s amount for free delivery.', if: '[Method] = "Delivery" And Nz([Delivery Charge], 0) = 0', small: true },
+        { type: 'text', text: 'Cancelled: this order was cancelled and nothing is owed for it.', if: '[Status] = "Cancelled"' },
         { type: 'text', text: 'Payment: {Payment}. VAT number {Business.Tax Number}.', small: true },
         { type: 'text', text: '{Business.Document Footer}', small: true },
       ] },
-    { name: 'Kitchen ticket', table: 'Orders', paper: 'receipt-80',
+    // For the kitchen: the items in the order they were taken, an extra under the dish it goes on.
+    { name: 'Kitchen ticket', table: 'Orders', paper: 'receipt-80', where: '[Status] <> "Cancelled"',
       blocks: [
         { type: 'heading', text: 'Kitchen {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Due', label: 'Due' }, { field: 'Method', label: 'Collection or delivery' }, { field: 'Placed', label: 'Taken' }, { field: 'Channel', label: 'Came by' },
+          { field: 'Due', label: 'Due', format: 'ddd hh:nn' }, { field: 'Method', label: 'Collection or delivery' }, { field: 'Placed', label: 'Taken', format: 'hh:nn' }, { field: 'Channel', label: 'Came by' },
         ] },
         { type: 'lines', table: 'Order Lines', sort: 'Line', columns: [
           { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Menu Item.Name', label: 'Item' }, { field: 'Size.Name', label: 'Size' }, { field: 'Notes' },
         ] },
         { type: 'totals', rows: [{ label: 'Items', expr: '[Quantity]', type: 'integer', strong: true }] },
+        { type: 'text', text: 'CANCELLED: do not cook.', if: '[Status] = "Cancelled"' },
       ] },
-    { name: 'Delivery slip', table: 'Orders', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Phone'] },
+    // Only deliveries go out with a driver; a collection has no slip.
+    { name: 'Delivery slip', table: 'Orders', paper: 'receipt-80', where: '[Method] = "Delivery" And [Status] <> "Cancelled"', letterhead: { table: 'Business', fields: ['Name', 'Phone'] },
       blocks: [
         { type: 'heading', text: 'Delivery {Number}' },
         { type: 'fields', columns: 1, items: [
           { field: 'Customer', label: 'Deliver to' }, { field: 'Address' }, { field: 'Postcode' }, { field: 'Customer.Phone', label: 'Phone' },
-          { field: 'Delivery Notes', label: 'Notes' }, { field: 'Zone.Name', label: 'Zone' }, { field: 'Due', label: 'Due by' }, { field: 'Driver' },
+          { field: 'Delivery Notes', label: 'Notes', if: '[Delivery Notes]' }, { field: 'Zone.Name', label: 'Zone' }, { field: 'Due', label: 'Due by', format: 'ddd hh:nn' },
+          { field: 'Driver', if: '[Driver]' },
         ] },
         { type: 'lines', table: 'Order Lines', sort: 'Line', columns: [
           { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Menu Item.Name', label: 'Item' }, { field: 'Size.Name', label: 'Size' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Order total', expr: '[Total]' }, { label: 'Cash to collect', expr: 'IIf([Payment] = "Cash", [Total], 0)', strong: true },
+          { label: 'Order total', expr: '[Total]' }, { label: 'Cash to collect', expr: '[Total]', strong: true, if: '[Payment] = "Cash"' },
         ] },
-        { type: 'text', text: 'Payment: {Payment}. Card and online orders are paid already; for cash, collect the amount above and hand it in at the end of the night.', small: true },
+        { type: 'text', text: 'Cash: collect the amount above and hand it in at the end of the night.', if: '[Payment] = "Cash"', small: true },
+        { type: 'text', text: 'Paid already ({Payment}): nothing to collect.', if: '[Payment] <> "Cash"', small: true },
       ] },
     { name: 'Driver pay sheet', table: 'Driver Pay', paper: 'a4', letterhead: LETTERHEAD,
       blocks: [
         { type: 'heading', text: 'Driver pay sheet {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Driver' }, { field: 'Week Beginning', label: 'Week beginning' }, { field: 'Driver.Phone', label: 'Phone' },
-          { field: 'Week Ending', label: 'Week ending' }, { field: 'Drops' }, { field: 'Pay Date', label: 'Paid on' },
+          { field: 'Driver' }, { field: 'Week Beginning', label: 'Week beginning', format: 'dd/mm/yyyy' }, { field: 'Driver.Phone', label: 'Phone' },
+          { field: 'Week Ending', label: 'Week ending', format: 'dd/mm/yyyy' }, { field: 'Pay Date', label: 'Paid on', format: 'dd/mm/yyyy' },
         ] },
-        { type: 'lines', table: 'Orders', link: 'Driver Pay', sort: 'Handed Over', columns: [
-          { field: 'Number', label: 'Order' }, { field: 'Handed Over', label: 'Delivered' }, { field: 'Zone.Name', label: 'Zone' },
+        // The drops night by night, with each night's fees and the cash handed in that night.
+        { type: 'lines', table: 'Orders', link: 'Driver Pay', sort: 'Handed Over', group: 'Night', subtotals: ['Drop Fee', 'Cash Taken'], columns: [
+          { expr: 'Format([Handed Over], "dddd dd/mm/yyyy")', as: 'Night' },
+          { field: 'Number', label: 'Order' }, { field: 'Handed Over', label: 'Delivered', format: 'hh:nn' }, { field: 'Zone.Name', label: 'Zone' },
           { field: 'Postcode' }, { field: 'Drop Fee', type: 'currency' },
           { expr: 'IIf([Payment] = "Cash", [Total], 0)', as: 'Cash Taken', type: 'currency' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Drops', expr: '[Drops]', type: 'integer' }, { label: 'Pay for the drops', expr: '[Drop Pay]', strong: true },
-          { label: 'Cash collected, handed in each night', expr: '[Cash Taken]' },
+          { label: 'Drops', expr: '[Orders count]', type: 'integer' }, { label: 'Pay for the drops', expr: '[Drop Pay]', strong: true },
+          { label: 'Cash collected, handed in each night', expr: '[Cash Taken]', if: '[Cash Taken] > 0' },
         ] },
         { type: 'text', text: 'Paid per drop at the zone\'s fee, which covers the driver\'s own fuel and car. Tax, National Insurance and any other deduction are worked out by the payroll, not on this sheet.', small: true },
         { type: 'signatures', labels: ['Driver', 'Manager'] },
@@ -446,10 +460,10 @@ export const about = {
     'Menu costing sheet': 'Each item by section with its price, price less VAT, food cost, food cost percentage and gross profit, and the averages. For setting prices.',
   },
   documents: {
-    'Customer receipt': 'Goes in the bag or to the customer at the counter, on an 80 mm roll: the order number, when it was ordered and is due, each item with its size, notes and price, the food and drink, the delivery charge, the total and the VAT within it, and how it was paid. Every order prints, so choose the one you want.',
-    'Kitchen ticket': 'Printed on the kitchen printer as the order is taken: the order number, the time due, collection or delivery, and each item with its size and notes, with no prices. Meal deals show what was chosen. Every order prints, so choose the new ones.',
-    'Delivery slip': 'Taped to the bag for the driver: the customer\'s name, address, postcode, phone and delivery notes, the zone, the time due, what is in the bag, and whether it is paid or how much cash to collect. Collections print one too, with no address, so choose the deliveries.',
-    'Driver pay sheet': 'Given to each driver with their pay each week: every drop they made with its zone and fee, the cash they collected and handed in, and the pay for the drops. Numbered DRV-2026-0042. Tax and deductions are left for the payroll.',
+    'Customer receipt': 'Goes in the bag or to the customer at the counter, on an 80 mm roll: the order number, when it was ordered and is due, each item with its size, notes and price, the food and drink, the delivery charge when there is one, the total and the VAT within it, how it is paid, and the cash to pay when it is not paid yet. It is for every order not cancelled; a cancelled one chosen on the Orders form still prints, marked cancelled.',
+    'Kitchen ticket': 'Printed on the kitchen printer as the order is taken: the order number, the time due, collection or delivery, and each item with its size and notes in the order taken, an extra under the dish it goes on, with no prices. Meal deals show what was chosen. It is for every order not cancelled; choose the new ones to print.',
+    'Delivery slip': 'Taped to the bag for the driver: the customer\'s name, address, postcode, phone and delivery notes, the zone, the time due, what is in the bag, and either the cash to collect or a line saying it is paid already. It is only for deliveries that are not cancelled: a collection has no slip.',
+    'Driver pay sheet': 'Given to each driver with their pay each week: every drop they made, night by night, with its time, zone and fee and each night\'s fees and cash handed in, the number of drops, the cash they collected, and the pay for the drops. Numbered DRV-2026-0042. Tax and deductions are left for the payroll.',
   },
   tutorial: [
     { title: 'Take a phone order and send it to the kitchen', steps: [
@@ -506,7 +520,7 @@ export const about = {
     'Goods, Total, Tax and Net on an order, and Drops and Drop Pay on a pay sheet, are stored figures typed when the record is made, not added up by the form. The sample\'s own are exactly the sums of their lines.',
     'A meal deal is a line at the deal\'s price followed by each thing chosen at nought, so best sellers count the pizzas and curries in deals as sold, and the money stays with the deal.',
     'Recipes are written for one item, and for the smallest pizza; the Portion on each order line scales them for the size. Extras have recipes of their own. Ingredient use is worked out from these, not counted, so check it against a stock count now and then.',
-    'Every order prints from each of the three order templates. A collection has a delivery slip with no address, and a cancelled order still has a receipt, so choose the orders you mean before pressing Print.',
+    'The three order templates leave cancelled orders out, and the Delivery slip prints for deliveries only. Choose the orders you mean before pressing Print; an order chosen on the Orders form always prints, a cancelled one marked as cancelled.',
     'Time is kept to the minute in Placed, Due, Ready, Out and Handed Over, and the delivery times are worked out from them. Leave Handed Over empty until the customer has the food.',
     'The VAT is kept simple: 20% on hot food, drinks, ice cream and delivery, nought on the cold desserts and coleslaw. Have yours checked by an accountant for your own country.',
     'A few orders are booked ahead for tonight and the next two nights, so Tonight\'s orders and Orders still to go out have something on them whenever the sample is made. Orders taken today before the time it was made are there too, with their status at that time.',

@@ -29,6 +29,11 @@ const NET = 'Round(Nz([Money In]) - Nz([Money Out]), 2)';
 const LAST_YEAR = { expr: 'DateDiff("d", [Date], Date())', as: 'Days Ago', total: 'where', criteria: ['Between 0 And 365'] };
 // The business's own details at the head of every document.
 const LETTERHEAD = { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website'] };
+// Who a tenant's paper is addressed to: a business by its name, with the person who signs for it.
+const TO = 'IIf(Nz([Business Name], "") <> "", [Business Name] & ", for the attention of " & [First Name] & " " & [Last Name], [First Name] & " " & [Last Name])';
+
+// The print templates use where, if, format, lines.on and running balances.
+export const minOffice = '2.16.0';
 
 export const spec = {
   // Where a value below nought is right: a check already overdue, a building
@@ -229,69 +234,90 @@ export const spec = {
     { name: 'Monthly accounts', query: 'Money in and out by month', columns: ['Month', { field: 'Money In', type: 'currency' }, { field: 'Money Out', type: 'currency' }, { field: 'Net', type: 'currency' }], totals: [{ field: 'Money In', fn: 'sum' }, { field: 'Money Out', fn: 'sum' }, { field: 'Net', fn: 'sum' }] },
     { name: 'Rent invoices this month', title: 'Rent invoices raised in the last 31 days', query: 'Rent invoices raised', columns: ['Invoice', { field: 'Invoice Date', type: 'date' }, { field: 'Due Date', type: 'date' }, 'Tenant', 'Unit', { field: 'Net', type: 'currency' }, { field: 'VAT', type: 'currency' }, { field: 'Amount', type: 'currency' }], totals: [{ field: 'Net', fn: 'sum' }, { field: 'VAT', fn: 'sum' }, { field: 'Amount', fn: 'sum' }] },
   ],
-  // The print templates: a document for each record of their table, the business's details at the head.
+  // The print templates: each prints for the records it is for (its `where`),
+  // and leaves out what does not apply to one record (an `if` on a block, a
+  // field or a total). A record printed from its form always prints.
   documents: [
-    { name: 'Rent invoice', table: 'Rent Charges', paper: 'a4', letterhead: { ...LETTERHEAD, fields: [...LETTERHEAD.fields, 'Tax Number'] }, blocks: [
+    // This month's invoices: those raised in the last 31 days.
+    { name: 'Rent invoice', table: 'Rent Charges', paper: 'a4', letterhead: LETTERHEAD, where: 'DateDiff("d", [Invoice Date], Date()) >= 0 And DateDiff("d", [Invoice Date], Date()) <= 31', blocks: [
       { type: 'heading', text: 'Rent invoice {Number}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Tenant', label: 'Invoice to' }, { field: 'Number', label: 'Invoice number' },
-        { field: 'Tenant.Business Name', label: 'Trading as' }, { field: 'Invoice Date', label: 'Date' },
-        { field: 'Tenant.Address', label: 'Address' }, { field: 'Due Date', label: 'Rent due' },
-        { field: 'Tenant.City', label: 'City' }, { field: 'Period End', label: 'Rent paid up to' },
-        { field: 'Tenant.Postcode', label: 'Postcode' }, { field: 'Tenant.Account', label: 'Rent account' },
+        { field: 'Number', label: 'Invoice number' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Tenant.Account', label: 'Rent account' }, { field: 'Due Date', label: 'Rent due', format: 'dd/mm/yyyy' },
+        { field: 'Lease.Pays By', label: 'You pay by' }, { field: 'Period End', label: 'Rent paid up to', format: 'dd/mm/yyyy' },
       ] },
-      { type: 'text', text: 'Rent for {Lease.Unit.Postal Address}, {Lease.Unit.Property.City} {Lease.Unit.Property.Postcode}, for the month from {Due Date} to {Period End}, due in advance. You pay by: {Lease.Pays By}.' },
-      { type: 'text', text: 'Payments received against this invoice:', small: true },
-      { type: 'lines', table: 'Transactions', link: 'Charge', sort: 'Date', columns: [
-        { field: 'Date', label: 'Received' }, { field: 'Method' }, { field: 'Money In', label: 'Amount', type: 'currency' },
+      // Who it is addressed to: a business by its name, with the person who signed for it.
+      { type: 'lines', table: 'Tenants', on: { ID: 'Tenant' }, columns: [
+        { expr: TO, as: 'Invoice to', type: 'text' },
+        { expr: '[Address] & ", " & [City] & " " & [Postcode]', as: 'Address', type: 'text' },
+      ] },
+      { type: 'text', text: 'Rent for {Lease.Unit.Postal Address}, {Lease.Unit.Property.City} {Lease.Unit.Property.Postcode}, for the month from {Due Date} to {Period End}, due in advance.' },
+      { type: 'text', text: 'Payments received against this invoice:', small: true, if: 'Nz([Amount Paid]) > 0' },
+      { type: 'lines', table: 'Transactions', link: 'Charge', sort: 'Date', where: 'Nz([Money In]) > 0', if: 'Nz([Amount Paid]) > 0', columns: [
+        { field: 'Date', label: 'Received', format: 'dd/mm/yyyy' }, { field: 'Method' }, { field: 'Money In', label: 'Amount', type: 'currency' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Rent', expr: '[Net]' }, { label: 'VAT', expr: 'Nz([Tax])' }, { label: 'Total for the month', expr: '[Amount]' },
-        { label: 'Already paid', expr: 'Nz([Amount Paid])' }, { label: 'Balance to pay', expr: 'Round([Amount] - Nz([Amount Paid]), 2)', strong: true },
+        { label: 'Rent', expr: '[Net]' },
+        { label: 'VAT rate %', expr: '[Tax Rate] * 100', format: '0', if: 'Nz([Tax]) > 0' },
+        { label: 'VAT', expr: '[Tax]', if: 'Nz([Tax]) > 0' },
+        { label: 'Total for the month', expr: '[Amount]', if: 'Nz([Tax]) > 0' },
+        { label: 'Already paid', expr: 'Nz([Amount Paid])', if: 'Nz([Amount Paid]) > 0' },
+        { label: 'Balance to pay', expr: OWED, strong: true },
       ] },
-      { type: 'text', text: '{Business.Payment Terms} Bank transfer to {Business.Bank Details}, quoting {Number}. A standing order pays this on the due date by itself: there is nothing more to do.', small: true },
-      { type: 'text', text: 'VAT registration {Business.Tax Number}. VAT is added only to the rent of a shop or workshop in a building the landlord has opted to tax; rent on a home carries none.', small: true },
+      { type: 'text', text: '{Business.Payment Terms} Bank transfer to {Business.Bank Details}, quoting {Number}. If you pay by standing order, it pays this on the due date by itself and there is nothing more to do.', small: true, if: `${OWED} > 0` },
+      { type: 'text', text: 'Paid in full: thank you. There is nothing more to pay for this month.', if: `${OWED} <= 0` },
+      { type: 'text', text: 'VAT registration {Business.Tax Number}. The landlord has opted to tax this building, so VAT is added to the rent of its shops and workshops.', small: true, if: 'Nz([Tax]) > 0' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
+    // Every invoice on the tenant's account, with the balance after each month.
     { name: 'Rent statement', table: 'Tenants', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Rent statement: {First Name} {Last Name}' },
+      { type: 'totals', rows: [{ label: 'Statement date', expr: 'Date()', format: 'dd/mm/yyyy' }] },
       { type: 'fields', columns: 2, items: [
-        { field: 'Business Name', label: 'Trading as' }, { field: 'Account', label: 'Rent account' },
-        { field: 'Address', label: 'Address' }, { field: 'Phone', label: 'Phone' },
-        { field: 'City', label: 'City' }, { field: 'E-mail', label: 'E-mail' }, { field: 'Postcode', label: 'Postcode' },
+        { field: 'Account', label: 'Rent account' }, { field: 'Phone', label: 'Phone' },
+        { field: 'Address', label: 'Address' }, { field: 'E-mail', label: 'E-mail' },
+        { field: 'City', label: 'City' }, { field: 'Postcode', label: 'Postcode' },
+        { field: 'Business Name', label: 'Trading as', if: '[Business Name]' },
       ] },
       { type: 'lines', table: 'Rent Charges', link: 'Tenant', sort: 'Due Date', columns: [
-        { field: 'Number', label: 'Invoice' }, { field: 'Period', label: 'Month' }, { field: 'Due Date', label: 'Due' },
-        { field: 'Amount', label: 'Charged', type: 'currency' }, { field: 'Amount Paid', label: 'Paid', type: 'currency' }, { field: 'Last Paid On', label: 'Paid on' },
-        { expr: 'Round([Amount] - Nz([Amount Paid]), 2)', as: 'Owing', type: 'currency' },
+        { field: 'Number', label: 'Invoice' }, { expr: 'Format([Due Date], "mmm yyyy")', as: 'Month', type: 'text' },
+        { field: 'Due Date', label: 'Due', format: 'dd/mm/yyyy' },
+        { field: 'Amount', label: 'Charged', type: 'currency' }, { field: 'Amount Paid', label: 'Paid', type: 'currency' },
+        { field: 'Last Paid On', label: 'Paid on', format: 'dd/mm/yyyy' },
+        { expr: OWED, as: 'Unpaid', type: 'currency' }, { running: 'Unpaid', as: 'Balance' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Rent charged', expr: '[Amount]' }, { label: 'Rent paid', expr: '[Amount Paid]' }, { label: 'Balance owing', expr: '[Owing]', strong: true },
+        { label: 'Rent charged', expr: '[Amount]' }, { label: 'Rent paid', expr: '[Amount Paid]' }, { label: 'Balance owing', expr: '[Balance]', strong: true },
       ] },
-      { type: 'text', text: 'Please pay any balance owing to {Business.Bank Details}, quoting your rent account {Account}. If you have paid since this statement was made, thank you. If anything here looks wrong, call us on {Business.Phone} and we will look into it.', small: true },
+      { type: 'text', text: 'Please pay the balance owing to {Business.Bank Details}, quoting your rent account {Account}. If you have paid since this statement was made, thank you. If anything here looks wrong, call us on {Business.Phone} and we will look into it.', small: true, if: '[Balance] > 0' },
+      { type: 'text', text: 'Your rent account is clear: nothing is owed. Thank you. If anything here looks wrong, call us on {Business.Phone} and we will look into it.', small: true, if: '[Balance] <= 0' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Tenancy agreement', table: 'Leases', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Homes let now or about to be.
+    { name: 'Tenancy agreement', table: 'Leases', paper: 'a4', letterhead: LETTERHEAD, where: '[Type] = "Residential" And [Status] <> "Ended"', blocks: [
       { type: 'heading', text: 'Tenancy agreement for a home' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Tenant', label: 'Tenant' }, { field: 'Signed On', label: 'Date of this agreement' },
-        { field: 'Unit.Postal Address', label: 'The property' }, { field: 'Start', label: 'Tenancy begins' },
-        { field: 'Unit.Property.City', label: 'City' }, { field: 'End', label: 'Fixed term ends' },
+        { field: 'Tenant', label: 'Tenant' }, { field: 'Signed On', label: 'Date of this agreement', format: 'd mmmm yyyy' },
+        { field: 'Unit.Postal Address', label: 'The property' }, { field: 'Start', label: 'Tenancy begins', format: 'd mmmm yyyy' },
+        { field: 'Unit.Property.City', label: 'City' }, { field: 'End', label: 'Fixed term ends', format: 'd mmmm yyyy' },
         { field: 'Unit.Property.Postcode', label: 'Postcode' }, { field: 'Rent Day', label: 'Rent day each month' },
         { field: 'Unit.Bedrooms', label: 'Bedrooms' }, { field: 'Pays By', label: 'Rent paid by' },
-        { field: 'Tenant.Account', label: 'Rent account' }, { field: 'Deposit Ref', label: 'Deposit protection reference' },
+        { field: 'Tenant.Account', label: 'Rent account' }, { field: 'Deposit Ref', label: 'Deposit protection reference', if: '[Deposit Ref]' },
       ] },
       { type: 'totals', rows: [{ label: 'Rent each month', expr: '[Monthly Rent]' }, { label: 'Deposit', expr: '[Deposit]' }] },
       { type: 'text', text: 'This agreement is made on {Signed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Landlord") and {Tenant} ("the Tenant"). The Landlord lets the property named above ("the Property") to the Tenant as a home, on the terms below.' },
+      { type: 'text', text: 'It renews the Tenant\'s earlier tenancy of the Property, which ends the day before this one begins.', if: '[Renewal]' },
       { type: 'text', text: '1. The property. The Property is let together with the use of any shared entrance, halls, stairs, paths, garden and bin store that serve it, and with the contents listed in the inventory. It is to be lived in by the Tenant and the members of the Tenant\'s household named on the application, and no one else without the Landlord\'s written consent.' },
       { type: 'text', text: '2. The term. The tenancy begins on {Start} and its fixed term ends on {End}. If neither side has ended it by then, it carries on from month to month on the same terms until it is ended as clause 11 says.' },
       { type: 'text', text: '3. The rent. The rent is {Monthly Rent} a month, paid in advance on day {Rent Day} of each month, the first payment on {Start}. The Tenant pays it by the method shown above into the Landlord\'s account, {Business.Bank Details}, quoting the rent account {Tenant.Account}. The Landlord sends a rent invoice before each rent day. The rent does not go up during the fixed term. After it, the Landlord may raise it no more than once a year, by giving at least two months\' notice in writing.' },
       { type: 'text', text: '4. What the rent includes. The rent includes: {Unit.Rent Includes}. The Tenant pays for everything else used at the Property, among them council tax, gas, electricity, water and sewerage, telephone and broadband.' },
-      { type: 'text', text: '5. The deposit. The Tenant pays a deposit of {Deposit} before the tenancy begins. Within 30 days of receiving it, the Landlord protects it in a government-approved tenancy deposit scheme and gives the Tenant the scheme\'s details; its reference is shown above once it has been given. At the end of the tenancy the deposit is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning needed to bring the Property back to its condition at the start. If they cannot agree, either of them may ask the scheme to decide.' },
+      { type: 'text', text: '5. The deposit. The Tenant pays a deposit of {Deposit} before the tenancy begins. Within 30 days of receiving it, the Landlord protects it in a government-approved tenancy deposit scheme and gives the Tenant the scheme\'s details; its reference is shown above once it has been given. At the end of the tenancy the deposit is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning needed to bring the Property back to its condition at the start. If they cannot agree, either of them may ask the scheme to decide.', if: 'Nz([Renewal], 0) = 0' },
+      { type: 'text', text: '5. The deposit. The deposit of {Deposit} paid for the earlier tenancy is kept, and carries on as the deposit for this one, protected in the same scheme under the reference shown above. At the end of the tenancy it is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning needed to bring the Property back to its condition at the start of the first tenancy. If they cannot agree, either of them may ask the scheme to decide.', if: '[Renewal]' },
       { type: 'text', text: '6. The Tenant agrees: to pay the rent on time; to keep the Property clean and in good order, and to heat and air it so that damp and mould do not build up; to tell the Landlord promptly of any repair needed or damage done; to test the smoke alarms once a month; not to make alterations, redecorate or change the locks without the Landlord\'s written consent; not to cause a nuisance or annoyance to the neighbours; not to sublet the Property or take in a lodger without the Landlord\'s written consent; and to give back all the keys at the end.' },
       { type: 'text', text: '7. The Landlord agrees: to let the Tenant live in the Property in peace, without needless interruption; to keep the structure and outside in repair, including the roof, walls, windows, gutters and drains; to keep the supplies of water, gas and electricity, and the heating and hot water, in repair and working order; to have any gas appliances checked by a registered engineer every year and the wiring every five years, and to give the Tenant a copy of each certificate; to fit smoke alarms, and carbon monoxide alarms where they are needed; and to insure the building.' },
       { type: 'text', text: '8. Repairs and access. The Tenant reports repairs to the Landlord on {Business.Phone} or at {Business.E-mail}, and the Landlord arranges them in a reasonable time, the most urgent first. The Landlord, or a contractor sent by the Landlord, may come in at a reasonable time of day to inspect the Property or carry out repairs after giving the Tenant at least 24 hours\' notice in writing. In an emergency, such as a gas leak, a flood or a fire, they may come in at once.' },
-      { type: 'text', text: '9. Pets and smoking. Pets agreed for this tenancy: {Pets}. Any other pet needs the Landlord\'s written consent first, which will not be refused without good reason. No one may smoke or vape inside the Property.' },
+      { type: 'text', text: '9. Pets and smoking. No pets are agreed for this tenancy. A pet needs the Landlord\'s written consent first, which will not be refused without good reason. No one may smoke or vape inside the Property.', if: 'Nz([Pets], "None") = "None"' },
+      { type: 'text', text: '9. Pets and smoking. Pets agreed for this tenancy: {Pets}. Any other pet needs the Landlord\'s written consent first, which will not be refused without good reason. No one may smoke or vape inside the Property.', if: 'Nz([Pets], "None") <> "None"' },
       { type: 'text', text: '10. The inventory. An inventory and record of condition, with photographs, is made at the start of the tenancy and signed by both sides. At the end, the Property is compared with it, allowing for fair wear and tear.' },
       { type: 'text', text: '11. Ending the tenancy. The Tenant may end the tenancy at the end of the fixed term, or at any time after it, by giving at least one month\'s notice in writing, ending the day before a rent day. The Landlord may end it only on the grounds, and with the notice, that the law allows, and always in writing. Before the fixed term ends, the Landlord will ask the Tenant whether they would like to renew.' },
       { type: 'text', text: '12. Notices. Notices to the Landlord go to {Business.Address}, {Business.City} {Business.Postcode} or {Business.E-mail}. Notices to the Tenant go to the Property, or to {Tenant.E-mail}.' },
@@ -299,60 +325,83 @@ export const spec = {
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['Signed for the Landlord', 'Date', 'Signed by the Tenant', 'Date'] },
     ] },
-    { name: 'Commercial lease summary', table: 'Leases', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Shops and workshops let now or about to be.
+    { name: 'Commercial lease summary', table: 'Leases', paper: 'a4', letterhead: LETTERHEAD, where: '[Type] = "Commercial" And [Status] <> "Ended"', blocks: [
       { type: 'heading', text: 'Commercial lease: summary of terms' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Tenant.Business Name', label: 'Tenant' }, { field: 'Signed On', label: 'Date of the lease' },
-        { field: 'Tenant', label: 'Signed for the tenant by' }, { field: 'Start', label: 'Term begins' },
-        { field: 'Unit.Postal Address', label: 'The premises' }, { field: 'End', label: 'Term ends' },
-        { field: 'Unit.Property.City', label: 'City' }, { field: 'Rent Review', label: 'Rent review' },
-        { field: 'Unit.Property.Postcode', label: 'Postcode' }, { field: 'Rent Day', label: 'Rent day each month' },
-        { field: 'Permitted Use', label: 'Permitted use' }, { field: 'Tenant.Account', label: 'Rent account' },
+        { field: 'Tenant.Business Name', label: 'Tenant' }, { field: 'Signed On', label: 'Date of the lease', format: 'd mmmm yyyy' },
+        { field: 'Tenant', label: 'Signed for the tenant by' }, { field: 'Start', label: 'Term begins', format: 'd mmmm yyyy' },
+        { field: 'Unit.Postal Address', label: 'The premises' }, { field: 'End', label: 'Term ends', format: 'd mmmm yyyy' },
+        { field: 'Unit.Property.City', label: 'City' }, { field: 'Rent Day', label: 'Rent day each month' },
+        { field: 'Unit.Property.Postcode', label: 'Postcode' }, { field: 'Tenant.Account', label: 'Rent account' },
+        { field: 'Permitted Use', label: 'Permitted use' }, { field: 'Rent Review', label: 'Rent review', format: 'd mmmm yyyy', if: '[Rent Review]' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Rent each month', expr: '[Monthly Rent]' }, { label: 'VAT on the rent', expr: 'Round([Monthly Rent] * Nz([Tax Rate]), 2)' },
-        { label: 'Each month with VAT', expr: '[Rent each month] + [VAT on the rent]', strong: true }, { label: 'Rent for a year', expr: '[Monthly Rent] * 12' },
+        { label: 'Rent each month', expr: '[Monthly Rent]' },
+        { label: 'VAT rate %', expr: '[Tax Rate] * 100', format: '0', if: 'Nz([Tax Rate]) > 0' },
+        { label: 'VAT on the rent', expr: 'Round([Monthly Rent] * [Tax Rate], 2)', if: 'Nz([Tax Rate]) > 0' },
+        { label: 'Each month with VAT', expr: '[Rent each month] + [VAT on the rent]', strong: true, if: 'Nz([Tax Rate]) > 0' },
+        { label: 'Rent for a year', expr: '[Monthly Rent] * 12' },
         { label: 'Deposit held', expr: '[Deposit]' },
       ] },
       { type: 'text', text: 'This summary sets out the main terms agreed between {Business.Name} ("the Landlord") and {Tenant.Business Name} ("the Tenant") for the lease of the premises named above. It goes with the lease and does not replace it: where the two differ, the lease is what counts.' },
       { type: 'text', text: '1. The premises. The unit named above, with the right to use the shared paths, service yard and bin store in common with the other occupiers.' },
       { type: 'text', text: '2. Use. The premises may be used for the permitted use shown above and for nothing else without the Landlord\'s written consent, which will not be refused without good reason.' },
       { type: 'text', text: '3. Term. The lease runs from {Start} to {End}. The Tenant has no right to end it early except as the lease says.' },
-      { type: 'text', text: '4. Rent. The rent is {Monthly Rent} a month, paid in advance by bank transfer on day {Rent Day} of each month, quoting the rent account. VAT is added at the rate shown above when the Landlord has opted to tax the building; otherwise none is added. Where a rent review date is shown, the rent is reviewed on that date to the rent the premises would then let for on the open market, and it does not go down at review.' },
+      { type: 'text', text: '4. Rent. The rent is {Monthly Rent} a month, paid in advance by bank transfer on day {Rent Day} of each month, quoting the rent account. The Landlord has opted to tax the building, so VAT is added to the rent at the rate shown above.', if: 'Nz([Tax Rate]) > 0' },
+      { type: 'text', text: '4. Rent. The rent is {Monthly Rent} a month, paid in advance by bank transfer on day {Rent Day} of each month, quoting the rent account. No VAT is added: the Landlord has not opted to tax the building, and will give the Tenant notice in writing before ever doing so.', if: 'Nz([Tax Rate]) = 0' },
+      { type: 'text', text: 'The rent is reviewed on {Rent Review} to the rent the premises would then let for on the open market. It does not go down at review.', if: '[Rent Review]' },
       { type: 'text', text: '5. Deposit. The Tenant pays the deposit shown above, three months\' rent, before the term begins. The Landlord holds it until the lease ends and returns it within 28 days, less any rent or other sums then owed and the cost of any repairs the Tenant should have done.' },
       { type: 'text', text: '6. Outgoings. The Tenant pays the business rates, water, power and telephone for the premises. The Landlord insures the building; the premium is included in the rent.' },
-      { type: 'text', text: '7. Repairs. The Tenant keeps the inside of the premises in good repair and decoration, together with the shop front or roller door, the doors and the glass, and the Tenant\'s own fittings. The Landlord keeps the roof, the structure, the outside walls and the shared parts in repair. Notes agreed for this lease: {Notes}' },
+      { type: 'text', text: '7. Repairs. The Tenant keeps the inside of the premises in good repair and decoration, together with the shop front or roller door, the doors and the glass, and the Tenant\'s own fittings. The Landlord keeps the roof, the structure, the outside walls and the shared parts in repair.', if: 'Nz([Notes], "") = ""' },
+      { type: 'text', text: '7. Repairs. The Tenant keeps the inside of the premises in good repair and decoration, together with the shop front or roller door, the doors and the glass, and the Tenant\'s own fittings. The Landlord keeps the roof, the structure, the outside walls and the shared parts in repair. Agreed for this lease: {Notes}', if: '[Notes]' },
       { type: 'text', text: '8. Access. The Landlord may come in to inspect or repair after giving at least 48 hours\' notice, and at once in an emergency. The premises are inspected once a year.' },
       { type: 'text', text: '9. Alterations, signs and assignment. Alterations other than minor ones inside, and any sign outside, need the Landlord\'s written consent. The Tenant may not assign the lease or sublet without the Landlord\'s written consent, which will not be refused without good reason.' },
       { type: 'text', text: '10. The end of the lease. At the end the Tenant gives the premises back clean, in the repair the lease asks for, with the Tenant\'s own fittings and signs taken away if the Landlord asks. The Landlord will talk to the Tenant about a new lease at least six months before the term ends.' },
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['For the Landlord', 'Date', 'For the Tenant', 'Date'] },
     ] },
-    { name: 'Deposit receipt', table: 'Deposits', paper: 'a5', letterhead: LETTERHEAD, blocks: [
+    // The deposits still held: the tenant's receipt for as long as the landlord has the money.
+    { name: 'Deposit receipt', table: 'Deposits', paper: 'a5', letterhead: LETTERHEAD, where: 'Nz([Returned On], "") = ""', blocks: [
       { type: 'heading', text: 'Deposit receipt {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Lease.Tenant', label: 'Received from' }, { field: 'Number', label: 'Receipt number' },
-        { field: 'Lease.Tenant.Business Name', label: 'Trading as' }, { field: 'Received On', label: 'Received on' },
-        { field: 'Lease.Unit.Postal Address', label: 'For the tenancy of' }, { field: 'Paid By', label: 'Paid by' },
-        { field: 'Lease.Start', label: 'Tenancy begins' }, { field: 'Held By', label: 'Held by' },
-        { field: 'Lease.Tenant.Account', label: 'Rent account' }, { field: 'Lease.Deposit Ref', label: 'Protection reference' },
+        { field: 'Lease.Unit.Postal Address', label: 'For the tenancy of' }, { field: 'Received On', label: 'Received on', format: 'dd/mm/yyyy' },
+        { field: 'Lease.Tenant.Account', label: 'Rent account' }, { field: 'Paid By', label: 'Paid by' },
+        { field: 'Lease.Start', label: 'Tenancy begins', format: 'dd/mm/yyyy' }, { field: 'Held By', label: 'Held by' },
+        // Held by the landlord: a shop or workshop, let to a business.
+        { field: 'Lease.Tenant.Business Name', label: 'Trading as', if: '[Held By] = "Landlord"' },
+        { field: 'Returned On', label: 'Returned on', format: 'dd/mm/yyyy', if: '[Returned On]' },
+        { field: 'Amount Returned', label: 'Amount returned', format: '#,##0.00', if: '[Returned On]' },
       ] },
       { type: 'totals', rows: [{ label: 'Deposit received', expr: '[Amount]', strong: true }] },
-      { type: 'text', text: 'This deposit is held as security for the tenant\'s side of the agreement. It is not rent and is not used to pay rent while the tenancy runs. The deposit on a home is protected in a tenancy deposit scheme within 30 days, and the scheme\'s reference is sent to the tenant; the deposit on a shop or workshop is held by the landlord until the lease ends. At the end it is returned, less anything owed, as the agreement says.', small: true },
+      { type: 'text', text: 'This deposit is held as security for the tenant\'s side of the agreement. It is not rent and is not used to pay rent while the tenancy runs. It is protected in a government-approved tenancy deposit scheme within 30 days of being received, and the scheme\'s details and reference are sent to the tenant. At the end it is returned, less anything owed, as the agreement says.', small: true, if: '[Held By] <> "Landlord"' },
+      { type: 'text', text: 'This deposit is held as security for the tenant\'s side of the lease. It is not rent and is not used to pay rent while the lease runs. The landlord holds it until the lease ends and returns it within 28 days, less any rent or other sums then owed, as the lease says.', small: true, if: '[Held By] = "Landlord"' },
+      { type: 'text', text: 'Returned on {Returned On}. {Notes}', small: true, if: '[Returned On]' },
       { type: 'spacer', size: 16 },
       { type: 'signatures', labels: ['Received for the Landlord'] },
     ] },
-    { name: 'Rent arrears letter', table: 'Rent Reminders', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Letters still waiting for their pay-by date, each listing the months unpaid when it was written.
+    { name: 'Rent arrears letter', table: 'Rent Reminders', paper: 'a4', letterhead: LETTERHEAD, where: '[Outcome] = "Waiting"', blocks: [
       { type: 'fields', columns: 2, items: [
-        { field: 'Lease.Tenant', label: 'To' }, { field: 'Sent On', label: 'Date' },
+        { field: 'Lease.Tenant', label: 'To' }, { field: 'Sent On', label: 'Date', format: 'd mmmm yyyy' },
         { field: 'Lease.Tenant.Address', label: 'Address' }, { field: 'Number', label: 'Our reference' },
         { field: 'Lease.Tenant.City', label: 'City' }, { field: 'Lease.Tenant.Account', label: 'Rent account' },
-        { field: 'Lease.Tenant.Postcode', label: 'Postcode' }, { field: 'Since', label: 'Unpaid since' },
+        { field: 'Lease.Tenant.Postcode', label: 'Postcode' }, { field: 'Pay By', label: 'Please pay by', format: 'd mmmm yyyy' },
       ] },
       { type: 'heading', text: 'Rent arrears: {Stage}' },
       { type: 'text', text: 'Dear {Lease.Tenant},' },
-      { type: 'text', text: 'Our records show that rent of {Amount Owed} is unpaid on your tenancy of {Lease.Unit.Postal Address}. The oldest unpaid month fell due on {Since}; the number of months unpaid is {Months Owing}.' },
-      { type: 'totals', rows: [{ label: 'Rent unpaid', expr: '[Amount Owed]', strong: true }] },
+      { type: 'text', text: 'Our records show that rent of {Amount Owed} is unpaid on your tenancy of {Lease.Unit.Postal Address}. The months unpaid are listed below; the oldest fell due on {Since}.' },
+      // The months that were unpaid on the day of the letter: due before it, and still owing then.
+      { type: 'lines', table: 'Rent Charges', on: { Lease: 'Lease' }, sort: 'Due Date', where: `[Due Date] < [Sent On] And (${OWED} > 0 Or Nz([Last Paid On], "") > [Sent On])`, columns: [
+        { field: 'Number', label: 'Invoice' }, { expr: 'Format([Due Date], "mmmm yyyy")', as: 'Month', type: 'text' },
+        { field: 'Due Date', label: 'Due', format: 'dd/mm/yyyy' }, { field: 'Amount', label: 'Rent', type: 'currency' },
+      ] },
+      { type: 'totals', rows: [
+        { label: 'Rent for these months', expr: '[Amount]' },
+        { label: 'Paid towards them', expr: 'Round([Amount] - [Amount Owed], 2)', if: 'Round([Amount] - [Amount Owed], 2) > 0' },
+        { label: 'Rent unpaid', expr: '[Amount Owed]', strong: true },
+      ] },
       { type: 'text', text: 'Please pay the full amount by {Pay By}, by bank transfer to {Business.Bank Details}, quoting your rent account {Lease.Tenant.Account}, or by card by calling us on {Business.Phone}.' },
       { type: 'text', text: '{Next Step}' },
       { type: 'text', text: 'If you have paid in the last few days, thank you, and please ignore this letter. If you cannot pay it all by that date, please call us before then: we would much rather agree a plan with you to clear it in steps than take things further. Free and confidential advice on money and debt is available from advice services near you.' },
@@ -360,17 +409,23 @@ export const spec = {
       { type: 'spacer', size: 24 },
       { type: 'text', text: 'Rent accounts, {Business.Name}' },
     ] },
-    { name: 'Notice of inspection', table: 'Inspections', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // The visits of the next three weeks with a tenant to tell: the notices
+    // due to go out, and those already sent.
+    { name: 'Notice of inspection', table: 'Inspections', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Done], "") = "" And Nz([Lease], 0) > 0 And DateDiff("d", Date(), [Due]) >= 1 And DateDiff("d", Date(), [Due]) <= 21', blocks: [
+      // The letter's date: the day the notice went, or today for one going now.
+      { type: 'totals', rows: [{ label: 'Date', expr: 'Nz([Notice Sent], Date())', format: 'd mmmm yyyy' }] },
       { type: 'fields', columns: 2, items: [
-        { field: 'Lease.Tenant', label: 'To' }, { field: 'Notice Sent', label: 'Date' },
-        { field: 'Unit.Postal Address', label: 'Address' }, { field: 'Kind', label: 'Visit for' },
-        { field: 'Unit.Property.City', label: 'City' }, { field: 'Due', label: 'Day of the visit' },
-        { field: 'Unit.Property.Postcode', label: 'Postcode' }, { field: 'Visit Time', label: 'Time' },
+        { field: 'Lease.Tenant', label: 'To' }, { field: 'Kind', label: 'Visit for' },
+        { field: 'Unit.Postal Address', label: 'Address' }, { field: 'Due', label: 'Day of the visit', format: 'dddd d mmmm yyyy' },
+        { field: 'Unit.Property.City', label: 'City' }, { field: 'Visit Time', label: 'Time', if: '[Visit Time]' },
+        { field: 'Unit.Property.Postcode', label: 'Postcode' },
       ] },
       { type: 'heading', text: 'Notice of a visit to {Unit.Postal Address}' },
       { type: 'text', text: 'Dear {Lease.Tenant},' },
       { type: 'text', text: 'We are writing to let you know that we will visit {Unit.Postal Address} on {Due}, {Visit Time}. The visit is for: {Kind}.' },
-      { type: 'text', text: 'A routine inspection takes about half an hour. We look at the general condition of the property, test the smoke and carbon monoxide alarms, look for any damp, leaks or damage, and note anything that needs mending so that we can arrange it. A gas or electrical safety check is made by a registered engineer from our contractor, takes about an hour, and needs the boiler, the meters and the fuse board to be easy to reach; you will be given a copy of the certificate.' },
+      { type: 'text', text: 'A routine inspection takes about half an hour. We look at the general condition of the property, test the smoke and carbon monoxide alarms, look for any damp, leaks or damage, and note anything that needs mending so that we can arrange it.', if: '[Kind] = "Routine inspection"' },
+      { type: 'text', text: 'The gas safety check is made by a registered gas engineer from our contractor and takes about an hour. The engineer checks the boiler, the cooker, any gas fire and the flues, so please make sure they and the gas meter are easy to reach. You will be given a copy of the certificate.', if: '[Kind] = "Gas safety"' },
+      { type: 'text', text: 'The electrical safety check is made by a qualified electrician from our contractor and takes two to three hours. The electrician tests the wiring, the sockets and the fuse board, and the power is off for short spells, so please save any work on a computer, and expect to reset clocks afterwards. You will be given a copy of the report.', if: '[Kind] = "Electrical safety"' },
       { type: 'text', text: 'You do not need to be in, though you are welcome to be, and it is a good time to tell us about anything that needs attention. If you are out, we will let ourselves in with our key, lock up when we leave, and leave a card to say that we have been.' },
       { type: 'text', text: 'If the day or time does not suit you, please call us on {Business.Phone} or write to {Business.E-mail}, and we will find another time in the next two weeks. This letter gives you at least 24 hours\' notice in writing, as your agreement asks.' },
       { type: 'text', text: 'Yours sincerely,' },
@@ -388,7 +443,7 @@ export const about = {
     'Hollybrook Lettings is an invented letting business in Leeds that owns and manages twelve buildings: six houses, two blocks of flats, two houses split into flats, a parade of three shops with two flats above, and a yard of two workshops bought about a year ago and refitted. Between them they hold thirty-eight units let to tenants on residential and commercial leases.',
     'The sample holds eighteen months of letting. Each unit has its run of leases: tenants who renewed, tenants who left, and the weeks a unit stood empty between them. A rent invoice goes out two weeks before each rent day, numbered RENT-2026-0042. Most tenants pay on the day by standing order, some pay late, and a few have fallen behind and pay part of what is due; a reminder letter goes to anyone a week behind, and every fortnight after while the rent is still unpaid. Things break and are reported, more of them in winter, and a contractor is booked to mend each one. Homes are inspected twice a year and shops and workshops once a year, gas appliances are checked every year and the wiring every five years, and the tenant gets a written notice before each visit. Insurance, loan interest, cleaning of shared areas, letting costs and the bills for empty units are paid out of each building\'s account.',
     'Rent on a home carries no VAT. The workshop yard is a building the landlord has opted to tax, so its rent invoices add VAT at twenty percent, and the VAT collected is paid over to the tax office each quarter.',
-    'Money for each building goes through one Transactions table, rent in and costs out, so income and expenditure, net income and the month-by-month accounts come from one place. A rent payment also points at the rent invoice it pays, and the invoice keeps the total paid against it, which is how arrears are found. Seven print templates make the papers a landlord sends: the rent invoice, the rent statement, the tenancy agreement for a home, the summary of a commercial lease, the deposit receipt, the arrears letter and the notice of an inspection.',
+    'Money for each building goes through one Transactions table, rent in and costs out, so income and expenditure, net income and the month-by-month accounts come from one place. A rent payment also points at the rent invoice it pays, and the invoice keeps the total paid against it, which is how arrears are found. Seven print templates make the papers a landlord sends: the rent invoice, the rent statement with a running balance, the tenancy agreement for a home, the summary of a commercial lease, the deposit receipt, the arrears letter listing the months unpaid, and the notice of an inspection. Each prints only for the records it is for, and leaves out what does not apply: no VAT lines on a home\'s rent, no payments table before anything is paid.',
   ],
   suits: ['A private landlord with a few houses or flats', 'A small letting agent managing homes for owners', 'Holiday lets, with weekly lets in place of leases', 'Student houses let by the room', 'Storage units or lock-up garages', 'Allotments or moorings let by the year', 'A small commercial landlord with shops and workshops'],
   tables: {
@@ -527,13 +582,13 @@ export const about = {
     'Rent invoices this month': 'The rent invoices raised in the last 31 days with the rent, VAT and totals: the month\'s invoicing at a glance.',
   },
   documents: {
-    'Rent invoice': 'The invoice each tenant gets two weeks before the rent day: the month it covers, the rent, any VAT, the payments already received against it and the balance to pay, with the bank details to pay to. Numbered RENT-2026-0042. It prints for every rent invoice, so choose the ones to print, or print from the Rent Charges form.',
-    'Rent statement': 'A tenant\'s account: every rent invoice with what was charged, paid and when, and the balance owing. Sent when a tenant asks, with an arrears letter, or when a tenancy ends. It prints for every tenant; choose the one you want, or print from the Tenants form.',
-    'Tenancy agreement': 'The agreement for a home, filled from the lease, the tenant, the unit and the building: the parties, the property, the term, the rent and rent day, the deposit and its protection, what the rent includes, each side\'s duties, repairs and access, pets and smoking, ending the tenancy, and places to sign. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it. Choose a residential lease to print it.',
-    'Commercial lease summary': 'A summary of the main terms of a lease of a shop or workshop: the premises, the use allowed, the term, the rent with any VAT and its review, the deposit, outgoings, repairs, access and the end of the lease. It goes with the full lease, which a solicitor draws up; have both checked for your own country. Choose a commercial lease to print it.',
-    'Deposit receipt': 'Given when a new tenant pays the deposit: how much, on what day, for which tenancy, and who holds it. Numbered DRC-2026-0042.',
-    'Rent arrears letter': 'The reminder sent when rent is a week late, and each fortnight after while it is unpaid: polite, clear about the amount and the date to pay by, and firmer at each stage, ending with the final notice. Have the final notice\'s wording checked for your own country before you rely on it.',
-    'Notice of inspection': 'The letter that tells a tenant, at least a week ahead, the day and time of a routine inspection or safety check, what happens at it and how to change the day.',
+    'Rent invoice': 'The invoice each tenant gets two weeks before the rent day: who it is addressed to (a business by its name), the month it covers, the rent, and for a workshop in the opted building the VAT rate, the VAT and the total. Once something is paid, it lists the payments received and what is left to pay; paid in full, it says so. Numbered RENT-2026-0042. It prints the invoices raised in the last 31 days; print an older one from the Rent Charges form.',
+    'Rent statement': 'A tenant\'s account on the day it is printed: every rent invoice with what was charged, what was paid and when, what is unpaid on each month, and the running balance after each, ending with the balance owing. Sent when a tenant asks, with an arrears letter, or when a tenancy ends. It prints for every tenant, past and present; choose the one you want, or print from the Tenants form.',
+    'Tenancy agreement': 'The agreement for a home, filled from the lease, the tenant, the unit and the building: the parties, the property, the term, the rent and rent day, the deposit and its protection, what the rent includes, each side\'s duties, repairs and access, pets and smoking, ending the tenancy, and places to sign. A renewal says so, and keeps the deposit already held; the pets clause reads one way when pets are agreed and another when none are. It prints for residential leases running or about to start. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it.',
+    'Commercial lease summary': 'A summary of the main terms of a lease of a shop or workshop: the premises, the use allowed, the term, the rent with its VAT where the building is opted to tax, the rent review where there is one, the deposit, outgoings, repairs, access and the end of the lease. It prints for commercial leases running or about to start. It goes with the full lease, which a solicitor draws up; have both checked for your own country.',
+    'Deposit receipt': 'Given when a new tenant pays the deposit: how much, on what day, for which tenancy, and who holds it, with the words for a home\'s protected deposit or a shop\'s deposit held by the landlord. Numbered DRC-2026-0042. It prints for the deposits still held.',
+    'Rent arrears letter': 'The reminder sent when rent is a week late, and each fortnight after while it is unpaid: polite, clear about the amount, the months unpaid when it was written (and anything already paid towards them) and the date to pay by, and firmer at each stage, ending with the final notice. It prints the letters still waiting for their pay-by date; print an older one from the Rent Reminders form. Have the final notice\'s wording checked for your own country before you rely on it.',
+    'Notice of inspection': 'The letter that tells a tenant, at least a week ahead, the day and time of a routine inspection or safety check, what happens at that kind of visit and how to change the day. It prints for the visits of the next three weeks to a unit with a tenant, dated the day the notice went, or today for one not sent yet.',
   },
   tutorial: [
     { title: 'Let a unit to a new tenant', steps: [
@@ -553,7 +608,7 @@ export const about = {
       'Each working day, open the query Rent due in the next 14 days, or the Leases form, to see whose rent day is two weeks away.',
       'Open the Rent Charges form and press New for each one. Give the next number in Number (RENT-, the year and the next number), choose the Lease and the Tenant, and type Period (as 2026-11), Invoice Date (today), Due Date (the rent day) and Period End (the day before the next rent day).',
       'Type Net (the lease\'s Monthly Rent) and Tax Rate (the lease\'s Tax Rate), then Tax (the rent times the rate, to the penny) and Amount (Net and Tax together). Leave Amount Paid at nought.',
-      'Open the print template Rent invoice from Print templates, choose the new invoices and press Print or Save as PDF to send them.',
+      'Open the print template Rent invoice from Print templates: it holds the invoices raised in the last 31 days. Choose the new ones and press Print or Save as PDF to send them.',
       'At the end of the month, open the report Rent invoices this month to check the month\'s invoicing.',
     ] },
     { title: 'Record a rent payment', steps: [
@@ -591,7 +646,7 @@ export const about = {
     'Monthly Rent on a lease is the rent before VAT. A rent invoice\'s Amount is the rent and VAT together, and that is what Amount Paid is measured against.',
     'Only the workshop yard is opted to tax, so only its two workshops have a Tax Rate of 0.2. The shops in Market Parade are commercial lets without VAT, which is how a building is until its landlord opts to tax it.',
     'The Status of units and leases (Let, Vacant, Upcoming, Active, Ended) is as it stood on the day the sample was made. Change it by hand when a tenancy starts or ends; the queries for current tenants and the rent roll read it.',
-    'A print template prints a document for every record of its table: every rent invoice, every lease, every inspection. Choose the records you want before you print, or print the one on screen from its form. The Tenancy agreement is worded for a home and the Commercial lease summary for a shop or workshop, so choose a lease of the right Type.',
+    'Each print template prints only the records it is for: the rent invoices of the last 31 days, the leases running or about to start (homes for the Tenancy agreement, shops and workshops for the Commercial lease summary), the deposits still held, the arrears letters still waiting, and the visits of the next three weeks. A record printed from its own form always prints, whatever the template would choose.',
     'An arrears letter keeps the amount owed on the day it was written. It is a record of what the tenant was told, so it does not change when they pay.',
     'A renewal is a new lease for the same tenant and unit. It keeps the deposit and its protection reference from the lease before, so it has no Deposits record of its own.',
     'Tenants keep a correspondence address. For a tenant living in one of your units it is that unit; when they leave, change it to their forwarding address so the final statement and the deposit letter reach them.',
@@ -602,7 +657,7 @@ export const about = {
     { q: 'Why do the workshop invoices have VAT and the others not?', a: 'Rent on a home never carries VAT. A commercial landlord adds VAT only after opting to tax the building, and here only Riverside Yard is opted (its VAT on Rent is ticked), so its leases have a Tax Rate of 0.2 and its invoices add VAT. The VAT collected is paid over each quarter and shows in Transactions as VAT.' },
     { q: 'How do I renew a tenancy?', a: 'Open the Leases form, press New, and enter the same Unit and Tenant with the new Start, End and rent, tick Renewal and copy the Deposit and Deposit Ref from the old lease. Set the old lease\'s Status to Ended on its last day. Print a new Tenancy agreement for the new lease.' },
     { q: 'What happens to the deposit at the end?', a: 'Agree any deductions with the tenant against the inventory, then return the rest. Open the Deposits form, find the deposit and type Returned On, Amount Returned and, in Notes, what was kept back and why.' },
-    { q: 'How do I print older documents, or many at once?', a: 'Every record of a print template\'s table can print. Open Print templates, choose the template, and choose the records you want in its list; for a month\'s rent invoices, choose those whose Invoice Date falls in that month. The query Rent invoices raised lists the last month\'s.' },
+    { q: 'How do I print older documents?', a: 'Open the record\'s own form and print from there: a record asked for by its form prints whether or not the template would list it. An old rent invoice prints from the Rent Charges form, an old arrears letter from the Rent Reminders form, an ended lease\'s agreement from the Leases form.' },
     { q: 'Can I use this for flats I manage for other owners?', a: 'Yes, with an Owners table: see the first idea under adapting it. The Properties, Units, Leases and rent invoices stay as they are.' },
   ],
   empty: 'Start with Business, your own name, address, VAT number and bank details, which every invoice, statement and letter prints. Then enter Properties, then the Units in each one (with the Postal Address and what the rent includes), then Contractors. Enter each Tenant with their rent account, their Lease, and the Deposit taken, and for every unit the next inspection and safety checks due. Two weeks before each rent day, add a Rent Charge for each running lease; when rent comes in, enter it in Transactions pointing at the charge, and add it to the charge\'s Amount Paid. Enter repairs in Maintenance Requests as they are reported, reminder letters in Rent Reminders as you send them, and every bill you pay in Transactions with its building.',

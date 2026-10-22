@@ -18,6 +18,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, money, person, phoneFor, random } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const LINE = 'Round([Quantity] * [Unit Price], 2)';
 const RECIPE_COST = 'Round([Quantity] * [Cost per Unit], 2)';
@@ -31,10 +34,6 @@ const WEEK_NO = '(DateDiff("d", #2024-01-01#, [Date]) - DateDiff("d", #2024-01-0
 const TAKINGS = '[Card Takings] + [Cash Takings]';
 // The VAT within a line's tax-inclusive price, as the till works it out.
 const VAT_IN = 'Round([Price] - [Price] / (1 + [Tax Rate]), 2)';
-// The day of the week a shift starts on, for the payslip.
-const SHIFT_DAY_NO = 'DateDiff("d", #2024-01-01#, [Start]) Mod 7';
-const SHIFT_DAY = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  .reduceRight((rest, name, i) => `IIf(${SHIFT_DAY_NO} = ${i}, "${name}", ${rest})`, '"Sunday"');
 
 export const spec = {
   // Where a value below nought is right: cash short in the till, a bill already past its day.
@@ -239,31 +238,37 @@ export const spec = {
       { expr: 'Round([In Stock] * [Cost per Unit], 2)', as: 'Value at Cost', total: 'sum' },
     ] },
   },
-  // The print templates: one document for each record of the table named, its lines from the records pointing at it.
+  // The print templates: a document for each record of the table named that the template is for, its lines from the records pointing at it.
   documents: [
-    { name: 'Receipt', table: 'Orders', paper: 'receipt-80',
+    // A receipt for each bill not voided; a voided one still prints when it is chosen, and says so.
+    { name: 'Receipt', table: 'Orders', paper: 'receipt-80', where: 'Nz([Voided], 0) = 0',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Tax Number'] },
       blocks: [
         { type: 'heading', text: 'Receipt {Number}' },
-        { type: 'fields', columns: 2, items: [{ field: 'When', label: 'Date and time' }, { field: 'Service' }, { field: 'Table No', label: 'Table' }, { field: 'Payment', label: 'Paid by' }] },
-        { type: 'lines', table: 'Order Lines', columns: [
+        { type: 'fields', columns: 2, items: [
+          { field: 'When', label: 'Date and time', format: 'dd/mm/yyyy hh:nn' }, { field: 'Service' },
+          { field: 'Table No', label: 'Table', if: '[Table No]' }, { field: 'Covers', if: '[Covers]' }, { field: 'Payment', label: 'Paid by' },
+        ] },
+        // The items under each VAT rate, with what each rate comes to and the VAT within it: the receipt's VAT summary.
+        { type: 'lines', table: 'Order Lines', group: 'Rate', subtotals: ['Price', 'VAT'], columns: [
           { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Menu Item.Name', label: 'Item' }, { field: 'Unit Price', label: 'Each', type: 'currency' },
-          { expr: LINE, as: 'Price', type: 'currency' }, { expr: 'Round([Tax Rate] * 100, 0)', as: 'VAT %', type: 'integer' },
-          { expr: VAT_IN, as: 'VAT', type: 'currency' },
+          { expr: LINE, as: 'Price', type: 'currency' }, { expr: '"VAT " & Format([Tax Rate] * 100, "0") & "%"', as: 'Rate', label: 'Rate' }, { expr: VAT_IN, as: 'VAT', type: 'currency' },
         ] },
         { type: 'totals', rows: [
           { label: 'Total', expr: '[Total]', strong: true }, { label: 'Net of VAT', expr: '[Net]' }, { label: 'VAT included', expr: '[Tax]' },
         ] },
-        { type: 'text', text: 'You were served by {Staff.First Name}. Please keep this receipt as your proof of purchase.' },
+        { type: 'text', text: 'Void: this bill was cancelled before it was paid and is not a receipt.', if: '[Voided]' },
+        { type: 'text', text: 'You were served by {Staff.First Name}. Please keep this receipt as your proof of purchase.', if: 'Nz([Voided], 0) = 0' },
         { type: 'text', text: 'VAT number {Business.Tax Number}. {Business.Document Footer}', small: true },
       ] },
-    { name: 'Purchase order', table: 'Purchases', paper: 'a4',
+    // For the orders not delivered yet: a delivered one prints when it is chosen on its form, to check a bill against.
+    { name: 'Purchase order', table: 'Purchases', paper: 'a4', where: 'Nz([Received On], "") = ""',
       letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail'] },
       blocks: [
         { type: 'heading', text: 'Purchase order {Number}' },
         { type: 'fields', columns: 2, items: [
           { field: 'Supplier.Name', label: 'To' }, { field: 'Number', label: 'Order number' }, { field: 'Supplier.Address', label: 'Address' },
-          { field: 'Ordered On', label: 'Order date' }, { field: 'Supplier.City', label: 'City' }, { field: 'Due On', label: 'Deliver on' },
+          { field: 'Ordered On', label: 'Order date', format: 'dd/mm/yyyy' }, { field: 'Supplier.City', label: 'City' }, { field: 'Due On', label: 'Deliver on', format: 'dddd dd/mm/yyyy' },
           { field: 'Supplier.Postcode', label: 'Postcode' }, { field: 'Supplier.Contact', label: 'For the attention of' },
         ] },
         { type: 'lines', table: 'Purchase Lines', columns: [
@@ -271,8 +276,8 @@ export const spec = {
           { field: 'Ingredient.Unit', label: 'Unit' }, { field: 'Unit Cost', label: 'Price per unit', type: 'currency' },
           { expr: 'Round([Quantity] * [Unit Cost], 2)', as: 'Amount', type: 'currency' },
         ] },
-        { type: 'totals', rows: [{ label: 'Order total', expr: '[Amount]', strong: true }] },
-        { type: 'text', text: 'Please deliver to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode} on {Due On}, before 7 in the morning if you can. Quote {Number} on your delivery note and your invoice. Prices are those we last paid; tell us before delivery if any has changed.' },
+        { type: 'totals', rows: [{ label: 'Lines', expr: '[Purchase Lines count]', type: 'integer' }, { label: 'Order total', expr: '[Amount]', strong: true }] },
+        { type: 'text', text: 'Please deliver to {Business.Name}, {Business.Address}, {Business.City} {Business.Postcode} on the day above, before 7 in the morning if you can. Quote {Number} on your delivery note and your invoice. Prices are those we last paid; tell us before delivery if any has changed.' },
         { type: 'text', text: 'Questions about this order: {Business.Phone} or {Business.E-mail}.', small: true },
         { type: 'signatures', labels: ['Ordered by', 'Received by'] },
       ] },
@@ -281,17 +286,18 @@ export const spec = {
       blocks: [
         { type: 'heading', text: 'Payslip {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Staff', label: 'Employee' }, { field: 'Week Beginning', label: 'Week beginning' }, { field: 'Staff.Role', label: 'Role' },
-          { field: 'Week Ending', label: 'Week ending' }, { field: 'Hourly Rate', label: 'Hourly rate' }, { field: 'Pay Date', label: 'Paid on' },
+          { field: 'Staff', label: 'Employee' }, { field: 'Week Beginning', label: 'Week beginning', format: 'dd/mm/yyyy' }, { field: 'Staff.Role', label: 'Role' },
+          { field: 'Week Ending', label: 'Week ending', format: 'dd/mm/yyyy' }, { field: 'Hourly Rate', label: 'Hourly rate', format: '#,##0.00' }, { field: 'Pay Date', label: 'Paid on', format: 'dd/mm/yyyy' },
         ] },
+        // Each shift's pay at the payslip's own hourly rate, which a line can read from the payslip.
         { type: 'lines', table: 'Shifts', sort: 'Start', columns: [
-          { expr: 'Format([Start], "yyyy-mm-dd")', as: 'Date', type: 'date' }, { expr: SHIFT_DAY, as: 'Day' }, { expr: 'Mid([Start], 12, 5)', as: 'From' }, { expr: 'Mid([End], 12, 5)', as: 'To' },
+          { field: 'Start', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Start', as: 'Day', format: 'dddd' }, { field: 'Start', as: 'From', format: 'hh:nn' }, { field: 'End', as: 'To', format: 'hh:nn' },
           { field: 'Break Minutes', label: 'Break (min)', type: 'integer' }, { field: 'Station' }, { field: 'Status' },
-          { field: 'Paid Hours', label: 'Hours', type: 'number' }, { field: 'Payslip.Hourly Rate', as: 'Rate', type: 'currency' },
-          { expr: 'Round([Paid Hours] * [Rate], 2)', as: 'Pay', type: 'currency' },
+          { field: 'Paid Hours', label: 'Hours', type: 'number' },
+          { expr: 'Round([Paid Hours] * [Hourly Rate], 2)', as: 'Pay', type: 'currency' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Hours paid', expr: '[Hours]', type: 'number' }, { label: 'Gross pay', expr: '[Gross Pay]', strong: true },
+          { label: 'Shifts', expr: '[Shifts count]', type: 'integer' }, { label: 'Hours paid', expr: '[Hours]', type: 'number' }, { label: 'Gross pay', expr: '[Gross Pay]', strong: true },
         ] },
         { type: 'text', text: 'Gross pay for the hours on the rota, holiday included at the usual rate and sick days unpaid here. Tax, National Insurance, pension and any other deductions are worked out by the payroll and shown on the payroll\'s own statement of net pay.', small: true },
       ] },
@@ -319,7 +325,7 @@ export const about = {
     `The records cover the last fourteen months: a cash-up sheet for every day the cafe opened, the rota as it was worked, every delivery and its bill, and what was thrown away. The till's orders are here line by line for the last eight weeks, about six thousand of them; older days are in their cash-up sheets. Trade is busier at weekends, in July and August and on sunny days, and quieter in January. The rota runs two weeks ahead. The records stop at the start of today: this morning's deliveries are not booked in yet and this morning's orders to suppliers are not placed, so the order list shows what to ask for.`,
     `Every dish has a recipe in its ingredients' own units, so its food cost comes from the ingredients' current prices. Prices are pounds, as a cafe in the UK would charge them, but nothing in the design depends on the currency.`,
     `The menu prices include VAT, as a cafe's prices to the public do. The sample keeps the VAT simple and says so: everything eaten in, every drink and any hot food taken away carries the standard rate of 20%, and cold food taken away (the cakes and bakes, the cold bagel and rolls) carries none. The real rules have more cases than that, such as hot food kept warm, cold drinks and snacks, so set each dish's Takeaway VAT Rate to what applies to you. Each line of a bill keeps the rate it was sold at, each bill keeps its VAT, and each day's cash-up keeps the day's VAT for the return.`,
-    `It prints three documents: a till receipt for every bill, numbered RCP-2026-00042; a purchase order for every order to a supplier, numbered PO-2026-0042, made each morning from the order list; and a weekly payslip for each person, numbered PAY-2026-0042, from the shifts on the rota. The payslip shows hours, rate and gross pay only: tax, National Insurance, pension and other deductions are left for the payroll to work out.`,
+    `It prints three documents: a till receipt for every bill that was not voided, numbered RCP-2026-00042, with its items under each VAT rate; a purchase order for each order to a supplier not yet delivered, numbered PO-2026-0042, made each morning from the order list; and a weekly payslip for each person, numbered PAY-2026-0042, from the shifts on the rota. The payslip shows hours, rate and gross pay only: tax, National Insurance, pension and other deductions are left for the payroll to work out.`,
   ].join('\n\n'),
   suits: [
     'A coffee shop or kiosk',
@@ -495,9 +501,9 @@ export const about = {
     'Bills to pay': 'Unpaid supplier bills grouped by supplier, with their invoice numbers, the days left to pay and the total owed to each.',
   },
   documents: {
-    Receipt: 'The till receipt for a bill, on an 80 mm roll: the cafe\'s name, address and VAT number, the receipt number, time, eat in or take away and the table, each item with its price and VAT rate, then the total, the net and the VAT within it, and how it was paid. Numbered RCP-2026-00042. Every bill on record prints, voided ones too, so choose the bill to print.',
-    'Purchase order': 'The order sent to a supplier each morning from the order list: what to send, how much, at the last price paid, and the day to deliver, with the cafe\'s address to deliver to. Numbered PO-2026-0042, which the supplier quotes on the delivery note and the bill. Every purchase prints, delivered ones too, so choose the ones placed today.',
-    Payslip: 'The weekly payslip for one person: the week, the hourly rate, each shift worked or on holiday with its hours and pay, and the gross pay. Numbered PAY-2026-0042. It shows gross pay only; tax, National Insurance, pension and other deductions are for the payroll to work out, and its statement of net pay goes with this one.',
+    Receipt: 'The till receipt for a bill, on an 80 mm roll: the cafe\'s name, address and VAT number, the receipt number, time, eat in or take away and the table, the items under each VAT rate with what that rate comes to and the VAT within it, then the total, the net and the VAT within it, and how it was paid. The table and covers show only for a table\'s bill. Numbered RCP-2026-00042. It is for the bills that were not voided; a voided bill chosen on the Orders form still prints, marked void.',
+    'Purchase order': 'The order sent to a supplier each morning from the order list: what to send, how much, at the last price paid, and the day to deliver, with the cafe\'s address to deliver to. Numbered PO-2026-0042, which the supplier quotes on the delivery note and the bill. It is for the purchases not delivered yet (no Received On), which are the ones placed this morning; a delivered one prints when you choose it on the Purchases form.',
+    Payslip: 'The weekly payslip for one person: the week, the hourly rate, each shift worked or on holiday with its day, times, hours and pay at that rate, the number of shifts, and the gross pay. Numbered PAY-2026-0042. It shows gross pay only; tax, National Insurance, pension and other deductions are for the payroll to work out, and its statement of net pay goes with this one.',
   },
   tutorial: [
     { title: 'Ring up a bill and print the receipt', steps: [
@@ -512,7 +518,7 @@ export const about = {
       'For each supplier on the list, open the Purchases form and press New. Type the next number in Number (PO-2026-0042), choose the Supplier, type today in Ordered On and the next delivery day in Due On.',
       'In the Purchase Lines below, choose each Ingredient and type the Quantity in its unit and the Unit Cost from the last bill.',
       'Open the Ingredients form and type the same amount in On Order for each ingredient ordered, so it leaves the order list.',
-      'Open the print template Purchase order from Print templates, choose today\'s purchases, and print them or press Save as PDF and e-mail each to the address on its Suppliers record.',
+      'Open the print template Purchase order from Print templates: it shows the purchases not yet delivered, which are this morning\'s. Print them or press Save as PDF and e-mail each to the address on its Suppliers record.',
     ] },
     { title: 'Book in a delivery and pay the bill', steps: [
       'When the delivery comes, open the Purchases form, find it by its Number (the query Deliveries due lists the ones expected), and type today in Received On and the supplier\'s bill number in Invoice Number.',
@@ -551,7 +557,7 @@ export const about = {
     'Nothing here takes sales off the stock by itself. In Stock is what the last count, the deliveries and the waste sheet say, so count the stock now and then and correct it.',
     'A bill\'s Total, Net and Tax, and a payslip\'s Hours and Gross Pay, are stored figures, typed when the record is made, not added up from the lines by the form. The sample\'s own are exactly the sums of their lines, rounded line by line as a till rounds them.',
     'The VAT is kept simple: 20% on everything eaten in, on drinks and on hot food taken away; nought on cold food taken away. Set each dish\'s Takeaway VAT Rate to what the rules say for you, and have your VAT checked by an accountant.',
-    'A print template prints every record of its table unless you choose some: Receipt prints every bill (voided ones too), Purchase order every purchase, Payslip every payslip. Choose the ones you want before pressing Print.',
+    'Each print template prints the records it is for: Receipt the bills not voided, Purchase order the purchases not delivered yet, Payslip every payslip. Choose some to print fewer; a voided bill or a delivered purchase prints when you choose it.',
     'The records stop at the start of today: this morning\'s deliveries are not booked in and this morning\'s orders not yet placed, so the order list shows what to ask for today. The rota runs two weeks ahead, and the week now running has no payslips yet.',
     'The VAT number, company number and bank details on the Business record are placeholders of noughts and Xs. Put in your own before printing anything for real.',
   ],

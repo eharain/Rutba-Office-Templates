@@ -30,6 +30,13 @@ const QUOTE_AMOUNT = 'Round([Quantity] * [Rate], 2)';
 const VALUE = '([Kind] = "Contract" Or [Kind] = "Variation" Or [Kind] = "Contingency")';
 const OVERDUE = (field) => ({ expr: `DateDiff("d", [${field}], Date())`, as: 'Days Overdue' });
 const STAFF_NAME = '[First Name] & " " & [Last Name]';
+// Dates as the firm writes them: 22/10/2026 on invoices and statements, 22 October 2026 in a contract.
+const DATE = 'dd/mm/yyyy';
+const LONG_DATE = 'd mmmm yyyy';
+const MONEY = '#,##0.00';
+
+// The print templates need the 2.16 engine: records chosen by a condition, blocks shown when they apply, formats.
+export const minOffice = '2.16.0';
 
 export const spec = {
   // Where a value below nought is right: work taken out of a contract, the
@@ -243,17 +250,20 @@ export const spec = {
   // The print templates: one document for each record of a table, its lines
   // from the records that point at it, the firm's details at the head.
   documents: [
-    { name: 'Quotation', table: 'Quotes', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For quotes waiting for an answer; one already answered prints from the Quotes form.
+    { name: 'Quotation', table: 'Quotes', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Sent"', blocks: [
       { type: 'heading', text: 'Quotation {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client.Name', label: 'Prepared for' }, { field: 'Number', label: 'Quote number' },
-        { field: 'Client.Address', label: 'Address of the work' }, { field: 'Quote Date', label: 'Date' },
-        { field: 'Client.City', label: 'Town' }, { field: 'Valid Until', label: 'Price holds until' },
+        { field: 'Client.Address', label: 'Address of the work' }, { field: 'Quote Date', label: 'Date', format: DATE },
+        { field: 'Client.City', label: 'Town' }, { field: 'Valid Until', label: 'Price holds until', format: DATE },
         { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Weeks on Site', label: 'Weeks on site, about' },
         { field: 'Title', label: 'The work' },
       ] },
-      { type: 'text', text: 'Thank you for having us round. This is our price for the work below, as we discussed on site. {Notes}' },
-      { type: 'lines', table: 'Quote Lines', sort: 'Line', columns: [
+      { type: 'text', text: 'Thank you for having us round. This is our price for the work below, as we discussed on site.', if: 'Nz([Notes], "") = ""' },
+      { type: 'text', text: 'Thank you for having us round. This is our price for the work below, as we discussed on site. {Notes}', if: 'Nz([Notes], "") <> ""' },
+      // The work section by section, each with what it comes to.
+      { type: 'lines', table: 'Quote Lines', sort: 'Line', group: 'Section', subtotals: ['Amount', 'VAT'], columns: [
         { field: 'Section' }, { field: 'Description' }, { field: 'Quantity', label: 'Qty', type: 'number' }, { field: 'Unit' },
         { field: 'Rate', type: 'currency' }, { expr: QUOTE_AMOUNT, as: 'Amount', type: 'currency' },
         { expr: `Round(${QUOTE_AMOUNT} * Nz([Tax Rate]), 2)`, as: 'VAT', type: 'currency' },
@@ -266,27 +276,31 @@ export const spec = {
       { type: 'spacer', size: 20 },
       { type: 'signatures', labels: ['Accepted by the client', 'For the builder'] },
     ] },
-    { name: 'Contract', table: 'Jobs', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For live contracts: jobs booked, on site or in their defects period. A closed job's prints from the Jobs form.
+    { name: 'Contract', table: 'Jobs', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] <> "Closed"', blocks: [
       { type: 'heading', text: 'Building contract {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client.Name', label: 'The client' }, { field: 'Number', label: 'Contract number' },
-        { field: 'Client.Address', label: 'Address of the works' }, { field: 'Signed On', label: 'Date of this contract' },
+        { field: 'Client.Address', label: 'Address of the works' }, { field: 'Signed On', label: 'Date of this contract', format: LONG_DATE },
         { field: 'Client.City', label: 'Town' }, { field: 'Quote.Number', label: 'Our quotation' },
-        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Contract Sum', label: 'Contract sum, before VAT' },
-        { field: 'Start Date', label: 'Start' }, { field: 'Finish Date', label: 'Finish, about' },
+        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Contract Sum', label: 'Contract sum, before VAT', format: MONEY },
+        { field: 'Start Date', label: 'Start', format: LONG_DATE }, { field: 'Finish Date', label: 'Finish, about', format: LONG_DATE },
       ] },
       { type: 'text', text: 'THIS CONTRACT is made on {Signed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Builder") and {Client.Name} of {Client.Address}, {Client.City} {Client.Postcode} ("the Client").' },
       { type: 'text', text: '1. The works. The Builder will carry out the works described in quotation {Quote.Number}, {Title}, at the Client\'s property above. The work will be done with care and skill, with materials of the kind described in the quotation, and to meet the building regulations and any planning permission for it.' },
-      { type: 'text', text: '2. The price. The contract sum is {Contract Sum} plus VAT at the rate in force when each invoice is raised. It includes a contingency of {Contingency} for work that cannot be seen before the works start. The contingency is not spent by the Builder on its own account: work it was meant for is agreed as a variation under clause 5, and the whole contingency is credited to the Client on the final invoice.' },
+      // The contingency sentence only where the contract holds one.
+      { type: 'text', text: '2. The price. The contract sum is {Contract Sum} plus VAT at the rate in force when each invoice is raised. It includes a contingency of {Contingency} for work that cannot be seen before the works start. The contingency is not spent by the Builder on its own account: work it was meant for is agreed as a variation under clause 5, and the whole contingency is credited to the Client on the final invoice.', if: 'Nz([Contingency]) > 0' },
+      { type: 'text', text: '2. The price. The contract sum is {Contract Sum} plus VAT at the rate in force when each invoice is raised. It holds no contingency: any work found once the works start is agreed as a variation under clause 5.', if: 'Nz([Contingency]) <= 0' },
       { type: 'text', text: '3. Stage payments. The Builder will invoice the payments below as each stage is reached. Each invoice after the deposit carries any variations agreed since the last one, less the retention in clause 6. The Client will pay each invoice within {Client.Payment Days} days of its date. If a payment is late the Builder may stop work, after giving seven days\' notice in writing, until it is paid.' },
       { type: 'lines', table: 'Job Stages', sort: 'Stage', columns: [
         { field: 'Stage', type: 'integer' }, { field: 'Name', label: 'Payment due when' }, { field: 'Payment Percent', label: 'Percent', type: 'number' },
-        { field: 'Amount', label: 'Amount before VAT', type: 'currency' }, { field: 'Planned Finish', label: 'Expected' },
+        { field: 'Amount', label: 'Amount before VAT', type: 'currency' }, { field: 'Planned Finish', label: 'Expected', format: LONG_DATE },
       ] },
       { type: 'totals', rows: [{ label: 'Contract sum, before VAT', expr: '[Amount]', strong: true }] },
       { type: 'text', text: '4. Start and finish. The Builder will start on {Start Date} and expects to finish by {Finish Date}. The Builder will tell the Client as soon as anything will hold the work up, such as bad weather, a change asked for by the Client, a problem found once work has started, or materials that cannot be had. The finish date moves by the time lost.' },
       { type: 'text', text: '5. Variations. Any change to the works, whether the Client asks for it or it is found to be needed once work has started, is written on a variation order with its price and any change to the finish date, and signed by both before the work is done. Only work needed at once to keep the building safe or dry may be done first, and it is then written up within two working days.' },
-      { type: 'text', text: '6. Retention. The Client may hold back {Retention Percent} percent of each invoice after the deposit (none when that figure is nought). The amount held is released {Defects Months} months after the works are finished, once any defects reported in that time have been put right.' },
+      { type: 'text', text: '6. Retention. The Client may hold back {Retention Percent} percent of each invoice after the deposit. The amount held is released {Defects Months} months after the works are finished, once any defects reported in that time have been put right.', if: 'Nz([Retention Percent]) > 0' },
+      { type: 'text', text: '6. Retention. Nothing is held back from the invoices under this contract.', if: 'Nz([Retention Percent]) <= 0' },
       { type: 'text', text: '7. Defects. For {Defects Months} months after the works are finished the Builder will come back and put right, free of charge, any fault in the work or in materials the Builder supplied, when the Client reports it in writing. This does not cover fair wear and tear, damage done by others, or the hairline cracks of new plaster and timber drying out, which are filled at the end of the period.' },
       { type: 'text', text: '8. The site. The Client will give access during working hours, 8 until 5 on weekdays, and the use of water and electricity. The Builder will protect the parts of the house not being worked on, keep the site tidy and safe, and take away the waste.' },
       { type: 'text', text: '9. Insurance and permissions. The Builder holds public liability insurance and insures the works until they are handed over. The Client will tell their home insurer about the works before they start, and is responsible for planning permission and any party wall notices unless the quotation says otherwise.' },
@@ -299,10 +313,10 @@ export const spec = {
       { type: 'heading', text: 'VAT invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client.Name', label: 'Invoice to' }, { field: 'Number', label: 'Invoice number' },
-        { field: 'Client.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Invoice date (tax point)' },
-        { field: 'Client.City', label: 'Town' }, { field: 'Due Date', label: 'Payment due' },
+        { field: 'Client.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Invoice date (tax point)', format: DATE },
+        { field: 'Client.City', label: 'Town' }, { field: 'Due Date', label: 'Payment due', format: DATE },
         { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Kind', label: 'Invoice for' },
-        { field: 'Job.Number', label: 'Contract' }, { field: 'Job.Contract Sum', label: 'Contract sum' },
+        { field: 'Job.Number', label: 'Contract' }, { field: 'Job.Contract Sum', label: 'Contract sum', format: MONEY },
         { field: 'Job.Title', label: 'The works' },
       ] },
       { type: 'lines', table: 'Invoice Lines', sort: 'Line', columns: [
@@ -312,25 +326,34 @@ export const spec = {
       { type: 'totals', rows: [
         { label: 'Amount before VAT', expr: '[Amount]' }, { label: 'VAT', expr: '[VAT]' }, { label: 'Total due', expr: '[Amount before VAT] + [VAT]', strong: true },
       ] },
-      { type: 'text', text: 'Retention held on this invoice: {Retention}. {Business.Payment Terms} Please quote {Number} with your payment, by bank transfer to {Business.Bank Details}. VAT number {Business.Tax Number}.', small: true },
+      // The retention line only where some is held; how to pay while it is owed, the day it was paid once it is.
+      { type: 'text', text: 'Retention held on this invoice: {Retention}, released after the defects period.', small: true, if: 'Nz([Retention]) <> 0' },
+      { type: 'text', text: '{Business.Payment Terms} Please quote {Number} with your payment, by bank transfer to {Business.Bank Details}. VAT number {Business.Tax Number}.', small: true, if: 'Nz([Paid On], "") = ""' },
+      { type: 'text', text: 'Paid in full on {Paid On}. Thank you. VAT number {Business.Tax Number}.', small: true, if: 'Nz([Paid On], "") <> ""' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Variation order', table: 'Variations', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For variations waiting for the client to sign; one agreed or rejected prints from the Variations form.
+    { name: 'Variation order', table: 'Variations', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Proposed"', blocks: [
       { type: 'heading', text: 'Variation order {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Job.Client.Name', label: 'Client' }, { field: 'Number', label: 'Variation number' },
-        { field: 'Job.Client.Address', label: 'Address of the works' }, { field: 'Raised On', label: 'Date raised' },
+        { field: 'Job.Client.Address', label: 'Address of the works' }, { field: 'Raised On', label: 'Date raised', format: DATE },
         { field: 'Job.Number', label: 'Contract' }, { field: 'Reason' },
-        { field: 'Job.Title', label: 'The works' }, { field: 'Status' },
+        { field: 'Job.Title', label: 'The works' }, { field: 'Status', if: '[Status] <> "Proposed"' },
+        { field: 'Agreed On', label: 'Agreed', format: DATE, if: 'Nz([Agreed On], "") <> ""' },
       ] },
       { type: 'text', text: 'Under clause 5 of contract {Job.Number}, the works are changed as follows:' },
       { type: 'text', text: '{Description}' },
       { type: 'totals', rows: [
         { label: 'Change to the contract sum, before VAT', expr: '[Amount]' }, { label: 'VAT', expr: 'Round([Amount] * [Business].[Tax Rate], 2)' },
         { label: 'Change with VAT', expr: '[Change to the contract sum, before VAT] + [VAT]', strong: true },
-        { label: 'Extra working days', expr: 'Nz([Extra Days])', type: 'integer' },
+        { label: 'Extra working days', expr: 'Nz([Extra Days])', type: 'integer', if: 'Nz([Extra Days]) <> 0' },
       ] },
-      { type: 'text', text: 'An amount below nought is work taken out, and comes off the contract sum. The finish date moves by the extra working days shown. Once both sides have signed, the work goes ahead and the amount is added to the next stage invoice. Everything else in the contract stays as it was.' },
+      // Worded for work added or work taken out, and for a finish date that moves or stays.
+      { type: 'text', text: 'Once both sides have signed, the work goes ahead and the amount is added to the next stage invoice.', if: '[Amount] >= 0' },
+      { type: 'text', text: 'This takes work out of the contract: once both sides have signed, the amount comes off the next stage invoice.', if: '[Amount] < 0' },
+      { type: 'text', text: 'The finish date moves by the extra working days shown. Everything else in the contract stays as it was.', if: 'Nz([Extra Days]) <> 0' },
+      { type: 'text', text: 'The finish date does not change. Everything else in the contract stays as it was.', if: 'Nz([Extra Days]) = 0' },
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['Agreed by the Client', 'For the Builder'] },
     ] },
@@ -340,14 +363,19 @@ export const spec = {
         { field: 'Name', label: 'Client' }, { field: 'Payment Days', label: 'Days to pay' },
         { field: 'Address' }, { field: 'City', label: 'Town' }, { field: 'Postcode' },
       ] },
-      { type: 'lines', table: 'Invoices', sort: 'Invoice Date', columns: [
-        { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Job.Number', label: 'Contract' }, { field: 'Kind', label: 'For' },
-        { field: 'Total', label: 'Amount', type: 'currency' }, { field: 'Paid On', label: 'Paid' },
-        { expr: 'IIf(Nz([Paid On], "") = "", [Total], 0)', as: 'Owing', type: 'currency' },
+      // What the client owes: the invoices not yet paid, oldest first, with the balance as it builds up.
+      { type: 'lines', table: 'Invoices', sort: 'Invoice Date', where: 'Nz([Paid On], "") = ""', columns: [
+        { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date', format: DATE }, { field: 'Due Date', label: 'Due', format: DATE },
+        { field: 'Job.Number', label: 'Contract' }, { field: 'Kind', label: 'For' },
+        { field: 'Total', label: 'Amount', type: 'currency' }, { running: 'Total', as: 'Balance' },
       ] },
-      { type: 'totals', rows: [{ label: 'Statement date', expr: 'Date()', type: 'date' }, { label: 'Balance owing', expr: '[Owing]', strong: true }] },
-      { type: 'text', text: 'An invoice with no date paid is still owed. Retention held under your contract is not shown as owing until it is invoiced at the end of the defects period. If you have paid in the last few days, thank you, and please ignore this.', small: true },
-      { type: 'text', text: 'Bank transfer to {Business.Bank Details}.', small: true },
+      { type: 'totals', rows: [
+        { label: 'Statement date', expr: 'Date()', format: DATE }, { label: 'Invoices unpaid', expr: '[Invoices count]', type: 'integer' },
+        { label: 'Balance owing', expr: '[Balance]', strong: true },
+      ] },
+      { type: 'text', text: 'Retention held under your contract is not shown as owing until it is invoiced at the end of the defects period. If you have paid in the last few days, thank you, and please ignore this.', small: true, if: '[Balance] > 0' },
+      { type: 'text', text: 'Bank transfer to {Business.Bank Details}.', small: true, if: '[Balance] > 0' },
+      { type: 'text', text: 'Nothing is owed on your account today. Retention held under a contract is invoiced at the end of its defects period. Thank you.', small: true, if: '[Balance] <= 0' },
     ] },
   ],
 };
@@ -488,11 +516,11 @@ export const about = {
     'Monthly invoicing': 'Work invoiced each month with retention and VAT, and the totals.',
   },
   documents: {
-    Quotation: 'The quote sent after a site visit: the work in sections with each line\'s quantity, rate and amount, the price before and with VAT, how long it holds, what it leaves out, and a place for the client to sign. One prints for each quote.',
-    Contract: 'The building contract for a job, in plain words: the parties, the works, the price and the contingency, the stage payments as a table, start and finish, variations, retention, defects, the site, insurance, ending the contract and the right to cancel, with signatures. It prints for every job, repairs included. It is a starting point: have it checked by someone who knows the law where you work.',
-    'Stage invoice': 'The VAT invoice for a deposit, a stage, completion or the retention release: the stage payment, the variations agreed since the last invoice, the contingency credited at the end, the retention taken off, the VAT and the total due.',
-    'Variation order': 'A change to a contract for the client to sign before the work is done: what changes, why, what it adds to or takes off the price, and the extra working days.',
-    Statement: 'Each client\'s invoices with what has been paid and the balance owing. It prints one for every client; choose those with something owing.',
+    Quotation: 'The quote sent after a site visit: the work in sections with each line\'s quantity, rate and amount, the price before and with VAT, how long it holds, what it leaves out, and a place for the client to sign. The lines come in their sections, each with its subtotal. It prints for quotes still Sent; any other prints from the Quotes form.',
+    Contract: 'The building contract for a job, in plain words: the parties, the works, the price and the contingency, the stage payments as a table, start and finish, variations, retention, defects, the site, insurance, ending the contract and the right to cancel, with signatures. The contingency and retention clauses are worded for what the contract holds. It prints for live contracts (every job not yet Closed), repairs included. It is a starting point: have it checked by someone who knows the law where you work.',
+    'Stage invoice': 'The VAT invoice for a deposit, a stage, completion or the retention release: the stage payment, the variations agreed since the last invoice, the contingency credited at the end, the retention taken off, the VAT and the total due, with how to pay while it is owed or the day it was paid.',
+    'Variation order': 'A change to a contract for the client to sign before the work is done: what changes, why, what it adds to or takes off the price, and the extra working days when there are any. It prints for variations still Proposed; one agreed prints from the Variations form.',
+    Statement: 'Each client\'s unpaid invoices, oldest first, with the balance as it builds up to what is owed. A client who owes nothing gets a statement that says so.',
   },
   tutorial: [
     { title: 'Take an enquiry and book a visit', steps: [
@@ -547,7 +575,7 @@ export const about = {
     { title: 'See who owes what and send statements', steps: [
       'Open the Invoices due report: every unpaid invoice by client, with days overdue.',
       'When money comes in, open the invoice in the Invoices form and type Paid On.',
-      'At the month end open Print templates, choose Statement, choose the clients who owe something and press Print or Save as PDF.',
+      'At the month end open Print templates and choose Statement: each lists the client\'s unpaid invoices and what they owe. Choose the clients who owe something and press Print or Save as PDF.',
       'The Contract account report shows each job\'s contract sum, invoiced, retention held, paid and owing.',
     ] },
   ],
@@ -558,7 +586,7 @@ export const about = {
     'The Job Ledger holds a job\'s value as well as its costs, so that the Job profit query can add them up in one go. Contract, Variation and Contingency entries are value; Labour, Materials, Plant and Subcontract are costs.',
     'Labour is costed once a week, on Friday, from who was on site; this week\'s labour is not in the ledger until then. Office staff are not costed to jobs.',
     'Stage amounts are worked out when the contract is signed and must add up to the contract sum. Variations do not change them: they are charged on their own lines.',
-    'Every record of a print template\'s table prints, so the Statement prints for every client and the Contract for every job. Choose the ones you want, or print the one on screen.',
+    'Each print template prints only the records it is for: quotes still Sent, contracts for jobs not yet Closed, variations still Proposed. Invoices and statements print for all. Any record prints from its own form, whatever it is.',
     'Document numbers run in date order with a new run each year. When you type a new one, look at the last number in that table and add one.',
   ],
   faq: [

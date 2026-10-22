@@ -25,6 +25,9 @@ const NAME = (t) => `[${t}].[First Name] & " " & [${t}].[Last Name]`;
 const STAGE_RANK = 'IIf([Stage] = "Offer accepted", 1, IIf([Stage] = "Solicitors instructed", 2, IIf([Stage] = "Searches and survey", 3, IIf([Stage] = "Mortgage offered", 4, IIf([Stage] = "Exchanged", 5, 6)))))';
 const FEES = 'Round(Nz([Received]) * [Management Fee], 2) + Round(Round(Nz([Received]) * [Management Fee], 2) * 0.2, 2)';
 
+// The print templates use where, if, format and lines.on.
+export const minOffice = '2.16.0';
+
 export const spec = {
   negative: {},
   tables: [
@@ -228,86 +231,104 @@ export const spec = {
     { name: 'Commission by month', query: 'Commission earned by month', columns: ['Month', { field: 'Sales', type: 'currency' }, { field: 'Letting Fees', type: 'currency' }, { field: 'Management Fees', type: 'currency' }, { field: 'Total', type: 'currency' }], totals: [{ field: 'Sales', fn: 'sum' }, { field: 'Letting Fees', fn: 'sum' }, { field: 'Management Fees', fn: 'sum' }, { field: 'Total', fn: 'sum' }] },
     { name: 'Rent arrears', query: 'Rent arrears', group: 'Tenant', columns: ['Property', 'Landlord', 'Period', { field: 'Due Date', type: 'date' }, { field: 'Days Late', type: 'integer' }, { field: 'Amount', type: 'currency' }, { field: 'Received', type: 'currency' }, { field: 'Owed', type: 'currency' }], totals: [{ field: 'Owed', fn: 'sum' }] },
   ],
-  // The print templates: a document for each record of their table, the agency's details at the head.
+  // The print templates: each prints for the records it is for (its `where`),
+  // and leaves out what does not apply to one record (an `if` on a block, a
+  // field or a total). A record printed from its form always prints.
   documents: [
-    { name: 'Landlord statement', table: 'Landlord Statements', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // This month's statements, and in the first week of a month last month's too (they go out on the third working day).
+    { name: 'Landlord statement', table: 'Landlord Statements', paper: 'a4', letterhead: LETTERHEAD, where: 'DateDiff("m", [Statement Date], Date()) = 0 Or (Day(Date()) <= 7 And DateDiff("m", [Statement Date], Date()) = 1)', blocks: [
       { type: 'heading', text: 'Landlord statement {Number}' },
+      { type: 'totals', rows: [{ label: 'For the month', expr: '[Period] & "-01"', format: 'mmmm yyyy' }] },
       { type: 'fields', columns: 2, items: [
         { field: 'Client', label: 'Landlord' }, { field: 'Number', label: 'Statement' },
-        { field: 'Client.Address', label: 'Address' }, { field: 'Period', label: 'For the month' },
-        { field: 'Client.City', label: 'City' }, { field: 'Statement Date', label: 'Date' },
-        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Client.Account', label: 'Your account' },
+        { field: 'Client.Address', label: 'Address' }, { field: 'Statement Date', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Client.City', label: 'City' }, { field: 'Client.Account', label: 'Your account' },
+        { field: 'Client.Postcode', label: 'Postcode' },
       ] },
+      // Each sum on its own side: what came in, and what was taken off.
       { type: 'lines', table: 'Statement Lines', link: 'Statement', sort: 'Date', columns: [
-        { field: 'Date' }, { field: 'Property.Address', label: 'Property' }, { field: 'Description' },
-        { field: 'Money In', label: 'Received', type: 'currency' }, { field: 'Money Out', label: 'Deducted', type: 'currency' },
+        { field: 'Date', format: 'dd/mm/yyyy' }, { field: 'Property.Address', label: 'Property', type: 'text' }, { field: 'Description' },
+        { expr: 'IIf(Nz([Money In]) <> 0, [Money In], Null)', as: 'Received', type: 'currency' },
+        { expr: 'IIf(Nz([Money Out]) <> 0, [Money Out], Null)', as: 'Deducted', type: 'currency' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Rent collected', expr: '[Money In]' }, { label: 'Fees, VAT and repairs', expr: '[Money Out]' },
-        { label: 'Paid to you', expr: '[Money In] - [Money Out]', strong: true },
+        { label: 'Rent collected', expr: '[Received]' }, { label: 'Fees, VAT and repairs', expr: '[Deducted]' },
+        { label: 'Paid to you', expr: 'Round([Received] - [Deducted], 2)', strong: true },
       ] },
-      { type: 'text', text: 'We paid {Paid Out} into your account by bank transfer on {Paid On}. Our fees are shown with VAT; our VAT invoices for them come with this statement. Repairs are charged at what the contractor billed, with nothing added.', small: true },
+      { type: 'text', text: 'We paid {Paid Out} into your account by bank transfer on {Paid On}.', if: 'Nz([Paid Out]) > 0' },
+      { type: 'text', text: 'Nothing was paid to you this month: the repairs came to more than the rent left after our fees, and what was left of them is carried to next month\'s statement. A statement never asks you for money.', if: 'Nz([Paid Out]) <= 0' },
+      { type: 'text', text: 'Our fees are shown with VAT; our VAT invoices for them come with this statement. Repairs are charged at what the contractor billed, with nothing added.', small: true },
       { type: 'text', text: 'Rent we collect for you is held in our client account, kept apart from our own money, until it is paid to you. Questions about this statement: call {Business.Phone} or write to {Business.E-mail}.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Tenancy agreement', table: 'Tenancies', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Tenancies running now or about to start.
+    { name: 'Tenancy agreement', table: 'Tenancies', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] <> "Ended"', blocks: [
       { type: 'heading', text: 'Tenancy agreement {Reference}' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Property.Client', label: 'Landlord' }, { field: 'Signed On', label: 'Date of this agreement' },
-        { field: 'Tenant', label: 'Tenant' }, { field: 'Start', label: 'Tenancy begins' },
-        { field: 'Property.Address', label: 'The property' }, { field: 'End', label: 'Fixed term ends' },
+        { field: 'Property.Client', label: 'Landlord' }, { field: 'Signed On', label: 'Date of this agreement', format: 'd mmmm yyyy' },
+        { field: 'Tenant', label: 'Tenant' }, { field: 'Start', label: 'Tenancy begins', format: 'd mmmm yyyy' },
+        { field: 'Property.Address', label: 'The property' }, { field: 'End', label: 'Fixed term ends', format: 'd mmmm yyyy' },
         { field: 'Property.City', label: 'City' }, { field: 'Rent Day', label: 'Rent day each month' },
-        { field: 'Property.Postcode', label: 'Postcode' }, { field: 'Deposit Ref', label: 'Deposit protection reference' },
-        { field: 'Property.Bedrooms', label: 'Bedrooms' }, { field: 'Service', label: 'Our service to the landlord' },
+        { field: 'Property.Postcode', label: 'Postcode' }, { field: 'Property.Bedrooms', label: 'Bedrooms' },
+        { field: 'Service', label: 'Our service to the landlord' }, { field: 'Deposit Ref', label: 'Deposit protection reference', if: '[Deposit Ref]' },
       ] },
       { type: 'totals', rows: [{ label: 'Rent each month', expr: '[Monthly Rent]' }, { label: 'Deposit', expr: '[Deposit]' }] },
       { type: 'text', text: 'This agreement is made on {Signed On} between {Property.Client} of {Property.Client.Address}, {Property.Client.City} {Property.Client.Postcode} ("the Landlord") and {Tenant} ("the Tenant"). {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Agent") signs it for the Landlord and acts for the Landlord, not for the Tenant. The Landlord lets the property named above ("the Property") to the Tenant as a home, on the terms below.' },
+      { type: 'text', text: 'It renews the Tenant\'s earlier tenancy of the Property, which ends the day before this one begins.', if: '[Renewal]' },
       { type: 'text', text: '1. The property. The Property is let together with the use of any shared entrance, paths, garden and bin store that serve it, and with the contents listed in the inventory. It is to be lived in by the Tenant and the members of the Tenant\'s household named on the application.' },
       { type: 'text', text: '2. The term. The tenancy begins on {Start} and its fixed term ends on {End}. If neither side has ended it by then, it carries on from month to month on the same terms until it is ended as clause 11 says.' },
       { type: 'text', text: '3. The rent. The rent is {Monthly Rent} a month, paid in advance on day {Rent Day} of each month, the first payment before the tenancy begins. It is paid to {Rent Paid To}, by standing order, quoting the reference {Reference}. The rent does not go up during the fixed term; after it, it may be raised no more than once a year, by at least two months\' notice in writing.' },
       { type: 'text', text: '4. Bills. The Tenant pays council tax, gas, electricity, water and sewerage, telephone and broadband for the Property from the start of the tenancy, and tells the suppliers of the meter readings on the day of moving in.' },
-      { type: 'text', text: '5. The deposit. The Tenant pays a deposit of {Deposit} before the tenancy begins. Within 30 days of receiving it, the Agent protects it for the Landlord in a government-approved tenancy deposit scheme and gives the Tenant the scheme\'s details; its reference is shown above once given. At the end, the deposit is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning; if they cannot agree, either may ask the scheme to decide.' },
+      { type: 'text', text: '5. The deposit. The Tenant pays a deposit of {Deposit} before the tenancy begins. Within 30 days of receiving it, the Agent protects it for the Landlord in a government-approved tenancy deposit scheme and gives the Tenant the scheme\'s details; its reference is shown above once given. At the end, the deposit is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning; if they cannot agree, either may ask the scheme to decide.', if: 'Nz([Renewal], 0) = 0' },
+      { type: 'text', text: '5. The deposit. The deposit of {Deposit} paid for the earlier tenancy is kept, and carries on as the deposit for this one, protected in the same scheme under the reference shown above. At the end, it is returned within ten days of both sides agreeing what, if anything, is kept back for unpaid rent, damage beyond fair wear and tear, or cleaning; if they cannot agree, either may ask the scheme to decide.', if: '[Renewal]' },
       { type: 'text', text: '6. The Tenant agrees: to pay the rent on time; to keep the Property clean and in good order, and to heat and air it so that damp and mould do not build up; to report any repair needed promptly; to test the smoke alarms once a month; not to make alterations, redecorate or change the locks without consent in writing; not to cause a nuisance to the neighbours; not to sublet or take in a lodger without consent in writing; and to give back all the keys at the end.' },
       { type: 'text', text: '7. The Landlord agrees: to let the Tenant live in the Property in peace; to keep the structure and outside in repair, and the supplies of water, gas and electricity, the heating and the hot water in repair and working order; to have any gas appliances checked every year and the wiring every five years, and give the Tenant copies of the certificates; to fit smoke alarms, and carbon monoxide alarms where needed; and to insure the building.' },
       { type: 'text', text: '8. Repairs and access. The Tenant reports repairs to {Repairs To}. The Landlord or the Agent, or a contractor sent by either, may come in at a reasonable time of day to inspect the Property or carry out repairs after giving at least 24 hours\' notice in writing, and at once in an emergency such as a gas leak, a flood or a fire.' },
-      { type: 'text', text: '9. Pets and smoking. Pets agreed for this tenancy: {Pets}. Any other pet needs consent in writing first, which will not be refused without good reason. No one may smoke or vape inside the Property.' },
+      { type: 'text', text: '9. Pets and smoking. No pets are agreed for this tenancy. A pet needs consent in writing first, which will not be refused without good reason. No one may smoke or vape inside the Property.', if: 'Nz([Pets], "None") = "None"' },
+      { type: 'text', text: '9. Pets and smoking. Pets agreed for this tenancy: {Pets}. Any other pet needs consent in writing first, which will not be refused without good reason. No one may smoke or vape inside the Property.', if: 'Nz([Pets], "None") <> "None"' },
       { type: 'text', text: '10. The inventory. An inventory and record of condition, with photographs, is made at the start and signed by both sides. At the end, the Property is compared with it, allowing for fair wear and tear.' },
       { type: 'text', text: '11. Ending the tenancy. The Tenant may end the tenancy at the end of the fixed term, or at any time after it, by giving at least one month\'s notice in writing ending the day before a rent day. The Landlord may end it only on the grounds, and with the notice, that the law allows, and always in writing.' },
       { type: 'text', text: '12. Notices. Notices to the Landlord may be sent to the Agent at {Business.Address}, {Business.City} {Business.Postcode} or {Business.E-mail}, and count as given to the Landlord. Notices to the Tenant go to the Property, or to {Tenant.E-mail}.' },
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['Signed by the Agent for the Landlord', 'Date', 'Signed by the Tenant', 'Date'] },
     ] },
-    { name: 'Viewing confirmation', table: 'Viewings', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Viewings booked for today or later.
+    { name: 'Viewing confirmation', table: 'Viewings', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Booked" And DateDiff("d", Date(), [Viewing Date]) >= 0', blocks: [
+      { type: 'totals', rows: [{ label: 'Date', expr: 'Nz([Confirmation Sent], [Booked On])', format: 'd mmmm yyyy' }] },
       { type: 'fields', columns: 2, items: [
-        { field: 'Applicant', label: 'To' }, { field: 'Booked On', label: 'Date' },
-        { field: 'Applicant.Address', label: 'Address' }, { field: 'Property.Reference', label: 'Property reference' },
-        { field: 'Applicant.City', label: 'City' }, { field: 'Applicant.Postcode', label: 'Postcode' },
+        { field: 'Applicant', label: 'To' }, { field: 'Property.Reference', label: 'Property reference' },
+        { field: 'Applicant.Address', label: 'Address' }, { field: 'Applicant.City', label: 'City' },
+        { field: 'Applicant.Postcode', label: 'Postcode' },
       ] },
       { type: 'heading', text: 'Your viewing of {Property.Address}' },
       { type: 'text', text: 'Dear {Applicant},' },
       { type: 'text', text: 'Thank you for booking a viewing with us. This is to confirm the details.' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Viewing Date', label: 'Day' }, { field: 'Viewing Time', label: 'Time' },
-        { field: 'Property.Address', label: 'Property' }, { field: 'Property.Area', label: 'Area' },
-        { field: 'Property.Postcode', label: 'Postcode' }, { field: 'Property.Kind', label: 'Kind of home' },
-        { field: 'Property.Bedrooms', label: 'Bedrooms' }, { field: 'Property.Price', label: 'Price' },
-        { field: 'Accompanied By', label: 'You will be met by' }, { field: 'Accompanied By.Phone', label: 'Their phone' },
+        { field: 'Viewing Date', label: 'Day', format: 'dddd d mmmm yyyy' }, { field: 'Viewing Time', label: 'Time' },
+        { field: 'Accompanied By', label: 'You will be met by', if: '[Accompanied By]' }, { field: 'Accompanied By.Phone', label: 'Their phone', if: '[Accompanied By]' },
       ] },
-      { type: 'text', text: '{Accompanied By} will meet you outside the property a minute or two before the time above. The viewing takes about twenty minutes, and you are welcome to bring someone with you. If you are running late, or need to change the day, please call {Accompanied By.Phone} or the office on {Business.Phone}.' },
-      { type: 'text', text: 'If you would like to make an offer, or apply to rent, after the viewing, tell {Accompanied By} or call the office. For a purchase we will ask how you are buying (a mortgage agreed in principle, the sale of your home, or cash) so that we can put your offer to the owner fully.' },
+      // The home: its price for a sale, its rent for a let.
+      { type: 'lines', table: 'Properties', on: { ID: 'Property' }, columns: [
+        { field: 'Address', label: 'The home' }, { field: 'Area', type: 'text' }, { field: 'Kind', label: 'Kind of home' }, { field: 'Bedrooms', type: 'integer' },
+        { expr: 'IIf([Purpose] = "Let", Format([Price], "#,##0") & " a month", Format([Price], "#,##0"))', as: 'Asking', label: 'Asking price or rent', type: 'text' },
+      ] },
+      { type: 'text', text: '{Accompanied By} will meet you outside the property a minute or two before the time above. The viewing takes about twenty minutes, and you are welcome to bring someone with you. If you are running late, or need to change the day, please call {Accompanied By.Phone} or the office on {Business.Phone}.', if: '[Accompanied By]' },
+      { type: 'text', text: 'If you would like to make an offer, or apply to rent, after the viewing, tell us at the viewing or call the office. For a purchase we will ask how you are buying (a mortgage agreed in principle, the sale of your home, or cash) so that we can put your offer to the owner fully.' },
       { type: 'text', text: 'Yours sincerely,' },
       { type: 'spacer', size: 16 },
       { type: 'text', text: '{Business.Name}' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Memorandum of sale', table: 'Sales', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Sales going through: accepted, and not yet completed or fallen through.
+    { name: 'Memorandum of sale', table: 'Sales', paper: 'a4', letterhead: LETTERHEAD, where: '[Stage] <> "Completed" And [Stage] <> "Fell through"', blocks: [
       { type: 'heading', text: 'Memorandum of sale {Number}' },
+      { type: 'totals', rows: [{ label: 'Date of this memorandum', expr: 'Nz([Memorandum Sent], Date())', format: 'd mmmm yyyy' }] },
       { type: 'text', text: 'To the seller, the buyer and their solicitors. An offer for the property below has been accepted, subject to contract. The details agreed are set out here so that the solicitors can begin their work. Nothing here is binding on either side until contracts are exchanged.' },
       { type: 'fields', columns: 2, items: [
-        { field: 'Property.Address', label: 'Property' }, { field: 'Accepted On', label: 'Offer accepted on' },
-        { field: 'Property.City', label: 'City' }, { field: 'Memorandum Sent', label: 'Date of this memorandum' },
+        { field: 'Property.Address', label: 'Property' }, { field: 'Accepted On', label: 'Offer accepted on', format: 'd mmmm yyyy' },
+        { field: 'Property.City', label: 'City' }, { field: 'Target Completion', label: 'Completion hoped for by', format: 'd mmmm yyyy', if: '[Target Completion]' },
         { field: 'Property.Postcode', label: 'Postcode' }, { field: 'Property.Kind', label: 'Kind of home' },
-        { field: 'Target Completion', label: 'Completion hoped for by' }, { field: 'Negotiator', label: 'Our negotiator' },
+        { field: 'Negotiator', label: 'Our negotiator', if: '[Negotiator]' },
       ] },
       { type: 'totals', rows: [{ label: 'Agreed price', expr: '[Price]', strong: true }] },
       { type: 'fields', columns: 2, items: [
@@ -315,6 +336,8 @@ export const spec = {
         { field: 'Property.Client.Address', label: 'Seller\'s address' }, { field: 'Buyer.Address', label: 'Buyer\'s address' },
         { field: 'Property.Client.City', label: 'City' }, { field: 'Buyer.City', label: 'City' },
         { field: 'Property.Client.Phone', label: 'Seller\'s phone' }, { field: 'Buyer.Phone', label: 'Buyer\'s phone' },
+      ] },
+      { type: 'fields', columns: 2, if: '[Seller Solicitor] Or [Buyer Solicitor]', items: [
         { field: 'Seller Solicitor.Name', label: 'Seller\'s solicitor' }, { field: 'Buyer Solicitor.Name', label: 'Buyer\'s solicitor' },
         { field: 'Seller Solicitor.Contact', label: 'Dealing' }, { field: 'Buyer Solicitor.Contact', label: 'Dealing' },
         { field: 'Seller Solicitor.Phone', label: 'Phone' }, { field: 'Buyer Solicitor.Phone', label: 'Phone' },
@@ -322,28 +345,34 @@ export const spec = {
       ] },
       { type: 'fields', columns: 1, items: [
         { field: 'Buyer.Position', label: 'How the buyer is buying' }, { field: 'Offer.Conditions', label: 'The offer was made' },
-        { field: 'Included', label: 'Included in the price' },
+        { field: 'Included', label: 'Included in the price', if: '[Included]' },
       ] },
       { type: 'text', text: 'The seller has agreed to take the property off the market while the sale goes ahead, and we will not show it to anyone else. Our sales progressor will keep in touch with both solicitors each week and tell you both of any news. Please tell us at once of anything that may delay the sale, such as a change in the buyer\'s mortgage or the seller\'s onward move.' },
       { type: 'text', text: 'Our fee is due from the seller on completion, as agreed when the property came to us. Questions: call {Business.Phone} or write to {Business.E-mail}, quoting {Number}.', small: true },
     ] },
-    { name: 'Commission invoice', table: 'Agency Invoices', paper: 'a4', letterhead: { ...LETTERHEAD, fields: [...LETTERHEAD.fields, 'Tax Number'] }, blocks: [
+    // The invoices of the last 31 days.
+    { name: 'Commission invoice', table: 'Agency Invoices', paper: 'a4', letterhead: { ...LETTERHEAD, fields: [...LETTERHEAD.fields, 'Tax Number'] }, where: 'DateDiff("d", [Invoice Date], Date()) >= 0 And DateDiff("d", [Invoice Date], Date()) <= 31', blocks: [
       { type: 'heading', text: 'Invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client', label: 'Invoice to' }, { field: 'Number', label: 'Invoice number' },
-        { field: 'Client.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Date' },
-        { field: 'Client.City', label: 'City' }, { field: 'Due Date', label: 'Payment due' },
+        { field: 'Client.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Client.City', label: 'City' }, { field: 'Due Date', label: 'Payment due', format: 'dd/mm/yyyy' },
         { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Client.Account', label: 'Your account' },
       ] },
       { type: 'lines', table: 'Invoice Lines', link: 'Invoice', columns: [
-        { field: 'Description' }, { field: 'Property.Address', label: 'Property' }, { field: 'Net', type: 'currency' },
-        { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number' }, { expr: 'Round([Net] * Nz([Tax Rate]), 2)', as: 'Line VAT', label: 'VAT', type: 'currency' },
+        { field: 'Description' }, { field: 'Property.Address', label: 'Property', type: 'text' }, { field: 'Net', type: 'currency' },
+        { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', format: '0' }, { expr: 'Round([Net] * Nz([Tax Rate]), 2)', as: 'Line VAT', label: 'VAT', type: 'currency' },
       ] },
       { type: 'totals', rows: [
         { label: 'Fees', expr: '[Net]' }, { label: 'VAT', expr: '[Tax]' }, { label: 'Total', expr: '[Amount]', strong: true },
       ] },
-      { type: 'fields', columns: 2, items: [{ field: 'Paid On', label: 'Paid on' }, { field: 'Paid How', label: 'Paid by' }] },
-      { type: 'text', text: '{Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}. Fees for a sale are paid by your solicitor from the sale money on completion; fees for a managed let are taken from the rent we collect and shown on your statement.', small: true },
+      { type: 'fields', columns: 2, if: '[Paid On]', items: [
+        { field: 'Paid On', label: 'Paid on', format: 'dd/mm/yyyy' }, { field: 'Paid How', label: 'Paid', if: '[Paid How]' },
+      ] },
+      { type: 'text', text: 'Paid in full: thank you.', if: '[Paid On]' },
+      { type: 'text', text: '{Business.Payment Terms} By bank transfer to {Business.Bank Details}, quoting {Number}.', small: true, if: 'Nz([Paid On], "") = ""' },
+      { type: 'text', text: 'Commission on a sale is paid by your solicitor from the sale money on completion.', small: true, if: '[Sale]' },
+      { type: 'text', text: 'Fees for a managed let are taken from the rent we collect, and shown on your landlord statement.', small: true, if: '[Statement]' },
       { type: 'text', text: 'VAT registration {Business.Tax Number}. {Business.Document Footer}', small: true },
     ] },
   ],
@@ -497,11 +526,11 @@ export const about = {
     'Rent arrears': 'Each tenant behind with rent on their own section, every unpaid month and the total owed.',
   },
   documents: {
-    'Landlord statement': 'Sent to each landlord on the third working day of the month: every rent received for them, the management fee and VAT, any letting fee and repairs, and the sum paid into their account. Numbered STM-2026-0042.',
-    'Tenancy agreement': 'The agreement for a home the agency lets, filled from the tenancy, the tenant, the home and its landlord. The agency signs it for the landlord and says that it acts for the landlord. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it.',
-    'Viewing confirmation': 'The letter or e-mail an applicant gets when a viewing is booked: the home, the day and time, who will meet them, and what to do after.',
-    'Memorandum of sale': 'Sent to the seller, the buyer and both solicitors when an offer is accepted: the property, the agreed price, both parties and their solicitors, how the buyer is buying, what is included, and the completion hoped for. Subject to contract.',
-    'Commission invoice': 'The agency\'s VAT invoice to a client: commission on a completed sale, the letting fee for a new tenancy, or a month\'s management fees, each line with its VAT. Numbered INV-2026-0042.',
+    'Landlord statement': 'Sent to each landlord on the third working day of the month: every rent received for them, the management fee and VAT, any letting fee and repairs, each sum on its own side as received or deducted, and the sum paid into their account (or, in a month when repairs took it all, why nothing was paid). Numbered STM-2026-0042. It prints this month\'s statements, and in the first week of a month last month\'s too; print an older one from the Landlord Statements form.',
+    'Tenancy agreement': 'The agreement for a home the agency lets, filled from the tenancy, the tenant, the home and its landlord. The agency signs it for the landlord and says that it acts for the landlord. A renewal says so and keeps the deposit already held; the pets clause reads one way when pets are agreed and another when none are. It prints for tenancies running or about to start. It is a plainly worded starting point of our own: have it checked against the law where your homes are before you use it.',
+    'Viewing confirmation': 'The letter or e-mail an applicant gets when a viewing is booked: the day and time, who will meet them, the home with its asking price (or its rent a month, for a let), and what to do after. It prints for the viewings booked for today or later.',
+    'Memorandum of sale': 'Sent to the seller, the buyer and both solicitors when an offer is accepted: the property, the agreed price, both parties and their solicitors, how the buyer is buying, what is included, and the completion hoped for. Subject to contract. It prints for the sales going through, not those completed or fallen through.',
+    'Commission invoice': 'The agency\'s VAT invoice to a client: commission on a completed sale, the letting fee for a new tenancy, or a month\'s management fees, each line with its VAT. Paid, it says when and how; unpaid, how to pay. Numbered INV-2026-0042. It prints the invoices of the last 31 days; print an older one from the Agency Invoices form.',
   },
   tutorial: [
     { title: 'Take on a home to sell', steps: [
@@ -556,7 +585,7 @@ export const about = {
     'Rent the agency collects is the landlord\'s money, not the agency\'s. It shows on the landlord statements, while the agency\'s own income is only its invoices, which is what Commission earned by month adds up.',
     'A landlord statement\'s Paid Out is the rent collected less everything deducted. When the repairs of a month cost more than the rent left after fees, they are carried to the next month\'s statement, so a statement never asks a landlord for money.',
     'Statuses on properties, applicants, sales and tenancies are as they stood on the day the sample was made. Change them by hand as things move on; the queries read them.',
-    'Every print template prints a document for each record of its table: every viewing, every sale, every invoice. Choose the record you want, or print from its form.',
+    'Each print template prints only the records it is for: this month\'s landlord statements, the tenancies running or about to start, the viewings still to come, the sales going through and the invoices of the last 31 days. A record printed from its own form always prints, whatever the template would choose.',
     'Commission on sales is taken from the sale money by the seller\'s solicitor on completion, so most sale invoices are paid within a few days. Letting and management fees for managed homes are taken from the rent, so they are paid the day the statement is made.',
   ],
   faq: [
@@ -883,8 +912,7 @@ export function fill(base, { r, cal, days = 540 }) {
     }
   }
   const SERVICE_FEE = { 'Fully managed': 0.12, 'Rent collection': 0.08, 'Let only': 0 };
-  const newTenancy = (p, tenant, S, renewal, rent, signed) => {
-    const term = r.chance(0.15) ? 6 : 12;
+  const newTenancy = (p, tenant, S, renewal, rent, signed, term = r.chance(0.15) ? 6 : 12) => {
     const t = {
       p, tenant, S, E: addMonths(S, term) - 1, rent, renewal, signed, service: p.service, mgmt: SERVICE_FEE[p.service],
       letFee: renewal ? 0 : money(rent * (p.service === 'Let only' ? 1 : 0.5)), pets: r.chance(0.1) ? r.pick(PETS) : 'None',
@@ -893,23 +921,30 @@ export function fill(base, { r, cal, days = 540 }) {
     tenancies.push(t);
     return t;
   };
+  // One home's yearly tenancies run on to an end in the next few weeks, so on
+  // any day there is a tenancy to ask about renewing.
+  const ending = letProps.find((p) => !p.fresh);
+  const endsOn = startFrom(r.int(11, 51)) - 1;
+  let endingStart = endsOn + 1;
+  while (endingStart > -days) endingStart = addMonths(endingStart, -12);
   for (const p of letProps) {
     p.price = p.market;
     let cur = null;
     let listAt = null;
     if (p.fresh) listAt = p.client.since + r.int(3, 14);
     else {
-      const S = startFrom(-days - r.int(0, 330));
+      const S = p === ending ? endingStart : startFrom(-days - r.int(0, 330));
       const tenant = newApplicant('Rent', p.area, S - r.int(25, 60), p.beds, round(p.market * 1.05, 25));
       tenant.foundAt = S - r.int(10, 20);
-      cur = newTenancy(p, tenant, S, false, round(p.market * Math.pow(1.035, S / 365), 25), S - r.int(5, 15));
+      cur = newTenancy(p, tenant, S, false, round(p.market * Math.pow(1.035, S / 365), 25), S - r.int(5, 15), p === ending ? 12 : undefined);
     }
     for (let guard = 0; guard < 12; guard++) {
       if (cur) {
         const decideAt = cur.E - 60;
         if (decideAt > 0) break;
-        if (r.chance(0.55)) {
-          cur = newTenancy(p, cur.tenant, cur.E + 1, true, round(cur.rent * 1.03, 5), Math.min(0, cur.E - r.int(25, 45)));
+        const onToTheEnd = p === ending && cur.E < endsOn;
+        if (onToTheEnd || r.chance(0.55)) {
+          cur = newTenancy(p, cur.tenant, cur.E + 1, true, round(cur.rent * 1.03, 5), Math.min(0, cur.E - r.int(25, 45)), onToTheEnd ? 12 : undefined);
           if (cur.S > 0) break;
           continue;
         }

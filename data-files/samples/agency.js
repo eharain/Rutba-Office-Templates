@@ -20,6 +20,9 @@
 
 import { address, BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, money, person, phoneFor, PLACES } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const PERSON = '[First Name] & " " & [Last Name]';
 const COST = 'Round([Hours] * [Hourly Cost], 2)';
@@ -195,92 +198,122 @@ export const spec = {
       { table: 'Contacts', field: 'E-mail' }, { table: 'Contacts', field: 'Phone' },
     ] },
   },
-  // What the studio prints: one document per record of the table named, its lines from the records that point at it.
+  // What the studio prints: one document per record of the table named (only those its `where` holds for), its lines from the records that point at it.
   documents: [
     { name: 'Invoice', table: 'Invoices', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client', label: 'Bill to' }, { field: 'Number', label: 'Invoice' },
-        { field: 'Project.Contact', label: 'For the attention of' }, { field: 'Invoice Date', label: 'Date' },
-        { field: 'Client.Address', label: 'Address' }, { field: 'Due Date', label: 'Payment due' },
+        { field: 'Project.Contact', label: 'For the attention of' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Client.Address', label: 'Address' }, { field: 'Due Date', label: 'Payment due', format: 'dd/mm/yyyy' },
         { field: 'Client.City', label: 'City' }, { field: 'Project.Code', label: 'Our reference' },
-        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Project.Client PO', label: 'Your order number' },
-        { field: 'Client.Country', label: 'Country' }, { field: 'Project.Name', label: 'Project' },
+        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Project.Name', label: 'Project' },
+        { field: 'Client.Country', label: 'Country' }, { field: 'Project.Client PO', label: 'Your order number' },
       ] },
       { type: 'lines', table: 'Invoice Lines', columns: [
         { field: 'Description' }, { field: 'Quantity', label: 'Hours or qty', type: 'number' }, { field: 'Unit Price', label: 'Rate', type: 'currency' },
-        { expr: LINE, as: 'Amount', type: 'currency' }, { field: 'Tax Rate', label: 'VAT rate', type: 'number' }, { expr: LINE_VAT, as: 'VAT', type: 'currency' },
+        { expr: LINE, as: 'Amount', type: 'currency' }, { expr: '[Tax Rate] * 100', as: 'VAT %', format: '0' }, { expr: LINE_VAT, as: 'VAT', type: 'currency' },
       ] },
       { type: 'totals', rows: [
         { label: 'Fees and expenses', expr: '[Amount]' }, { label: 'VAT', expr: '[VAT]' },
-        { label: 'Total', expr: '[Fees and expenses] + [VAT]', strong: true }, { label: 'Paid', expr: '[Paid]' },
-        { label: 'Balance due', expr: 'Round([Total] - [Paid], 2)', strong: true },
+        { label: 'Total', expr: '[Fees and expenses] + [VAT]', strong: true },
+        // What has come in and what is left, only once something has been paid.
+        { label: 'Paid so far', expr: '[Paid]', if: '[Paid] > 0' },
+        { label: 'Balance due', expr: 'Round([Total] - [Paid], 2)', strong: true, if: '[Paid] > 0' },
       ] },
-      { type: 'text', text: 'Please pay by {Due Date}. {Business.Payment Terms} Pay to {Business.Bank Details}, quoting {Number}. VAT registration {Business.Tax Number}.', small: true },
+      { type: 'text', text: 'No VAT is charged on this invoice: the client is outside the UK.', small: true, if: '[VAT] = 0' },
+      { type: 'text', text: 'Please pay by the payment due date above. {Business.Payment Terms} Pay to {Business.Bank Details}, quoting {Number}. VAT registration {Business.Tax Number}.', small: true, if: '[Status] <> "Paid"' },
+      { type: 'text', text: 'Paid in full. Thank you. VAT registration {Business.Tax Number}.', small: true, if: '[Status] = "Paid"' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Proposal', table: 'Projects', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // A proposal for work quoted for and not yet answered; one won or lost prints when it is chosen from the Projects form.
+    { name: 'Proposal', table: 'Projects', where: '[Status] = "Proposal"', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Proposal {Quote No}: {Name}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client', label: 'For' }, { field: 'Quote No', label: 'Proposal' },
-        { field: 'Contact', label: 'For the attention of' }, { field: 'Proposed On', label: 'Date' },
-        { field: 'Client.Address', label: 'Address' }, { field: 'Code', label: 'Our reference' },
-        { field: 'Client.City', label: 'City' }, { field: 'Work Type', label: 'The work' },
-        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Kind', label: 'Charged as' },
-        { field: 'Client.Country', label: 'Country' }, { field: 'Start Date', label: 'Could start' },
+        { field: 'Client.Address', label: 'Address' }, { field: 'Proposed On', label: 'Date', format: 'd mmmm yyyy' },
+        { field: 'Client.City', label: 'City' }, { field: 'Code', label: 'Our reference' },
+        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Work Type', label: 'The work' },
+        { field: 'Client.Country', label: 'Country' }, { field: 'Kind', label: 'Charged as' },
+        { field: 'Start Date', label: 'Could start', format: 'd mmmm yyyy' }, { field: 'Due Date', label: 'Could finish by', format: 'd mmmm yyyy' },
+        { field: 'Contact', label: 'For the attention of', if: '[Contact]' },
       ] },
-      { type: 'text', text: 'Thank you for asking us to quote. Below is the work as we would plan it, in its parts, with the hours we allow for each. We could start on {Start Date} and finish by {Due Date}, given your comments at each stage within a week of asking.' },
+      { type: 'text', text: 'Thank you for asking us to quote. Below is the work as we would plan it, in its parts, with the hours we allow for each. We could start and finish on the dates above, given your comments at each stage within a week of asking.' },
       { type: 'lines', table: 'Tasks', columns: [{ field: 'Name', label: 'Part of the work' }, { field: 'Role', label: 'Who does it' }, { field: 'Estimated Hours', label: 'Hours', type: 'number' }] },
-      { type: 'totals', rows: [{ label: 'Hours planned', expr: '[Estimated Hours]', type: 'number' }, { label: 'Fee, before VAT', expr: '[Fee]', strong: true }] },
-      { type: 'text', text: 'A fixed fee covers the work above with two rounds of changes at each stage, and is invoiced in stages as the work goes. Work charged by the hour is invoiced monthly for the time spent, and the fee above is then our estimate. VAT is added for clients in the UK. Printing, licences, hosting and travel are passed on at cost. This proposal holds for 60 days from its date.' },
+      { type: 'totals', rows: [
+        { label: 'Hours planned', expr: '[Estimated Hours]', type: 'number' },
+        { label: 'Fixed fee, before VAT', expr: '[Fee]', strong: true, if: '[Kind] = "Fixed fee"' },
+        { label: 'Estimated fee, before VAT', expr: '[Fee]', strong: true, if: '[Kind] = "Hourly"' },
+      ] },
+      { type: 'text', text: 'The fixed fee covers the work above with two rounds of changes at each stage, and is invoiced in stages as the work goes: the first part when it starts and the last on completion.', if: '[Kind] = "Fixed fee"' },
+      { type: 'text', text: 'This work is charged by the hour for the time we spend, and invoiced at the start of each month for the month before. The fee above is our estimate, and we will tell you before the time used goes past it.', if: '[Kind] = "Hourly"' },
+      { type: 'text', text: 'VAT is added for clients in the UK. Printing, licences, hosting and travel are passed on at cost. This proposal holds for 60 days from its date.' },
       { type: 'text', text: 'To go ahead, reply to this proposal and we will send a letter of engagement to sign. {Business.Document Footer}', small: true },
     ] },
-    { name: 'Statement', table: 'Clients', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // A statement for each client (not the studio itself), listing only the invoices with money still owing.
+    { name: 'Statement', table: 'Clients', where: '[Sector] <> "Internal"', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Statement of account' },
+      { type: 'totals', rows: [{ label: 'Statement date', expr: 'Date()', format: 'dd/mm/yyyy' }] },
       { type: 'fields', columns: 2, items: [{ field: 'Name', label: 'Client' }, { field: 'Address' }, { field: 'City' }, { field: 'Postcode' }, { field: 'Country' }, { field: 'Payment Days', label: 'Payment terms, days' }] },
-      { type: 'lines', table: 'Invoices', link: 'Client', sort: 'Invoice Date', columns: [
-        { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Due Date', label: 'Due' }, { field: 'Project.Name', label: 'Project' },
+      { type: 'lines', table: 'Invoices', link: 'Client', sort: 'Invoice Date', where: 'Round([Total] - [Paid], 2) > 0', columns: [
+        { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' }, { field: 'Due Date', label: 'Due', format: 'dd/mm/yyyy' }, { field: 'Project.Name', label: 'Project' },
         { field: 'Total', label: 'Invoiced', type: 'currency' }, { field: 'Paid', type: 'currency' }, { expr: 'Round([Total] - [Paid], 2)', as: 'Owing', type: 'currency' },
-        { expr: 'IIf([Owing] > 0 And DateDiff("d", [Due Date], Date()) > 0, DateDiff("d", [Due Date], Date()), 0)', as: 'Days Overdue', label: 'Days overdue', type: 'integer' },
+        { expr: 'IIf(DateDiff("d", [Due Date], Date()) > 0, DateDiff("d", [Due Date], Date()), 0)', as: 'Days Overdue', label: 'Days overdue', type: 'integer' },
       ] },
-      { type: 'totals', rows: [{ label: 'Invoiced', expr: '[Total]' }, { label: 'Received', expr: '[Paid]' }, { label: 'Balance owing', expr: '[Owing]', strong: true }] },
-      { type: 'text', text: 'Invoices with nothing owing are shown for your records. Please pay the balance owing to {Business.Bank Details}, quoting the invoice numbers. If you think anything here is wrong, call us on {Business.Phone}.', small: true },
+      { type: 'totals', rows: [
+        { label: 'Invoices unpaid', expr: '[Invoices count]', type: 'integer' },
+        { label: 'Balance owing', expr: '[Owing]', strong: true },
+      ] },
+      { type: 'text', text: 'Please pay the balance owing to {Business.Bank Details}, quoting the invoice numbers. If you think anything here is wrong, call us on {Business.Phone}.', small: true, if: '[Owing] > 0' },
+      { type: 'text', text: 'Nothing is owing on your account. Thank you.', small: true, if: '[Owing] <= 0' },
     ] },
     { name: 'Weekly time sheet', table: 'Time Sheets', paper: 'a4', letterhead: { table: 'Business', fields: ['Name'] }, blocks: [
       { type: 'heading', text: 'Time sheet {Number}' },
       { type: 'fields', columns: 3, items: [
-        { field: 'Staff', label: 'Name' }, { field: 'Staff.Role', label: 'Role' }, { field: 'Week Commencing', label: 'Week commencing' },
-        { field: 'Staff.Hours per Week', label: 'Contracted hours' }, { field: 'Status' }, { field: 'Approved On', label: 'Approved on' },
+        { field: 'Staff', label: 'Name' }, { field: 'Staff.Role', label: 'Role' }, { field: 'Week Commencing', label: 'Week commencing', format: 'dd/mm/yyyy' },
+        { field: 'Staff.Hours per Week', label: 'Contracted hours' }, { field: 'Status' },
+        { field: 'Submitted On', label: 'Submitted on', format: 'dd/mm/yyyy', if: '[Submitted On]' },
+        { field: 'Approved On', label: 'Approved on', format: 'dd/mm/yyyy', if: '[Approved On]' },
       ] },
-      { type: 'lines', table: 'Time Entries', sort: 'Date', columns: [
-        { field: 'Date' }, { field: 'Project.Client', label: 'Client' }, { field: 'Project.Code', label: 'Code' }, { field: 'Project.Name', label: 'Project' },
+      // The week day by day: a heading for each day and its hours under it.
+      { type: 'lines', table: 'Time Entries', sort: 'Date', group: 'Date', subtotals: ['Hours', 'Billable'], columns: [
+        { field: 'Date', label: 'Day', format: 'dddd d mmmm' }, { field: 'Project.Client', label: 'Client' }, { field: 'Project.Code', label: 'Code' }, { field: 'Project.Name', label: 'Project' },
         { field: 'Task.Name', label: 'Task' }, { field: 'Note' }, { field: 'Hours', type: 'number' }, { expr: 'IIf([Billable], [Hours], 0)', as: 'Billable', type: 'number' },
       ] },
       { type: 'totals', rows: [
         { label: 'Hours worked', expr: '[Hours]', type: 'number' }, { label: 'Billable hours', expr: '[Billable]', type: 'number' },
-        { label: 'Billable share, percent', expr: 'IIf([Hours] > 0, Round(100 * [Billable] / [Hours], 0), 0)', type: 'number' },
+        { label: 'Billable share, %', expr: 'IIf([Hours] > 0, 100 * [Billable] / [Hours], 0)', format: '0' },
       ] },
       { type: 'text', text: 'I confirm these are the hours I worked this week.', small: true },
       { type: 'signatures', labels: ['Signed', 'Approved by'] },
     ] },
-    { name: 'Letter of engagement', table: 'Projects', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // A letter for work won and in hand, never the studio's own internal projects; a finished one prints when chosen from the form.
+    { name: 'Letter of engagement', table: 'Projects', where: '[Status] = "Active" And [Kind] <> "Internal"', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Letter of engagement: {Name}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Client', label: 'Client' }, { field: 'Code', label: 'Our reference' },
-        { field: 'Contact', label: 'For the attention of' }, { field: 'Quote No', label: 'Proposal' },
-        { field: 'Client.Address', label: 'Address' }, { field: 'Start Date', label: 'Starting' },
-        { field: 'Client.City', label: 'City' }, { field: 'Due Date', label: 'Finishing by' },
-        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Work Type', label: 'The work' },
+        { field: 'Client.Address', label: 'Address' }, { field: 'Quote No', label: 'Proposal' },
+        { field: 'Client.City', label: 'City' }, { field: 'Start Date', label: 'Starting', format: 'd mmmm yyyy' },
+        { field: 'Client.Postcode', label: 'Postcode' }, { field: 'Due Date', label: 'Finishing by', format: 'd mmmm yyyy' },
+        { field: 'Work Type', label: 'The work' }, { field: 'Kind', label: 'Charged as' },
+        { field: 'Budget Hours', label: 'Hours planned' },
+        { field: 'Fee', label: 'Fixed fee, before VAT', format: '#,##0.00', if: '[Kind] = "Fixed fee"' },
+        { field: 'Fee', label: 'Estimated fee, before VAT', format: '#,##0.00', if: '[Kind] = "Hourly"' },
+        { field: 'Contact', label: 'For the attention of', if: '[Contact]' },
       ] },
-      { type: 'text', text: 'Dear {Contact.First Name},' },
+      { type: 'text', text: 'Dear {Contact.First Name},', if: '[Contact]' },
+      { type: 'text', text: 'Dear colleagues at {Client},', if: 'Nz([Contact], 0) = 0' },
       { type: 'text', text: 'Thank you for asking us to do this work. This letter sets out what we will do, what it costs, how we invoice it, who owns the result and how either of us can bring it to an end, so that we both know where we stand. Please sign a copy and send it back to us before the work starts.' },
-      { type: 'text', text: '1. The work. We will carry out the {Work Type} work set out in our proposal {Quote No}, which goes with this letter. We plan to start on {Start Date} and to finish by {Due Date}. Those dates depend on your comments reaching us when the plan says; if they are late, or you ask us to pause, the finish date moves on by the same time.' },
-      { type: 'text', text: '2. The fee. This work is charged as: {Kind}. It is planned at {Budget Hours} hours and the fee is {Fee}, plus VAT where it applies. A fixed fee covers the work in the proposal with two rounds of changes at each stage; changes beyond those, or work you add, we quote for before we do them. Work by the hour is charged in quarters of an hour for the time we spend, at the rates in the proposal; its fee is our estimate, and we will tell you before the time used goes past it.' },
+      { type: 'text', text: '1. The work. We will carry out the {Work Type} work set out in our proposal {Quote No}, which goes with this letter, starting and finishing on the dates above. Those dates depend on your comments reaching us when the plan says; if they are late, or you ask us to pause, the finish date moves on by the same time.' },
+      { type: 'text', text: '2. The fee. This work is for the fixed fee above, plus VAT where it applies, worked out from the hours planned. It covers the work in the proposal with two rounds of changes at each stage; changes beyond those, or work you add, we quote for before we do them.', if: '[Kind] = "Fixed fee"' },
+      { type: 'text', text: '2. The fee. This work is charged by the hour, in quarters of an hour, for the time we spend, at the rates in the proposal, plus VAT where it applies. The fee above is our estimate from the hours planned, and we will tell you before the time used goes past it.', if: '[Kind] = "Hourly"' },
       { type: 'text', text: '3. Costs we pay for you. Printing, licences for photographs and fonts, hosting, couriers and travel to see you are passed on at what they cost us and shown on the invoice. We will ask you before taking on any single large cost.' },
-      { type: 'text', text: '4. How we invoice. A fixed fee is invoiced in stages: the first part when the work starts, the next as the proposal sets out, and the last on completion. Work by the hour is invoiced at the start of each month for the month before. Each invoice is due {Client.Payment Days} days after its date, paid by bank transfer to {Business.Bank Details}, quoting the invoice number. If an invoice is more than 30 days overdue we may pause the work until it is paid.' },
+      { type: 'text', text: '4. How we invoice. The fixed fee is invoiced in stages: the first part when the work starts, the next as the proposal sets out, and the last on completion. Each invoice is due {Client.Payment Days} days after its date, paid by bank transfer to {Business.Bank Details}, quoting the invoice number. If an invoice is more than 30 days overdue we may pause the work until it is paid.', if: '[Kind] = "Fixed fee"' },
+      { type: 'text', text: '4. How we invoice. The time is invoiced at the start of each month for the month before, with the hours by person. Each invoice is due {Client.Payment Days} days after its date, paid by bank transfer to {Business.Bank Details}, quoting the invoice number. If an invoice is more than 30 days overdue we may pause the work until it is paid.', if: '[Kind] = "Hourly"' },
       { type: 'text', text: '5. Who owns the work. Once every invoice for this work has been paid in full, the rights in the final work we deliver pass to you. Until then the work stays ours and you may use it only to review it. Ideas and drafts you did not choose stay ours. Photographs, fonts and software made by others are licensed to you on their makers\' terms, which we will hand over with the files. We may show the finished work in our portfolio unless you ask us not to.' },
       { type: 'text', text: '6. Keeping things private. We keep to ourselves anything you tell us about your business that is not public, and ask the same of you for what we tell you about our methods and prices.' },
-      { type: 'text', text: '7. Ending the work. Either of us may end this engagement by writing to the other with 14 days\' notice. You then pay for the work done up to the day it ends, at our hourly rates and, for fixed-fee work, never more than the fee, and for any costs already taken on for you. The rights pass to you in the work that has been paid for.' },
+      { type: 'text', text: '7. Ending the work. Either of us may end this engagement by writing to the other with 14 days\' notice. You then pay for the work done up to the day it ends, at our hourly rates and never more than the fixed fee, and for any costs already taken on for you. The rights pass to you in the work that has been paid for.', if: '[Kind] = "Fixed fee"' },
+      { type: 'text', text: '7. Ending the work. Either of us may end this engagement by writing to the other with 14 days\' notice. You then pay for the time spent up to the day it ends, and for any costs already taken on for you. The rights pass to you in the work that has been paid for.', if: '[Kind] = "Hourly"' },
       { type: 'text', text: '8. Keeping in touch. We will name one person to look after the work day to day, and ask you to do the same. Approvals are best given by e-mail, so that there is a record of them.' },
       { type: 'text', text: 'If this is as you understand it, please sign and return a copy. We look forward to working with you.' },
       { type: 'text', text: 'Yours sincerely, for {Business.Name}' },
@@ -418,11 +451,11 @@ export const about = {
     'Invoices issued': 'Each invoice of the last 45 days with its lines and its total before VAT.',
   },
   documents: {
-    'Invoice': 'The VAT invoice for a record in Invoices: the client and the person it is for, the project, the client\'s order number where they have one, each line (hours by grade, a fee stage or an expense) with its VAT, then the total, what has been paid and the balance due, and how to pay. Numbered INV-2026-0042.',
-    'Proposal': 'The quote for a record in Projects: the parts of the work with the hours allowed for each, the total hours and the fee before VAT, when it could start and how it is charged. Print it from the Projects form for a project whose Status is Proposal; the template prints for any project you choose.',
-    'Statement': 'A statement for a record in Clients: every invoice sent to the client with what was invoiced, what has been paid and what is still owing on each, the days overdue, and the balance owing. Paid invoices are listed too, for the client\'s records.',
-    'Weekly time sheet': 'One person\'s week from Time Sheets: each day\'s entries with client, project, task and hours, the hours worked and the billable share, and lines for the person to sign and for the approver.',
-    'Letter of engagement': 'The letter that goes to the client with a won proposal, for a record in Projects: the work and its dates, the fee and how it is charged, costs passed on, how and when invoices are paid, who owns the work once paid for, confidentiality and how either side can end it, with two signature lines. It is a plain starting point written for this sample, not legal advice: have it checked for your own country and trade before you use it.',
+    'Invoice': 'The VAT invoice for a record in Invoices: the client and the person it is for, the project, the client\'s order number where they have one, each line (hours by grade, a fee stage or an expense) with its VAT rate and VAT, then the total. Once something has been paid it shows what has come in and the balance due; a paid invoice says so in place of how to pay, and one to a client abroad says why no VAT is charged. Numbered INV-2026-0042.',
+    'Proposal': 'The quote for a project whose Status is Proposal: the parts of the work with the hours allowed for each, the total hours, the fee before VAT (a fixed fee, or an estimate for hourly work, each with its own wording), and when it could start and finish. A project already won or lost prints when you choose it from the Projects form.',
+    'Statement': 'A statement for each client (not the studio itself), dated the day it is printed: only the invoices with money still owing, with what was invoiced, what has been paid and what is owing on each, the days overdue, how many are unpaid and the balance owing. A client who owes nothing gets a short note saying so.',
+    'Weekly time sheet': 'One person\'s week from Time Sheets, day by day: each day\'s entries with client, project, task and hours, and the day\'s hours under it, then the hours worked, the billable hours and the billable share, the days it was submitted and approved once it has been, and lines for the person to sign and for the approver.',
+    'Letter of engagement': 'The letter that goes to the client with a won proposal, for each project whose Status is Active (not the studio\'s internal ones): the work and its dates, the fee and how it is charged and invoiced (worded for a fixed fee or for hourly work), costs passed on, who owns the work once paid for, confidentiality and how either side can end it, with two signature lines. A finished project prints when you choose it from the Projects form. It is a plain starting point written for this sample, not legal advice: have it checked for your own country and trade before you use it.',
   },
   tutorial: [
     { title: 'Quote for new work and send the proposal', steps: [
@@ -455,7 +488,7 @@ export const about = {
       'When money arrives, open the Payments form and press New: choose the Invoice, type Received On, Amount, Method and the client\'s Reference.',
       'Open the invoice in the Invoices form and bring Paid up to what has been received, and Status to Part paid or Paid.',
       'Run the query Overdue invoices: it lists what is past due, the longest first, with the client\'s phone number.',
-      'Open the print template Statement, choose the client, and send it: it lists every invoice with what is owing and the balance.',
+      'Open the print template Statement, choose the client, and send it: it lists only the invoices with money still owing, with the days each is overdue and the balance.',
     ] },
     { title: 'Keep projects on budget', steps: [
       'Before the weekly meeting, print the report Project budget report: each project in hand with its budget hours, hours used, fee and the cost of the time so far.',
@@ -470,8 +503,8 @@ export const about = {
     'An invoice\'s Net, VAT and Total are kept on the invoice as it was sent. If you change a line afterwards, change these too, or the totals block on the printed invoice and the figures in the revenue queries will differ.',
     'VAT comes from the client: 0.2 for clients in the UK, 0 for clients abroad. Each invoice line carries its own Tax Rate so an old invoice keeps the rate it was sent at.',
     'An hourly project\'s Fee is the estimate while the work goes on; when it is completed the Fee becomes what its billable time came to, so Project profit compares like with like.',
-    'Each print template prints for every record of its table unless you choose one: choose the invoice, project, client or time sheet you want before pressing Print. The Proposal and the Letter of engagement are for projects whose Status is Proposal or newly Active.',
-    'The Statement lists every invoice the client has had, paid or not; the balance owing is the sum of the Owing column.',
+    'Some print templates print only the records they are for: the Proposal for projects whose Status is Proposal, the Letter of engagement for Active client projects, and the Statement for every client but the studio itself. A record you choose from its form always prints, so an old proposal or the letter for a finished project can be printed again.',
+    'The Statement lists only invoices with money still owing, so it reads the same as Unpaid invoices for that client; the balance owing is the sum of the Owing column, and the statement date is the day it is printed.',
   ],
   faq: [
     { q: 'How do I see what has not been invoiced yet?', a: 'Run the query Unbilled time for hourly work, or print the report Work in progress. Unbilled expenses lists costs to pass on. Fixed-fee work is invoiced in stages instead, so its hours never show there.' },

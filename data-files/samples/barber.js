@@ -19,6 +19,9 @@
 
 import { address, BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, companies, FIRST, LAST, money } from './util.js';
 
+// Its print templates need Office 2.16.0 or later: they say which records they print and when a line shows.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const BARBER = '[Barbers].[First Name] & " " & [Barbers].[Last Name]';
 const CLIENT = '[Clients].[First Name] & " " & [Clients].[Last Name]';
@@ -213,29 +216,37 @@ export const spec = {
     ] },
   },
   documents: [
-    // The receipt from the till, on the 80 mm roll. On a rented chair it says whose takings it is.
-    { name: 'Receipt', table: 'Visits', paper: 'receipt-80', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Website', 'Tax Number'] }, blocks: [
+    // The receipt from the till, on the 80 mm roll, for a visit paid for. On a rented chair it says whose takings it is.
+    { name: 'Receipt', table: 'Visits', paper: 'receipt-80', where: 'Nz([Receipt No], "") <> ""', letterhead: { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'Website', 'Tax Number'] }, blocks: [
       { type: 'heading', text: 'Receipt {Receipt No}' },
-      { type: 'fields', columns: 1, items: [{ field: 'Finished', label: 'Date' }, { field: 'Barber', label: 'Barber' }, { field: 'Barber.Chair.Name', label: 'Chair' }, { field: 'Name', label: 'Client' }, { field: 'Card.Number', label: 'Loyalty card' }, { field: 'Card.Stamps', label: 'Stamps on the card' }] },
+      { type: 'fields', columns: 1, items: [
+        { field: 'Finished', label: 'Date', format: 'dd/mm/yyyy hh:nn' }, { field: 'Barber', label: 'Barber' }, { field: 'Barber.Chair.Name', label: 'Chair' }, { field: 'Name', label: 'Client' },
+        { field: 'Card.Number', label: 'Loyalty card', if: '[Card]' }, { field: 'Card.Stamps', label: 'Stamps on the card', if: '[Card]' },
+      ] },
       { type: 'lines', table: 'Visit Lines', columns: [
         { field: 'Item' }, { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Unit Price', label: 'Price', type: 'currency' },
-        { expr: 'Round([Quantity] * [Unit Price], 2)', as: 'Amount', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number' },
+        { expr: 'Round([Quantity] * [Unit Price], 2)', as: 'Amount', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number', format: '0' },
         { expr: 'Round(Round([Quantity] * [Unit Price], 2) - Round([Quantity] * [Unit Price], 2) / (1 + [Tax Rate]), 2)', as: 'VAT In', label: 'VAT', type: 'currency' },
       ] },
-      { type: 'totals', rows: [{ label: 'Total paid', expr: '[Amount]', strong: true }, { label: 'Of which VAT', expr: '[VAT In]' }] },
-      { type: 'text', text: 'Paid by {Paid By}. {Barber.Receipt Note}', small: true },
-      { type: 'text', text: 'Loyalty card: a stamp for every paid cut, on any chair, and the tenth cut is free. Ask at the desk for a card.', small: true },
+      // A rented chair's cut carries no VAT: the VAT row shows only when there is some.
+      { type: 'totals', rows: [{ label: 'Total paid', expr: '[Amount]', strong: true }, { label: 'Of which VAT', expr: '[VAT In]', if: '[VAT In]' }] },
+      { type: 'text', text: 'Your tenth cut, free on your loyalty card.', small: true, if: '[Free Cut]' },
+      { type: 'text', text: 'Paid by {Paid By}.', small: true, if: '[Paid By]' },
+      { type: 'text', text: '{Barber.Receipt Note}', small: true },
+      { type: 'text', text: 'Loyalty card: a stamp for every paid cut, on any chair, and the tenth cut is free. Ask at the desk for a card.', small: true, if: 'Nz([Card], 0) = 0' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
     // The agreement a chair renter signs, its blanks filled from the renter's record and the rental's.
-    { name: 'Chair rental agreement', table: 'Chair Rentals', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For the agreements in force; an ended one prints from its form, saying when it ended.
+    { name: 'Chair rental agreement', table: 'Chair Rentals', paper: 'a4', where: '[Status] = "Active"', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Chair rental agreement {Number}' },
+      { type: 'text', text: 'This agreement ended on {End Date}.', if: '[End Date]' },
       { type: 'fields', columns: 2, items: [
         { field: 'Barber', label: 'Chair renter' }, { field: 'Chair.Name', label: 'Chair' },
-        { field: 'Barber.Trading Name', label: 'Trading as' }, { field: 'Start Date', label: 'Starts' },
-        { field: 'Barber.Address', label: 'Address' }, { field: 'Weekly Rent', label: 'Weekly rent (plus VAT)' },
+        { field: 'Barber.Trading Name', label: 'Trading as' }, { field: 'Start Date', label: 'Starts', format: 'd mmmm yyyy' },
+        { field: 'Barber.Address', label: 'Address' }, { field: 'Weekly Rent', label: 'Weekly rent (plus VAT)', format: '#,##0.00' },
         { field: 'Barber.City', label: 'City' }, { field: 'Rent Day', label: 'Rent due each' },
-        { field: 'Barber.Postcode', label: 'Postcode' }, { field: 'Deposit', label: 'Deposit' },
+        { field: 'Barber.Postcode', label: 'Postcode' }, { field: 'Deposit', label: 'Deposit', format: '#,##0.00', if: '[Deposit]' },
       ] },
       { type: 'text', text: 'This agreement is made on {Signed On} between {Business.Name} of {Business.Address}, {Business.City} {Business.Postcode} ("the Shop") and {Barber.First Name} {Barber.Last Name}, trading as {Barber.Trading Name}, of {Barber.Address}, {Barber.City} {Barber.Postcode} ("the Barber").' },
       { type: 'text', text: '1. The chair. The Shop lets the Barber use {Chair.Name} ({Chair.Position}) in the shop, with its mirror, station, drawer and the shared basin, from {Start Date} until either side ends this agreement. The Barber runs their own business from the chair as a self-employed person. The Barber is not an employee or a partner of the Shop.' },
@@ -257,32 +268,33 @@ export const spec = {
       { type: 'heading', text: 'Invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Rental.Barber', label: 'Invoice to' }, { field: 'Number', label: 'Invoice number' },
-        { field: 'Rental.Barber.Trading Name', label: 'Trading as' }, { field: 'Invoice Date', label: 'Date' },
-        { field: 'Rental.Barber.Address', label: 'Address' }, { field: 'Week Starting', label: 'Week starting' },
-        { field: 'Rental.Barber.City', label: 'City' }, { field: 'Due On', label: 'Payment due' },
+        { field: 'Rental.Barber.Trading Name', label: 'Trading as' }, { field: 'Invoice Date', label: 'Date', format: 'dd/mm/yyyy' },
+        { field: 'Rental.Barber.Address', label: 'Address' }, { field: 'Week Starting', label: 'Week starting', format: 'dd/mm/yyyy' },
+        { field: 'Rental.Barber.City', label: 'City' }, { field: 'Due On', label: 'Payment due', format: 'dd/mm/yyyy' },
         { field: 'Rental.Barber.Postcode', label: 'Postcode' }, { field: 'Rental.Number', label: 'Agreement' },
       ] },
       { type: 'lines', table: 'Rent Lines', sort: 'Line', columns: [
         { field: 'Description' }, { field: 'Quantity', label: 'Qty', type: 'integer' }, { field: 'Unit Price', type: 'currency' },
-        { expr: 'Round([Quantity] * [Unit Price], 2)', as: 'Line Net', label: 'Net', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number' },
+        { expr: 'Round([Quantity] * [Unit Price], 2)', as: 'Line Net', label: 'Net', type: 'currency' }, { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number', format: '0' },
         { expr: 'Round(Round([Quantity] * [Unit Price], 2) * [Tax Rate], 2)', as: 'Line VAT', label: 'VAT', type: 'currency' },
       ] },
       { type: 'totals', rows: [{ label: 'Net', expr: '[Line Net]' }, { label: 'VAT', expr: '[Line VAT]' }, { label: 'Total due', expr: '[Line Net] + [Line VAT]', strong: true }] },
-      { type: 'text', text: '{Business.Payment Terms} Please pay to {Business.Bank Details}, quoting {Number}, or in cash at the desk.', small: true },
-      { type: 'text', text: 'Paid on: {Paid On}', small: true },
+      { type: 'text', text: '{Business.Payment Terms} Please pay to {Business.Bank Details}, quoting {Number}, or in cash at the desk.', small: true, if: 'Nz([Paid On], "") = ""' },
+      { type: 'text', text: 'Paid with thanks on {Paid On} by {Paid By}.', small: true, if: '[Paid On]' },
     ] },
-    // The loyalty card, on the narrow roll to fold into a wallet: each stamp is a visit.
-    { name: 'Loyalty card', table: 'Loyalty Cards', paper: 'receipt-58', letterhead: { table: 'Business', fields: ['Name', 'Phone', 'Website'] }, blocks: [
+    // The loyalty card, on the narrow roll to fold into a wallet: each stamp is a visit. For cards still in use.
+    { name: 'Loyalty card', table: 'Loyalty Cards', paper: 'receipt-58', where: '[Status] <> "Used"', letterhead: { table: 'Business', fields: ['Name', 'Phone', 'Website'] }, blocks: [
       { type: 'heading', text: 'Loyalty card {Number}' },
-      { type: 'fields', columns: 1, items: [{ field: 'Client', label: 'For' }, { field: 'Started', label: 'Started' }, { field: 'Status', label: 'Card' }] },
+      { type: 'fields', columns: 1, items: [{ field: 'Client', label: 'For' }, { field: 'Started', label: 'Started', format: 'dd/mm/yyyy' }, { field: 'Status', label: 'Card' }] },
       { type: 'lines', table: 'Visits', link: 'Card', sort: 'Finished', columns: [
-        { expr: 'Left([Finished], 10)', as: 'Day' }, { field: 'Barber.First Name', label: 'Barber' },
+        { field: 'Finished', as: 'Day', format: 'dd/mm/yyyy' }, { field: 'Barber.First Name', label: 'Barber' },
         { expr: 'IIf([Free Cut], 0, 1)', as: 'Stamp', type: 'integer' }, { expr: 'IIf([Free Cut], "Free cut", "")', as: 'Free' },
       ] },
       { type: 'totals', rows: [
         { label: 'Stamps', expr: '[Stamps]', type: 'integer', strong: true },
-        { label: 'Cuts to your free one', expr: 'IIf(9 - [Stamps] > 0, 9 - [Stamps], 0)', type: 'integer' },
+        { label: 'Cuts to your free one', expr: '9 - [Stamps]', type: 'integer', if: '[Stamps] < 9' },
       ] },
+      { type: 'text', text: 'Your free cut is waiting: tell us when you come in.', if: '[Stamps] >= 9' },
       { type: 'text', text: 'One stamp for every paid cut, on any chair. Nine stamps and your tenth cut is free. Show your card or give your name at the desk.', small: true },
     ] },
   ],
@@ -422,10 +434,10 @@ export const about = {
     'Price list': 'The services and prices, for the board in the window.',
   },
   documents: {
-    Receipt: 'The receipt from the till for a visit, on an 80 mm roll: the barber and chair, each service and product with the VAT within it, the total, how it was paid and the loyalty stamps so far. On a rented chair it says the takings are the renter\'s and carry no VAT. Every visit has one, including ones not yet paid: print the one on screen.',
-    'Chair rental agreement': 'The agreement a self-employed barber signs to rent a chair: the parties, the chair, the weekly rent and the day it is due, the deposit, what the rent covers, the hours, clients and payment, insurance, tax, notice and signatures. Plain words of our own: have it checked for your own country before you use it.',
-    'Chair rent invoice': 'The weekly invoice for a rented chair, numbered RENT-2026-0042, with the week\'s rent, any credit for free loyalty cuts, the VAT and the total due on the rent day.',
-    'Loyalty card': 'A client\'s loyalty card on the narrow roll: the days of each stamped cut and who did it, the stamps so far and how many to the free cut.',
+    Receipt: 'The receipt from the till for a visit, on an 80 mm roll: the barber and chair, each service and product with the VAT within it, the total, how it was paid and the loyalty stamps so far. On a rented chair it says the takings are the renter\'s and carry no VAT, and leaves out the VAT line. It prints for visits paid for, those with a receipt number; the loyalty card lines print only when the visit was on a card.',
+    'Chair rental agreement': 'The agreement a self-employed barber signs to rent a chair: the parties, the chair, the weekly rent and the day it is due, the deposit, what the rent covers, the hours, clients and payment, insurance, tax, notice and signatures. It prints for agreements in force; an ended one prints from the Chair Rentals form and says when it ended. Plain words of our own: have it checked for your own country before you use it.',
+    'Chair rent invoice': 'The weekly invoice for a rented chair, numbered RENT-2026-0042, with the week\'s rent, any credit for free loyalty cuts, the VAT and the total due on the rent day. An unpaid invoice says how to pay; a paid one says when and how it was paid.',
+    'Loyalty card': 'A client\'s loyalty card on the narrow roll: the days of each stamped cut and who did it, the stamps so far and how many to the free cut, or that the free cut is waiting. It prints for cards still in use, not ones whose free cut has been given.',
   },
   tutorial: [
     { title: 'Put a walk-in on the queue board and take payment', steps: [
@@ -468,12 +480,12 @@ export const about = {
     ] },
   ],
   notes: [
-    'A visit is also its receipt: the Receipt No, Total and VAT are filled in when it is paid for. A booking still to come, a no-show or a walk-out has no receipt number, and its Receipt prints empty.',
+    'A visit is also its receipt: the Receipt No, Total and VAT are filled in when it is paid for. A booking still to come, a no-show or a walk-out has no receipt number, so the Receipt template leaves it out.',
     'Chair renters keep their own takings. Their visits are on the queue board so the queue, the waits and the loyalty cards are right, and their totals show in Takings by barber, but they are left out of the shop\'s VAT. Their lines carry a Tax Rate of 0.',
     'Waiting times are worked out from Arrived and Started, which must be on the same day. A walk-in who leaves before their turn is kept, as Walked out, with no Started time, so the queries can count them.',
     'Stock is not counted by Data Files on its own: take a product off In Stock when you sell it, and add a delivery when it comes. In the sample this was done while the records were made.',
     'A free cut on a rented chair costs the renter their price, so the shop credits it against the next week\'s rent: that is the line below nought on a Chair rent invoice.',
-    'Every record of a table prints from its template, so choose the visit, card, agreement or invoice you want before printing.',
+    'Each print template prints only the records it is for: receipts for paid visits, agreements in force, loyalty cards still in use, and every rent invoice. Printed from a form, the record on screen prints whatever its state.',
   ],
   faq: [
     { q: 'How do I see who is next?', a: 'Run the query Queue board. It lists everyone waiting, in the chair and booked, today and for the next two days, in time order.' },

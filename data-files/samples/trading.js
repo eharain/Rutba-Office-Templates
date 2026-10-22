@@ -17,6 +17,11 @@ const LINE = 'Round([Quantity] * [Unit Price] * (1 - Nz([Discount])), 2)';
 // The business's own details at the head of every document.
 const LETTERHEAD = { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website', 'Tax Number'] };
 const VAT = 'Round(Round([Quantity] * [Unit Price] * (1 - Nz([Discount])), 2) * Nz([Tax Rate]), 2)';
+// Dates on the documents as a business writes them: 22/10/2026.
+const DATE = 'dd/mm/yyyy';
+
+// The print templates need the 2.16 engine: records chosen by a condition, blocks shown when they apply, formats.
+export const minOffice = '2.16.0';
 
 export const spec = {
   // Where a value below nought is right: stock going out, an order already late.
@@ -47,7 +52,7 @@ export const spec = {
     { name: 'Order Lines', fields: [
       { name: 'Order', ...ref('Orders'), required: true }, { name: 'Product', ...ref('Products'), required: true },
       { name: 'Quantity', type: 'integer', default: 1 }, { name: 'Unit Price', type: 'currency' }, { name: 'Discount', type: 'number', default: 0 },
-      { name: 'Tax Rate', type: 'number', default: 0 }, { name: 'Invoice', ...ref('Invoices') },
+      { name: 'Tax Rate', type: 'number', default: 0 },
     ] },
     { name: 'Categories', fields: [{ name: 'Name', type: 'text', required: true, unique: true }, { name: 'Description', type: 'text' }, { name: 'Tax Rate', type: 'number', default: 0 }] },
     { name: 'Products', fields: [
@@ -134,47 +139,54 @@ export const spec = {
       { type: 'heading', text: 'Invoice {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Order.Customer', label: 'Invoice to' }, { field: 'Number', label: 'Invoice number' },
-        { field: 'Order.Customer.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Date' },
-        { field: 'Order.Customer.City', label: 'City' }, { field: 'Due Date', label: 'Payment due' },
+        { field: 'Order.Customer.Address', label: 'Address' }, { field: 'Invoice Date', label: 'Date', format: DATE },
+        { field: 'Order.Customer.City', label: 'City' }, { field: 'Due Date', label: 'Payment due', format: DATE },
         { field: 'Order.Customer.Postcode', label: 'Postcode' }, { field: 'Order.ID', label: 'Your order' },
-        { field: 'Order.Customer.Country', label: 'Country' }, { field: 'Order.Shipped Date', label: 'Shipped' },
+        { field: 'Order.Customer.Country', label: 'Country' }, { field: 'Order.Shipped Date', label: 'Shipped', format: DATE },
       ] },
-      { type: 'lines', table: 'Order Lines', link: 'Invoice', columns: [
+      // The invoice lists its order's lines, found through the order: a line needs no invoice of its own.
+      { type: 'lines', table: 'Order Lines', on: { Order: 'Order' }, columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Product' }, { field: 'Product.Unit', label: 'Unit' },
         { field: 'Quantity', type: 'integer' }, { field: 'Unit Price', type: 'currency' },
-        { expr: 'Nz([Discount]) * 100', as: 'Discount %', type: 'number' }, { expr: LINE, as: 'Line Net', label: 'Net', type: 'currency' },
-        { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number' }, { expr: VAT, as: 'Line VAT', label: 'VAT', type: 'currency' },
+        { expr: 'Nz([Discount]) * 100', as: 'Discount %', type: 'number', format: '0' }, { expr: LINE, as: 'Line Net', label: 'Net', type: 'currency' },
+        { expr: 'Nz([Tax Rate]) * 100', as: 'VAT %', type: 'number', format: '0' }, { expr: VAT, as: 'Line VAT', label: 'VAT', type: 'currency' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Goods', expr: '[Line Net]' }, { label: 'Delivery', expr: '[Net] - [Line Net]' },
+        // Delivery only when it was charged.
+        { label: 'Goods', expr: '[Line Net]' }, { label: 'Delivery', expr: '[Net] - [Line Net]', if: 'Round([Net] - [Line Net], 2) <> 0' },
         { label: 'VAT', expr: '[Tax]' }, { label: 'Total due', expr: '[Amount]', strong: true },
       ] },
-      { type: 'text', text: '{Business.Payment Terms} Please pay to {Business.Bank Details}, quoting {Number}.', small: true },
+      // How to pay while it is owed; a thank you once it is paid.
+      { type: 'text', text: '{Business.Payment Terms} Please pay to {Business.Bank Details}, quoting {Number}.', small: true, if: 'Nz([Paid On], "") = ""' },
+      { type: 'text', text: 'Paid in full on {Paid On}. Thank you.', small: true, if: 'Nz([Paid On], "") <> ""' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Delivery note', table: 'Orders', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For orders that have left the warehouse: one not shipped yet, or cancelled, has nothing to deliver.
+    { name: 'Delivery note', table: 'Orders', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Shipped Date], "") <> ""', blocks: [
       { type: 'heading', text: 'Delivery note DN-{ID}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer', label: 'Deliver to' }, { field: 'ID', label: 'Order' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Order Date', label: 'Ordered' },
-        { field: 'Customer.City', label: 'City' }, { field: 'Shipped Date', label: 'Shipped' },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Order Date', label: 'Ordered', format: DATE },
+        { field: 'Customer.City', label: 'City' }, { field: 'Shipped Date', label: 'Shipped', format: DATE },
         { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Shipper', label: 'Carrier' },
-        { field: 'Customer.Country', label: 'Country' }, { field: 'Notes', label: 'Instructions' },
+        { field: 'Customer.Country', label: 'Country' }, { field: 'Notes', label: 'Instructions', if: 'Nz([Notes], "") <> ""' },
       ] },
       { type: 'lines', table: 'Order Lines', link: 'Order', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Product' }, { field: 'Product.Unit', label: 'Unit' }, { field: 'Quantity', type: 'integer' },
       ] },
-      { type: 'totals', rows: [{ label: 'Units', expr: '[Quantity]', type: 'integer', strong: true }] },
+      { type: 'totals', rows: [{ label: 'Lines', expr: '[Order Lines count]', type: 'integer' }, { label: 'Units', expr: '[Quantity]', type: 'integer', strong: true }] },
       { type: 'text', text: 'Please check the goods against this note. Shortages or damage to be reported within 48 hours of delivery.', small: true },
       { type: 'signatures', labels: ['Received in good order by', 'Date'] },
     ] },
-    { name: 'Purchase order', table: 'Purchase Orders', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For purchase orders still to send or to come; one already received prints from its form.
+    { name: 'Purchase order', table: 'Purchase Orders', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Submitted"', blocks: [
       { type: 'heading', text: 'Purchase order {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Supplier', label: 'To' }, { field: 'Number', label: 'Order number' },
-        { field: 'Supplier.Address', label: 'Address' }, { field: 'Ordered On', label: 'Date' },
-        { field: 'Supplier.City', label: 'City' }, { field: 'Expected', label: 'Deliver by' },
+        { field: 'Supplier.Address', label: 'Address' }, { field: 'Ordered On', label: 'Date', format: DATE },
+        { field: 'Supplier.City', label: 'City' }, { field: 'Expected', label: 'Deliver by', format: DATE },
         { field: 'Supplier.Country', label: 'Country' }, { field: 'Employee', label: 'Ordered by' },
+        { field: 'Received On', label: 'Received', format: DATE, if: 'Nz([Received On], "") <> ""' },
       ] },
       { type: 'lines', table: 'Purchase Lines', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Product' }, { field: 'Product.Unit', label: 'Unit' },
@@ -183,19 +195,24 @@ export const spec = {
       { type: 'totals', rows: [{ label: 'Order total', expr: '[Line Total]', strong: true }] },
       { type: 'text', text: 'Please quote {Number} on your delivery note and invoice. Deliver to {Business.Address}, {Business.City} {Business.Postcode}.', small: true },
     ] },
-    { name: 'Statement', table: 'Companies', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For customers only, listing what they owe: each unpaid invoice, oldest first, with the balance as it builds up.
+    { name: 'Statement', table: 'Companies', paper: 'a4', letterhead: LETTERHEAD, where: '[Kind] = "Customer"', blocks: [
       { type: 'heading', text: 'Statement of account' },
       { type: 'fields', columns: 2, items: [
         { field: 'Name', label: 'Account' }, { field: 'Payment Days', label: 'Terms (days)' },
         { field: 'Address', label: 'Address' }, { field: 'City', label: 'City' }, { field: 'Postcode', label: 'Postcode' }, { field: 'Country', label: 'Country' },
       ] },
-      { type: 'lines', table: 'Invoices', link: 'Customer', sort: 'Invoice Date', columns: [
-        { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Due Date', label: 'Due' },
-        { field: 'Amount', type: 'currency' }, { field: 'Paid On', label: 'Paid' },
-        { expr: 'IIf(Nz([Paid On], "") = "", [Amount], 0)', as: 'Owing', type: 'currency' },
+      { type: 'lines', table: 'Invoices', link: 'Customer', sort: 'Invoice Date', where: 'Nz([Paid On], "") = ""', columns: [
+        { field: 'Number', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date', format: DATE }, { field: 'Due Date', label: 'Due', format: DATE },
+        { expr: 'IIf(DateDiff("d", [Due Date], Date()) > 0, DateDiff("d", [Due Date], Date()), 0)', as: 'Days Overdue', label: 'Days overdue', type: 'integer' },
+        { field: 'Amount', type: 'currency' }, { running: 'Amount', as: 'Balance' },
       ] },
-      { type: 'totals', rows: [{ label: 'Invoiced', expr: '[Amount]' }, { label: 'Balance owing', expr: '[Owing]', strong: true }] },
-      { type: 'text', text: 'Please pay the balance owing to {Business.Bank Details}. If you have paid since this statement was made, thank you.', small: true },
+      { type: 'totals', rows: [
+        { label: 'Statement date', expr: 'Date()', format: DATE }, { label: 'Invoices unpaid', expr: '[Invoices count]', type: 'integer' },
+        { label: 'Balance owing', expr: '[Balance]', strong: true },
+      ] },
+      { type: 'text', text: 'Please pay the balance owing to {Business.Bank Details}. If you have paid since this statement was made, thank you.', small: true, if: '[Balance] > 0' },
+      { type: 'text', text: 'Nothing is owed on your account today. Thank you for your custom.', small: true, if: '[Balance] <= 0' },
     ] },
   ],
   reports: [
@@ -250,7 +267,7 @@ export const about = {
     'Order Lines': { about: 'The products on each order.', fields: {
       Order: 'The order the line belongs to.', Product: 'What was ordered.', Quantity: 'How many units.',
       'Unit Price': 'The price of one unit on this order, kept so a later price change does not alter it.', Discount: 'The discount as a fraction: 0.05 is five percent.',
-      'Tax Rate': 'The VAT rate of the line, taken from its product\'s group when the order was taken.', Invoice: 'The invoice the line went on, once the order shipped and was invoiced.',
+      'Tax Rate': 'The VAT rate of the line, taken from its product\'s group when the order was taken.',
     } },
     'Purchase Orders': { about: 'Orders you place with your suppliers.', fields: {
       Number: 'The purchase order\'s number, printed on it and quoted by the supplier: PO-2026-0042.', Supplier: 'Who you ordered from.', Employee: 'Who placed the order.', 'Ordered On': 'The day it was sent.',
@@ -289,10 +306,10 @@ export const about = {
     'Stock to reorder': 'What to order, on a page for each supplier.',
   },
   documents: {
-    Invoice: 'The tax invoice sent when an order ships: the business\'s details at the head, the customer\'s address, each line with its VAT rate, and the goods, delivery, VAT and total due. Numbered INV-2026-0042.',
-    'Delivery note': 'Goes in the box with a shipped order: what was sent and how many, without prices, for the customer to check and sign.',
-    'Purchase order': 'Sent to a supplier: what to send, at what cost, and when it is expected. Numbered PO-2026-0042.',
-    Statement: 'Sent to a customer each month: their invoices, which are paid and when, and the balance owing. It prints for every company; print it for a customer from the Companies form.',
+    Invoice: 'The tax invoice sent when an order ships: the business\'s details at the head, the customer\'s address, the order\'s lines with their VAT rates, and the goods, delivery (when charged), VAT and total due. While it is owed it says how to pay; once paid, the day it was paid. Numbered INV-2026-0042.',
+    'Delivery note': 'Goes in the box with a shipped order: what was sent and how many, without prices, for the customer to check and sign. It prints for orders with a Shipped Date only.',
+    'Purchase order': 'Sent to a supplier: what to send, at what cost, and when it is expected. Numbered PO-2026-0042. It prints for purchase orders still Submitted; one already received prints from the Purchase Orders form, with the day it came in.',
+    Statement: 'Sent to a customer each month: the invoices they have not paid yet, oldest first, with the days each is overdue and the balance as it builds up to what they owe. It prints for customers only, not suppliers or carriers.',
   },
   tutorial: [
     { title: 'Take an order', steps: [
@@ -304,26 +321,25 @@ export const about = {
     { title: 'Ship the order and send its delivery note', steps: [
       'Pick the goods, then open the Orders form, find the order and type the Shipped Date. Change Status to Shipped.',
       'For each product sent, open the Stock Movements form and add a Sold movement with the quantity below nought (-12 for twelve sent) and Order and its number in Reference; then lower Units in Stock on the Products form by the same.',
-      'Open Print templates, choose Delivery note, choose the order and press Print. It goes in the box for the customer to check and sign.',
+      'Open Print templates, choose Delivery note, choose the order and press Print. It goes in the box for the customer to check and sign. Only orders with a Shipped Date are listed there.',
     ] },
     { title: 'Invoice it', steps: [
       'Open the Invoices form and press New. Type the next number in Number (INV-2026-0301 after INV-2026-0300), choose the Order and the Customer, and type today in Invoice Date.',
       'Type the Due Date: the invoice date plus the customer\'s Payment Days from the Companies form.',
       'Type Net (the goods after discounts, with the delivery charge), Tax (the VAT on them) and Amount (the two together). The query Order totals shows the goods for the order.',
-      'Open the Order Lines form and choose the new invoice in Invoice on each of the order\'s lines, so the invoice lists them.',
-      'Open Print templates, choose Invoice, choose the new invoice and press Save as PDF to e-mail it, or Print.',
+      'Open Print templates, choose Invoice, choose the new invoice and press Save as PDF to e-mail it, or Print. It lists the lines of the order you chose in Order.',
     ] },
     { title: 'Record a payment and see who owes what', steps: [
       'When a customer pays, open the Invoices form, find the invoice and type the day in Paid On. Then open the Orders form and change the order\'s Status to Closed.',
       'Run the query Unpaid invoices for every invoice not yet paid, by due date, with how many days each is overdue.',
       'Open the report Invoices due for the same list a page a customer, with what each owes in total.',
-      'At the month\'s end, open Print templates, choose Statement and print it for each customer who owes money.',
+      'At the month\'s end, open Print templates and choose Statement: it prints for each customer, listing their unpaid invoices and the balance owing. Send it to those who owe money.',
     ] },
     { title: 'Reorder stock', steps: [
       'Run the query Products to reorder: products at or below their Reorder Level, by supplier, with how many to order.',
       'Open the Purchase Orders form and press New: type the next number (PO-2026-0120), choose the Supplier and yourself, today in Ordered On and the day it should come in Expected. Status is Submitted.',
       'Open the Purchase Lines form and add a line for each product to order, with the Quantity and the Unit Cost.',
-      'Open Print templates, choose Purchase order and send it to the supplier as a PDF.',
+      'Open Print templates, choose Purchase order and send it to the supplier as a PDF. Only purchase orders still Submitted are listed there.',
       'When the goods come, type the day in Received On and change Status to Received; add a Received movement in Stock Movements for each line and raise Units in Stock by the same.',
     ] },
     { title: 'See how the business is doing', steps: [
@@ -334,7 +350,8 @@ export const about = {
   ],
   notes: [
     'Units in Stock on a product is the sum of its Stock Movements: received above nought, sold and corrected below. When you change one, change the other, or count the stock and add an Adjusted movement to put it right.',
-    'An order line keeps its own Unit Price, Discount and Tax Rate, so a later price change never alters an order already taken or invoiced.',
+    'An order line keeps its own Unit Price, Discount and Tax Rate, so a later price change never alters an order already taken or invoiced. An invoice prints the lines of its order, so there is nothing to mark on the lines when you invoice.',
+    'Each print template prints only the records it is for: delivery notes for shipped orders, statements for customers. One you print from its form always prints.',
     'Invoice and purchase order numbers are typed by you, a new run each year. Number them in date order and never use one twice; Data Files refuses a number already used.',
     'Customers, suppliers and carriers share the Companies table. Kind says which a company is, and most queries choose by it.',
     'VAT is a rate on each order line, taken from the product\'s group in Categories: food at 0, kitchen and cleaning supplies at 0.2. Delivery is charged at the standard rate. Check the rates for your own country and goods.',
@@ -497,10 +514,9 @@ export function fill(base, { r, cal, days = 540 }) {
       // Net and VAT as the invoice prints them: each line rounded, then added up; delivery at the standard rate.
       let net = fee;
       let vat = money(fee * 0.2);
-      const lineIds = [];
       for (const { p, qty } of lines) {
         const discount = c.discount || (qty >= 20 ? 0.05 : 0);
-        lineIds.push(add('Order Lines', { Order: order, Product: p.id, Quantity: qty, 'Unit Price': p.list, Discount: discount, 'Tax Rate': p.rate }));
+        add('Order Lines', { Order: order, Product: p.id, Quantity: qty, 'Unit Price': p.list, Discount: discount, 'Tax Rate': p.rate });
         const lineNet = money(qty * p.list * (1 - discount));
         net += lineNet;
         vat += money(lineNet * p.rate);
@@ -509,7 +525,7 @@ export function fill(base, { r, cal, days = 540 }) {
         // An order not shipped yet keeps its goods set aside.
         else if (!cancelled) p.held += qty;
       }
-      if (shipped) invoices.push({ order, customer: c.id, lineIds, date: shipped, offset: cal.workday(d + shipIn), net: money(net), vat: money(vat), days: c.days, slow: c.size === 'small' && r.chance(0.25) });
+      if (shipped) invoices.push({ order, customer: c.id, date: shipped, offset: cal.workday(d + shipIn), net: money(net), vat: money(vat), days: c.days, slow: c.size === 'small' && r.chance(0.25) });
     }
 
     // Each Monday and Thursday the buyer orders what is at or below its reorder level.
@@ -538,8 +554,7 @@ export function fill(base, { r, cal, days = 540 }) {
     const due = inv.offset + inv.days;
     const paidAt = inv.offset + (inv.slow ? inv.days + r.int(5, 40) : r.int(3, inv.days));
     const paid = paidAt <= 0 ? cal.day(paidAt) : null;
-    const invoice = add('Invoices', { Number: `INV-${y}-${String(invCount[y]).padStart(4, '0')}`, Order: inv.order, Customer: inv.customer, 'Invoice Date': cal.day(inv.offset), 'Due Date': cal.day(due), Net: inv.net, Tax: inv.vat, Amount: money(inv.net + inv.vat), 'Paid On': paid });
-    for (const id of inv.lineIds) base.update('Order Lines', id, { Invoice: invoice });
+    add('Invoices', { Number: `INV-${y}-${String(invCount[y]).padStart(4, '0')}`, Order: inv.order, Customer: inv.customer, 'Invoice Date': cal.day(inv.offset), 'Due Date': cal.day(due), Net: inv.net, Tax: inv.vat, Amount: money(inv.net + inv.vat), 'Paid On': paid });
     if (paid) base.update('Orders', inv.order, { Status: 'Closed' });
   }
 

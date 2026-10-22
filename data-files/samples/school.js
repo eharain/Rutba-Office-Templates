@@ -26,6 +26,9 @@
 
 import { BUSINESS_ABOUT, BUSINESS_TABLE, businessRecord, FIRST, LAST, money, person, phoneFor } from './util.js';
 
+// These print templates need Data Files 2.16: an older Office is told to update.
+export const minOffice = '2.16.0';
+
 const ref = (table) => ({ type: 'integer', points: table });
 const FEE = 'Round([Fee per Lesson] * [Lessons Billed] * (1 - Nz([Discount])), 2)';
 const STUDENT = '[Students].[First Name] & " " & [Students].[Last Name]';
@@ -239,8 +242,8 @@ export const spec = {
         { type: 'heading', text: 'Fee invoice {Number}' },
         { type: 'fields', columns: 2, items: [
           { field: 'Family.Contact', label: 'To' }, { field: 'Number', label: 'Invoice' },
-          { field: 'Family.Address', label: 'Address' }, { field: 'Invoice Date' },
-          { field: 'Family.City', label: 'City' }, { field: 'Due Date', label: 'Please pay by' },
+          { field: 'Family.Address', label: 'Address' }, { field: 'Invoice Date', format: 'dd/mm/yyyy' },
+          { field: 'Family.City', label: 'City' }, { field: 'Due Date', label: 'Please pay by', format: 'dd/mm/yyyy' },
           { field: 'Family.Postcode', label: 'Postcode' }, { field: 'Term', label: 'For' },
           { field: 'Family', label: 'Account' },
         ] },
@@ -252,46 +255,56 @@ export const spec = {
           { expr: 'Round([Per Lesson] * [Lessons] * (1 - Nz([Discount])), 2)', as: 'To Pay', type: 'currency' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Fees', expr: '[Fees]' }, { label: 'Less discounts', expr: '[Less]' },
+          { label: 'Fees', expr: '[Fees]' },
+          { label: 'Less discounts', expr: '[Less]', if: '[Less] > 0' },
           { label: 'Total for the term', expr: '[To Pay]', strong: true },
-          { label: 'Paid so far', expr: 'Nz([Paid So Far])' },
-          { label: 'Balance due', expr: 'Round([Total for the term] - [Paid so far], 2)', strong: true },
+          // What has been paid and what is left, once something has come in.
+          { label: 'Paid so far', expr: 'Nz([Paid So Far], 0)', if: 'Nz([Paid So Far], 0) > 0' },
+          { label: 'Balance due', expr: 'Round([Total for the term] - Nz([Paid So Far], 0), 2)', strong: true, if: 'Nz([Paid So Far], 0) > 0' },
         ] },
-        { type: 'text', text: 'Brothers and sisters after the first child booked in a term have ten percent off; a bursary place is half fees. {Business.Payment Terms}', small: true },
-        { type: 'text', text: 'Pay by bank transfer to {Business.Bank Details}, quoting {Number}, or by card or cash at the office.', small: true },
+        { type: 'text', text: 'Brothers and sisters after the first child booked in a term have ten percent off; a bursary place is half fees.', small: true, if: '[Less] > 0' },
+        { type: 'text', text: '{Business.Payment Terms} Pay by bank transfer to {Business.Bank Details}, quoting {Number}, or by card or cash at the office.', small: true, if: 'Nz([Paid So Far], 0) < [Total for the term]' },
+        { type: 'text', text: 'Paid in full. Thank you.', small: true, if: 'Nz([Paid So Far], 0) >= [Total for the term]' },
         { type: 'text', text: '{Business.Document Footer}', small: true },
       ] },
     { name: 'Payment receipt', table: 'Payments', paper: 'a5', letterhead: LETTERHEAD,
       blocks: [
         { type: 'heading', text: 'Receipt {Number}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Number', label: 'Receipt' }, { field: 'Paid On', label: 'Received on' },
+          { field: 'Number', label: 'Receipt' }, { field: 'Paid On', label: 'Received on', format: 'dd/mm/yyyy' },
           { field: 'Invoice.Family.Contact', label: 'Received from' }, { field: 'Method', label: 'Paid by' },
           { field: 'Invoice', label: 'For invoice' }, { field: 'Invoice.Term', label: 'Term' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Invoice total', expr: 'Round([Amount] + [Balance After], 2)', type: 'currency' },
+          { label: 'Owing before this payment', expr: 'Round([Amount] + [Balance After], 2)', type: 'currency' },
           { label: 'Received with thanks', expr: '[Amount]', strong: true },
-          { label: 'Left to pay on the invoice', expr: '[Balance After]' },
+          { label: 'Left to pay on the invoice', expr: '[Balance After]', if: '[Balance After] > 0' },
         ] },
-        { type: 'text', text: 'The invoice total here is what was owing on the invoice before this payment.', small: true },
+        { type: 'text', text: 'The invoice is now paid in full.', small: true, if: 'Nz([Balance After], 0) <= 0' },
         { type: 'text', text: '{Business.Document Footer}', small: true },
         { type: 'signatures', labels: ['Received for the centre'] },
       ] },
-    { name: 'Enrolment letter', table: 'Enrolments', paper: 'a4', letterhead: LETTERHEAD,
+    // A letter for each place booked and still running; one finished or withdrawn prints when it is chosen.
+    { name: 'Enrolment letter', table: 'Enrolments', where: '[Status] = "Enrolled"', paper: 'a4', letterhead: LETTERHEAD,
       blocks: [
         { type: 'fields', columns: 2, items: [
-          { field: 'Student.Family.Contact', label: 'To' }, { field: 'Enrolled On', label: 'Date' },
+          { field: 'Student.Family.Contact', label: 'To' }, { field: 'Enrolled On', label: 'Date', format: 'd mmmm yyyy' },
           { field: 'Student.Family.Address', label: 'Address' }, { field: 'Student.Family.City', label: 'City' },
           { field: 'Student.Family.Postcode', label: 'Postcode' }, { field: 'Class', label: 'Our reference', type: 'text' },
         ] },
         { type: 'heading', text: 'Your place is confirmed: {Student.First Name} on {Class.Course.Name}' },
         { type: 'text', text: 'Dear {Student.Family.Contact},' },
         { type: 'text', text: 'Thank you for booking with us. This letter confirms the place for {Student} and tells you what to expect before the first lesson.' },
+        { type: 'fields', columns: 3, items: [
+          { field: 'First Lesson', label: 'First lesson', format: 'dddd d mmmm yyyy' },
+          { field: 'Class.Term.Starts', label: 'Term starts', format: 'd mmmm yyyy' }, { field: 'Class.Term.Ends', label: 'Term ends', format: 'd mmmm yyyy' },
+        ] },
         { type: 'text', text: '1. The class. {Class.Course.Name} meets every {Class.Weekday} at {Class.Start Time} in {Class.Room}, and each lesson lasts {Class.Course.Minutes} minutes. The teacher is {Class.Teacher}.' },
-        { type: 'text', text: '2. When it starts. The first lesson for {Student.First Name} is on {First Lesson}. {Class.Term} runs from {Class.Term.Starts} to {Class.Term.Ends}, and the class has {Class.Lessons Planned} lessons in that time.' },
+        { type: 'text', text: '2. When it starts. The first lesson for {Student.First Name} is on the day above. {Class.Term} runs between the dates above, and the class has {Class.Lessons Planned} lessons in that time.' },
         { type: 'text', text: '3. What to bring. {Class.Course.What to Bring}' },
         { type: 'text', text: '4. Fees. The place is charged for {Lessons Billed} lessons, on the invoice for the term. Fees are not refunded part way through a term, but if a lesson is cancelled by us it is made up or taken off the next invoice.' },
+        { type: 'text', text: 'Another place in the family was booked first this term, so this place for {Student.First Name} has ten percent off.', if: '[Discount] > 0 And [Discount] < 0.5' },
+        { type: 'text', text: 'This is a bursary place, at half fees.', if: '[Discount] >= 0.5' },
         { type: 'text', text: '5. Arriving and going home. Please arrive five minutes before the start. Children are signed in at the front desk and wait inside until they are collected, so please tell the office if someone new is coming for them. Adult learners go straight to the room.' },
         { type: 'text', text: '6. If you cannot come. Ring {Business.Phone} or write to {Business.E-mail} before the lesson, so the register can be marked and work kept back.' },
         { type: 'text', text: 'We look forward to seeing {Student.First Name}.' },
@@ -303,7 +316,7 @@ export const spec = {
       blocks: [
         { type: 'heading', text: 'Progress report, {Term}' },
         { type: 'fields', columns: 2, items: [
-          { field: 'Student', type: 'text' }, { field: 'School Year' }, { field: 'Term' }, { field: 'Written On', label: 'Date' },
+          { field: 'Student', type: 'text' }, { field: 'School Year' }, { field: 'Term' }, { field: 'Written On', label: 'Date', format: 'd mmmm yyyy' },
           { field: 'Student.Family.Contact', label: 'Sent to' },
         ] },
         { type: 'lines', table: 'Report Lines', columns: [
@@ -313,9 +326,10 @@ export const spec = {
           { field: 'Half-term %', type: 'integer' }, { field: 'End of Term %', type: 'integer' }, { field: 'Comment', as: 'Teacher\'s comment' },
         ] },
         { type: 'totals', rows: [
+          { label: 'Classes', expr: '[Report Lines count]', type: 'integer' },
           { label: 'Lessons this term', expr: '[Lessons]', type: 'integer' },
           { label: 'Missed', expr: '[Absent]', type: 'integer' },
-          { label: 'Attendance, percent', expr: 'Round(([Lessons] - [Absent]) * 100 / [Lessons], 0)', type: 'integer', strong: true },
+          { label: 'Attendance, %', expr: 'Round(([Lessons] - [Absent]) * 100 / [Lessons], 0)', type: 'integer', strong: true },
         ] },
         { type: 'text', text: '{Comment}' },
         { type: 'text', text: 'Marks are percentages of the test. A blank mark means the test was missed or the course has none.', small: true },
@@ -329,7 +343,7 @@ export const spec = {
         { type: 'heading', text: '{Enrolment.Student}' },
         { type: 'text', text: 'has completed {Enrolment.Class.Course.Name} ({Enrolment.Class.Course.Level}) at {Business.Name}, {Enrolment.Class.Term}, taught by {Enrolment.Class.Teacher}, attending {Lessons Attended} lessons and {Hours} hours of teaching.' },
         { type: 'spacer', size: 24 },
-        { type: 'fields', columns: 2, items: [{ field: 'Number', label: 'Certificate' }, { field: 'Issued On' }] },
+        { type: 'fields', columns: 2, items: [{ field: 'Number', label: 'Certificate' }, { field: 'Issued On', format: 'd mmmm yyyy' }] },
         { type: 'spacer', size: 24 },
         { type: 'signatures', labels: ['Teacher', 'Centre director'] },
       ] },
@@ -338,18 +352,18 @@ export const spec = {
         { type: 'heading', text: 'Pay statement {Number}' },
         { type: 'fields', columns: 2, items: [
           { field: 'Teacher' }, { field: 'Number', label: 'Statement' },
-          { field: 'Month' }, { field: 'Paid On' },
-          { field: 'Period Start', label: 'From' }, { field: 'Period End', label: 'To' },
-          { field: 'Hourly Rate' },
+          { field: 'Period Start', label: 'Month', format: 'mmmm yyyy' }, { field: 'Hourly Rate', format: '#,##0.00' },
+          { field: 'Period Start', label: 'From', format: 'dd/mm/yyyy' }, { field: 'Period End', label: 'To', format: 'dd/mm/yyyy' },
+          { field: 'Paid On', format: 'dd/mm/yyyy', if: '[Paid On]' },
         ] },
         { type: 'lines', table: 'Lessons', sort: 'Lesson Date', columns: [
-          { field: 'Lesson Date', as: 'Date' }, { field: 'Class', as: 'Class', type: 'text' }, { field: 'Class.Course.Name', as: 'Course' },
+          { field: 'Lesson Date', as: 'Date', format: 'ddd dd/mm/yyyy' }, { field: 'Class', as: 'Class', type: 'text' }, { field: 'Class.Course.Name', as: 'Course' },
           { field: 'Minutes', type: 'integer' }, { expr: 'Round([Minutes] / 60, 2)', as: 'Hours', type: 'number' },
           { field: 'Teacher.Hourly Rate', as: 'Rate', type: 'currency' },
           { expr: 'Round([Minutes] / 60 * [Rate], 2)', as: 'Pay', type: 'currency' },
         ] },
         { type: 'totals', rows: [
-          { label: 'Lessons taught', expr: '[Lessons]', type: 'integer' },
+          { label: 'Lessons taught', expr: '[Lessons count]', type: 'integer' },
           { label: 'Hours', expr: '[Hours]', type: 'number' },
           { label: 'Gross pay', expr: '[Pay]', strong: true },
         ] },
@@ -564,12 +578,12 @@ export const about = {
     'Fees received': 'Fee income month by month, with the total.',
   },
   documents: {
-    'Fee invoice': 'Sent to each family about three weeks before a term or holiday starts: a line for each child\'s class with the lessons, the price per lesson and any discount, then the total, what has been paid so far and the balance due. Numbered INV-2026-0042. Print it again later and it shows the payments since.',
-    'Payment receipt': 'Given or sent for each payment, on A5: the receipt number, who paid, how, which invoice it was for, and what is left to pay on it.',
-    'Enrolment letter': 'Sent when a place is booked: the class, its day, time and room, the teacher, the first lesson, the term\'s dates, what to bring and what happens if the student cannot come. It prints for every enrolment, so choose the ones just booked before printing. Have the wording checked for your own centre and country.',
+    'Fee invoice': 'Sent to each family about three weeks before a term or holiday starts: a line for each child\'s class with the lessons, the price per lesson and any discount, then the total. The discounts row and the line about discounts show only when there is one; once something has been paid it shows what has come in and the balance due, and a paid invoice says so in place of how to pay. Numbered INV-2026-0042. Print it again later and it shows the payments since.',
+    'Payment receipt': 'Given or sent for each payment, on A5: the receipt number, who paid, how, which invoice it was for, what was owing before it, and what is left to pay, or that the invoice is now paid in full.',
+    'Enrolment letter': 'Sent when a place is booked: the class, its day, time and room, the teacher, the first lesson, the term\'s dates, what to bring, any discount or bursary, and what happens if the student cannot come. It prints for places whose Status is Enrolled; a finished or withdrawn place prints when you choose it from the Enrolments form. Have the wording checked for your own centre and country.',
     'Term report': 'The progress report sent home after each term: for each class, the lessons, late marks and absences, the attendance percentage, the half-term and end of term marks and the teacher\'s comment, then the attendance for the term and the centre\'s comment.',
     'Certificate of completion': 'Given to each adult learner who finishes a course and each child who finishes a holiday workshop with three lessons in four attended: the course, its level, the term, the teacher, the lessons and hours, signed by the teacher and the director.',
-    'Pay statement': 'Given to each teacher each month: every lesson they taught with its class, minutes and pay at their hourly rate, then the hours and the gross pay. Tax and National Insurance are worked out by the payroll, not here.',
+    'Pay statement': 'Given to each teacher each month: every lesson they taught with its day, class, minutes and pay at their hourly rate, then the lessons counted, the hours and the gross pay, and the day it was paid once it has been. Tax and National Insurance are worked out by the payroll, not here.',
   },
   empty: 'Start with Business, the centre\'s own name, address and bank details, which every document prints. Then Terms (this year\'s terms and holidays), then Teachers and Courses (what you teach, how long and at what price). Then set up the Classes for the first term, each with its course, teacher, day, time and room. Enter Families and then their Students as they book, and an Enrolment for each place. Add the Lessons of each class (one for each week of the term), take the register in Attendance as the lessons happen, and record Assessments and Results when tests are marked. Raise a Fee Invoice for each family each term and set each of their enrolments\' Invoice to it, then enter Payments as they come in, adding each to the invoice\'s Paid So Far. At the end of a term write a Term Report for each student, with a Report Line for each class; at the end of a month make each teacher\'s Pay Statement and set it on the lessons they taught.',
   adapt: [
@@ -631,7 +645,7 @@ export const about = {
   notes: [
     'An invoice\'s lines are the enrolments that point at it, so an enrolment with no Invoice is not on any invoice yet. Set it when you send the invoice; a place booked after the invoice was sent goes on a new invoice of its own.',
     'Paid So Far on an invoice and Balance After on a payment are typed, not worked out. Keep Paid So Far equal to the invoice\'s payments added up, or the balance printed on the invoice will be wrong.',
-    'A print template prints every record of its table, so the Enrolment letter, the Fee invoice and the others print the whole history unless you choose the records first. Choose the ones you want (the new enrolments, this term\'s invoices) before pressing Print.',
+    'The Enrolment letter prints only for places whose Status is Enrolled. The other print templates print every record of their table (every invoice, receipt, report, certificate and pay statement there is), so choose the ones you want, such as this term\'s invoices, before pressing Print. A record you choose from its form always prints.',
     'Term reports and certificates are records of their own, written once at the end of a term. Changing the register later does not change a report already written: update its line by hand if a mark was wrong.',
     'A pay statement\'s lines are the lessons that point at it. A lesson covered by another teacher has that teacher in its Teacher field, so it is paid on their statement, not the class teacher\'s.',
     'Tuition here is exempt from VAT, so the Business record\'s Tax Rate is 0 and no document shows VAT. If yours is not, see the last of the ways to adapt the sample.',

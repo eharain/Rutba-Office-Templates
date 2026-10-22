@@ -33,16 +33,22 @@ const VAT_LINE = `Round(${LINE} * Nz([Tax Rate]), 2)`;
 const STANDARD_RATE = 0.2;
 // What the head of every document the workshop sends out shows.
 const LETTERHEAD = { table: 'Business', fields: ['Name', 'Address', 'City', 'Postcode', 'Phone', 'E-mail', 'Website', 'Tax Number'] };
+// Dates on the documents as the workshop writes them: 22/10/2026.
+const DATE = 'dd/mm/yyyy';
 // A quote's or an invoice's totals from its lines: each line's VAT rounded
 // and added up, then the VAT on delivery, exactly as the fill stores them.
+// Delivery shows only when it is charged; left out, it counts as nothing.
 const TOTALS = (last) => [
-  { label: 'Goods', expr: '[Net]' }, { label: 'Delivery', expr: 'Nz([Delivery Fee])' }, { label: 'Net total', expr: '[Goods] + [Delivery]' },
-  { label: 'VAT', expr: '[VAT] + Round([Delivery] * [Business].[Tax Rate], 2)' }, { label: last, expr: '[Net total] + [VAT]', strong: true },
+  { label: 'Goods', expr: '[Net]' }, { label: 'Delivery', expr: 'Nz([Delivery Fee])', if: 'Nz([Delivery Fee]) <> 0' }, { label: 'Net total', expr: '[Goods] + Nz([Delivery])' },
+  { label: 'VAT', expr: '[VAT] + Round(Nz([Delivery]) * [Business].[Tax Rate], 2)' }, { label: last, expr: '[Net total] + [VAT]', strong: true },
 ];
 // The labour rate the margin queries cost a product's minutes at: about the
 // makers' average hourly cost with holiday and insurance on top.
 const RATE = 21;
 const LABOUR = `[Labour Minutes] / 60 * ${RATE}`;
+
+// The print templates need the 2.16 engine: records chosen by a condition, blocks shown when they apply, formats.
+export const minOffice = '2.16.0';
 
 export const spec = {
   // Where a value below nought is right: stock going out, work or an order
@@ -264,15 +270,17 @@ export const spec = {
   // The print templates: one document for each record of a table, its lines
   // from the records that point at it, the workshop's details at the head.
   documents: [
-    { name: 'Quote', table: 'Quotes', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For quotes waiting for an answer; one already answered prints from the Quotes form.
+    { name: 'Quote', table: 'Quotes', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Sent"', blocks: [
       { type: 'heading', text: 'Quotation {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer.Name', label: 'Prepared for' }, { field: 'Number', label: 'Quote number' },
-        { field: 'Customer.Contact', label: 'For the attention of' }, { field: 'Quote Date', label: 'Date' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Valid Until', label: 'Prices held until' },
+        { field: 'Customer.Contact', label: 'For the attention of' }, { field: 'Quote Date', label: 'Date', format: DATE },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Valid Until', label: 'Prices held until', format: DATE },
         { field: 'Customer.City', label: 'Town' }, { field: 'Customer.Postcode', label: 'Postcode' },
       ] },
-      { type: 'text', text: 'Thank you for asking us to quote. Notes: {Notes}' },
+      { type: 'text', text: 'Thank you for asking us to quote.', if: 'Nz([Notes], "") = ""' },
+      { type: 'text', text: 'Thank you for asking us to quote. What you asked for: {Notes}', if: 'Nz([Notes], "") <> ""' },
       { type: 'lines', table: 'Quote Lines', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Description' }, { field: 'Quantity', label: 'Qty', type: 'integer' },
         { field: 'Unit Price', label: 'Each', type: 'currency' }, { expr: 'Round(Nz([Discount]) * 100, 0)', as: 'Discount %', type: 'integer' },
@@ -285,14 +293,15 @@ export const spec = {
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['Accepted for the customer', 'For the workshop'] },
     ] },
-    { name: 'Invoice', table: 'Sales Orders', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For orders delivered and invoiced: an order not delivered yet has no invoice number.
+    { name: 'Invoice', table: 'Sales Orders', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Invoice No], "") <> ""', blocks: [
       { type: 'heading', text: 'VAT invoice {Invoice No}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer.Name', label: 'Invoice to' }, { field: 'Invoice No', label: 'Invoice number' },
-        { field: 'Customer.Contact', label: 'For the attention of' }, { field: 'Invoice Date', label: 'Invoice date (tax point)' },
+        { field: 'Customer.Contact', label: 'For the attention of' }, { field: 'Invoice Date', label: 'Invoice date (tax point)', format: DATE },
         { field: 'Customer.Address', label: 'Address' }, { field: 'ID', label: 'Our order' },
-        { field: 'Customer.City', label: 'Town' }, { field: 'Delivered On', label: 'Delivered' },
-        { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Invoice Due', label: 'Payment due' },
+        { field: 'Customer.City', label: 'Town' }, { field: 'Delivered On', label: 'Delivered', format: DATE },
+        { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Invoice Due', label: 'Payment due', format: DATE },
       ] },
       { type: 'lines', table: 'Sales Lines', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Description' }, { field: 'Quantity', label: 'Qty', type: 'integer' },
@@ -301,19 +310,22 @@ export const spec = {
         { expr: VAT_LINE, as: 'VAT', type: 'currency' },
       ] },
       { type: 'totals', rows: TOTALS('Total due') },
-      { type: 'text', text: '{Business.Payment Terms} Please quote {Invoice No} with your payment. By bank transfer to {Business.Bank Details}. VAT number {Business.Tax Number}.', small: true },
+      // How to pay while it is owed; the day it was paid once it is.
+      { type: 'text', text: '{Business.Payment Terms} Please quote {Invoice No} with your payment. By bank transfer to {Business.Bank Details}. VAT number {Business.Tax Number}.', small: true, if: 'Nz([Paid On], "") = ""' },
+      { type: 'text', text: 'Paid in full on {Paid On}. Thank you. VAT number {Business.Tax Number}.', small: true, if: 'Nz([Paid On], "") <> ""' },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Delivery note', table: 'Sales Orders', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For orders still to go out in the van; one delivered prints from the Sales Orders form.
+    { name: 'Delivery note', table: 'Sales Orders', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Open"', blocks: [
       { type: 'heading', text: 'Delivery note DN-{ID}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Customer.Name', label: 'Deliver to' }, { field: 'ID', label: 'Our order' },
-        { field: 'Customer.Contact', label: 'Contact' }, { field: 'Order Date', label: 'Ordered' },
-        { field: 'Customer.Address', label: 'Address' }, { field: 'Delivery Due', label: 'Due' },
-        { field: 'Customer.City', label: 'Town' }, { field: 'Delivered On', label: 'Delivered' },
+        { field: 'Customer.Contact', label: 'Contact' }, { field: 'Order Date', label: 'Ordered', format: DATE },
+        { field: 'Customer.Address', label: 'Address' }, { field: 'Delivery Due', label: 'Due', format: DATE },
+        { field: 'Customer.City', label: 'Town' }, { field: 'Delivered On', label: 'Delivered', format: DATE, if: 'Nz([Delivered On], "") <> ""' },
         { field: 'Customer.Postcode', label: 'Postcode' }, { field: 'Customer.Phone', label: 'Phone' },
       ] },
-      { type: 'text', text: 'Notes: {Notes}' },
+      { type: 'text', text: 'Notes: {Notes}', if: 'Nz([Notes], "") <> ""' },
       { type: 'lines', table: 'Sales Lines', columns: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Description' }, { field: 'Quantity', label: 'Pieces', type: 'integer' },
       ] },
@@ -322,13 +334,15 @@ export const spec = {
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['Received in good order by', 'Delivered by'] },
     ] },
-    { name: 'Purchase order', table: 'Material Purchases', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For orders sent and not yet received; one received prints from the Material Purchases form.
+    { name: 'Purchase order', table: 'Material Purchases', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Ordered"', blocks: [
       { type: 'heading', text: 'Purchase order {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Supplier.Name', label: 'To' }, { field: 'Number', label: 'Order number' },
-        { field: 'Supplier.Contact', label: 'For the attention of' }, { field: 'Ordered On', label: 'Date' },
-        { field: 'Supplier.Address', label: 'Address' }, { field: 'Expected', label: 'Deliver by' },
+        { field: 'Supplier.Contact', label: 'For the attention of' }, { field: 'Ordered On', label: 'Date', format: DATE },
+        { field: 'Supplier.Address', label: 'Address' }, { field: 'Expected', label: 'Deliver by', format: DATE },
         { field: 'Supplier.City', label: 'Town' }, { field: 'Supplier.Postcode', label: 'Postcode' },
+        { field: 'Received On', label: 'Received', format: DATE, if: 'Nz([Received On], "") <> ""' },
       ] },
       { type: 'lines', table: 'Purchase Lines', columns: [
         { field: 'Material.Code', label: 'Our code' }, { field: 'Material.Name', label: 'Description' }, { field: 'Material.Unit', label: 'Unit' },
@@ -340,30 +354,38 @@ export const spec = {
       { type: 'spacer', size: 16 },
       { type: 'signatures', labels: ['Ordered by'] },
     ] },
-    { name: 'Statement', table: 'Customers', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // For trade accounts (shops and designers), listing the invoices they have not paid, with the balance as it builds up.
+    // The public pay on delivery and have no account.
+    { name: 'Statement', table: 'Customers', paper: 'a4', letterhead: LETTERHEAD, where: '[Kind] <> "Public"', blocks: [
       { type: 'heading', text: 'Statement of account' },
       { type: 'fields', columns: 2, items: [
         { field: 'Name', label: 'Account' }, { field: 'Kind', label: 'Account type' },
-        { field: 'Contact', label: 'For the attention of' }, { field: 'Payment Days', label: 'Days to pay' },
+        { field: 'Contact', label: 'For the attention of', if: 'Nz([Contact], "") <> ""' }, { field: 'Payment Days', label: 'Days to pay' },
         { field: 'Address' }, { field: 'City', label: 'Town' }, { field: 'Postcode' },
       ] },
-      { type: 'lines', table: 'Sales Orders', sort: 'Order Date', columns: [
-        { field: 'Invoice No', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date' }, { field: 'Invoice Due', label: 'Due' },
-        { field: 'Invoice Amount', label: 'Amount', type: 'currency' }, { field: 'Paid On', label: 'Paid' },
-        { expr: 'IIf(Nz([Paid On], "") = "", Nz([Invoice Amount]), 0)', as: 'Owing', type: 'currency' },
+      { type: 'lines', table: 'Sales Orders', sort: 'Invoice Date', where: 'Nz([Invoice No], "") <> "" And Nz([Paid On], "") = ""', columns: [
+        { field: 'Invoice No', label: 'Invoice' }, { field: 'Invoice Date', label: 'Date', format: DATE }, { field: 'Invoice Due', label: 'Due', format: DATE },
+        { expr: 'IIf(DateDiff("d", [Invoice Due], Date()) > 0, DateDiff("d", [Invoice Due], Date()), 0)', as: 'Days Overdue', label: 'Days overdue', type: 'integer' },
+        { field: 'Invoice Amount', label: 'Amount', type: 'currency' }, { running: 'Invoice Amount', as: 'Balance' },
       ] },
-      { type: 'totals', rows: [{ label: 'Statement date', expr: 'Date()', type: 'date' }, { label: 'Balance owing', expr: '[Owing]', strong: true }] },
-      { type: 'text', text: 'An invoice with no date paid is still owed. {Business.Payment Terms} If you have paid in the last few days, thank you, and please ignore this. Bank transfer to {Business.Bank Details}.', small: true },
+      { type: 'totals', rows: [
+        { label: 'Statement date', expr: 'Date()', format: DATE }, { label: 'Invoices unpaid', expr: '[Sales Orders count]', type: 'integer' },
+        { label: 'Balance owing', expr: '[Balance]', strong: true },
+      ] },
+      { type: 'text', text: '{Business.Payment Terms} If you have paid in the last few days, thank you, and please ignore this. Bank transfer to {Business.Bank Details}.', small: true, if: '[Balance] > 0' },
+      { type: 'text', text: 'Nothing is owed on your account today. Thank you.', small: true, if: '[Balance] <= 0' },
     ] },
-    { name: 'Works order', table: 'Work Orders', paper: 'a4', letterhead: { table: 'Business', fields: ['Name'] }, blocks: [
+    // For the bench: work orders planned or in progress. One done or cancelled prints from the Work Orders form.
+    { name: 'Works order', table: 'Work Orders', paper: 'a4', letterhead: { table: 'Business', fields: ['Name'] }, where: '[Status] = "Planned" Or [Status] = "In progress"', blocks: [
       { type: 'heading', text: 'Works order {Number}' },
       { type: 'fields', columns: 3, items: [
         { field: 'Product.Code', label: 'Code' }, { field: 'Product.Name', label: 'Make' }, { field: 'Quantity', label: 'How many' },
-        { field: 'Maker', label: 'Given to' }, { field: 'Planned Start', label: 'Start' }, { field: 'Due Date', label: 'Finish by' },
-        { field: 'Sales Order.ID', label: 'For order' }, { field: 'Sales Order.Customer.Name', label: 'Customer' }, { field: 'Standard Hours', label: 'Standard hours' },
-        { field: 'Status' }, { field: 'Started' }, { field: 'Finished' },
+        { field: 'Maker', label: 'Given to' }, { field: 'Planned Start', label: 'Start', format: DATE }, { field: 'Due Date', label: 'Finish by', format: DATE },
+        // A batch for the shelf has no order or customer.
+        { field: 'Sales Order.ID', label: 'For order', if: '[Sales Order]' }, { field: 'Sales Order.Customer.Name', label: 'Customer', if: '[Sales Order]' }, { field: 'Standard Hours', label: 'Standard hours' },
+        { field: 'Status' }, { field: 'Started', format: DATE, if: 'Nz([Started], "") <> ""' }, { field: 'Finished', format: DATE, if: 'Nz([Finished], "") <> ""' },
       ] },
-      { type: 'text', text: 'Instructions: {Instructions}' },
+      { type: 'text', text: 'Instructions: {Instructions}', if: 'Nz([Instructions], "") <> ""' },
       { type: 'lines', table: 'Work Order Materials', columns: [
         { field: 'Material.Code', label: 'Code' }, { field: 'Material.Name', label: 'Material' }, { field: 'Material.Unit', label: 'Unit' },
         { field: 'Needed', label: 'Take from stock', type: 'number' },
@@ -538,12 +560,12 @@ export const about = {
     'Hours by maker': 'Each maker\'s booked hours and their cost month by month, with totals.',
   },
   documents: {
-    Quote: 'The quotation sent for made-to-order work: the customer\'s name and address, each piece with its price, trade discount and VAT, the delivery, the total, how long the prices hold, and a place to sign to accept. One prints for each record in Quotes.',
-    Invoice: 'The VAT invoice that goes with a delivery: the invoice number and tax point, each line with its discount and VAT rate, the goods, delivery, VAT and total due, and how to pay. It prints from Sales Orders, so an order not yet delivered prints without a number: print the one on screen, or those chosen.',
-    'Delivery note': 'Goes in the van with an order: what is being delivered, without prices, where to, a phone number for the driver, and two places to sign. Print it the day before the delivery.',
-    'Purchase order': 'Sent to a timber merchant or a fittings supplier: what to send, at what price, and when it is wanted, with the workshop\'s delivery address.',
-    Statement: 'Sent to each trade account at the start of the month: every invoice with what was paid and when, and the balance owing. It prints one for every customer, so choose the trade accounts with something owing.',
-    'Works order': 'The sheet for the bench: what to make and how many, for whom, when to start and finish, the standard hours, the customer\'s wishes, and the list of materials to take from stock, with places to sign when it is made and checked.',
+    Quote: 'The quotation sent for made-to-order work: the customer\'s name and address, each piece with its price, trade discount and VAT, the delivery, the total, how long the prices hold, and a place to sign to accept. It prints for quotes still Sent, waiting for an answer; any other prints from the Quotes form.',
+    Invoice: 'The VAT invoice that goes with a delivery: the invoice number and tax point, each line with its discount and VAT rate, the goods, delivery, VAT and total due, and how to pay while it is owed, or the day it was paid. It prints from Sales Orders, for the orders delivered and given an invoice number only.',
+    'Delivery note': 'Goes in the van with an order: what is being delivered, without prices, where to, a phone number for the driver, and two places to sign. It prints for open orders, those still to go out: print it the day before the delivery.',
+    'Purchase order': 'Sent to a timber merchant or a fittings supplier: what to send, at what price, and when it is wanted, with the workshop\'s delivery address. It prints for orders still Ordered; one received prints from the Material Purchases form.',
+    Statement: 'Sent to each trade account at the start of the month: the invoices not yet paid, oldest first, with the days each is overdue and the balance as it builds up to what is owed. It prints for shops and designers only, not the public, who pay on delivery.',
+    'Works order': 'The sheet for the bench: what to make and how many, for whom, when to start and finish, the standard hours, the customer\'s wishes, and the list of materials to take from stock, with places to sign when it is made and checked. It prints for work orders Planned or In progress; the order and customer show only for made-to-order work.',
   },
   tutorial: [
     { title: 'Quote for a made-to-order piece', steps: [
@@ -585,7 +607,7 @@ export const about = {
     { title: 'Take a payment and send statements', steps: [
       'When money comes in, open the order in the Sales Orders form and type Paid On.',
       'At the start of each month open the Invoices due report: every unpaid invoice by customer, with days overdue.',
-      'Open Print templates, choose Statement, choose the trade customers who owe something and press Print or Save as PDF. Send each its statement.',
+      'Open Print templates and choose Statement: it prints for each shop and designer, listing what they have not paid. Press Print or Save as PDF and send each its statement.',
       'Ring anyone more than a fortnight overdue. The Unpaid invoices query shows the oldest first.',
     ] },
     { title: 'Chase quotes and see how many are won', steps: [
@@ -597,15 +619,15 @@ export const about = {
   ],
   notes: [
     'Prices in Products, quotes and orders are before VAT. Everything the workshop sells is at the standard rate, 0.2, and delivery carries VAT too. A shop that shows prices with VAT in its showroom adds a fifth to these.',
-    'An invoice is the sales order itself once it is delivered: its Invoice No, Invoice Date, Net, VAT and Invoice Amount are filled in on the day. So the Invoice print template prints from Sales Orders, and an order not yet delivered prints with no number. Print the one on screen, or choose those to print.',
+    'An invoice is the sales order itself once it is delivered: its Invoice No, Invoice Date, Net, VAT and Invoice Amount are filled in on the day. So the Invoice print template prints from Sales Orders, for the orders that have an Invoice No.',
     'Net and VAT are worked out the way the invoice shows them: each line rounded to the penny, its VAT rounded to the penny, then added up, and the VAT on delivery added. Work them out the same way when you type them, or the invoice and the record will differ by a penny.',
     'Stock and materials are not counted by the database on its own. In Stock, On Order and Allocated are typed figures, kept right by the Material Movements and Stock Movements records you add. Count once a month and correct them with a Counted or Adjusted movement.',
     'A work order\'s materials are copied into Work Order Materials when it is planned. Changing a product\'s bill of materials afterwards changes new work orders, not ones already planned.',
-    'The Statement print template prints one for every customer, including members of the public who paid on delivery. Choose the trade accounts you want before printing.',
+    'Each print template prints only the records it is for: quotes waiting for an answer, invoices for delivered orders, delivery notes for open orders, purchase orders not yet received, statements for trade accounts and works orders for the bench. Any record prints from its own form, whatever it is.',
     'Document numbers run in date order with a new run each year. When you type a new one, look at the last number used in that table and add one.',
   ],
   faq: [
-    { q: 'How do I print an invoice I sent last month?', a: 'Open Print templates, choose Invoice, and pick the order by its number or customer. Every order prints, whatever its date. To find the order, look the invoice number up in the Unpaid invoices query or the Sales Orders table.' },
+    { q: 'How do I print an invoice I sent last month?', a: 'Open Print templates, choose Invoice, and pick the order by its number or customer. Every invoiced order prints, whatever its date. To find the order, look the invoice number up in the Unpaid invoices query or the Sales Orders table.' },
     { q: 'Why is there no Invoices table?', a: 'The workshop invoices each order once, on delivery, so the invoice\'s fields sit on the sales order and its lines are the order\'s lines. If you invoice in parts, add an Invoices table pointing at Sales Orders, with lines of its own.' },
     { q: 'How do I give a designer their trade discount?', a: 'Set Trade Discount on the customer (0.1 for ten percent), and copy it to Discount on each quote and order line. The invoice shows the discount on each line.' },
     { q: 'Where do I see how long a job really took?', a: 'The Work order costs query lists work orders finished in the last 90 days with the standard hours beside the hours booked on time sheets, and what the labour cost.' },

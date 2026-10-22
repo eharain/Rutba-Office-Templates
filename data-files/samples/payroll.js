@@ -25,6 +25,17 @@ const NAME = '[First Name] & " " & [Last Name]';
 // Years served at the work anniversary this month or next.
 const YEARS = 'Year(Date()) - Year([Start Date]) + IIf(Month([Start Date]) < Month(Date()), 1, 0)';
 // The current year of a record with a start and an end: today falls between them.
+// The latest pay run's payslips: this month's once its pay date (the last
+// weekday of the month) has come, last month's until then. The first of next
+// month gives the days left in this one.
+const NEXT_MONTH = 'IIf(Month(Date()) = 12, (Year(Date()) + 1) & "-01-01", Year(Date()) & "-" & Format(Month(Date()) + 1, "00") & "-01")';
+const DAYS_LEFT = `(DateDiff("d", Date(), ${NEXT_MONTH}) - 1)`;
+const PAID_THIS_MONTH = `(${DAYS_LEFT} = 0 Or (Weekday(Date()) = 6 And ${DAYS_LEFT} <= 2) Or (Weekday(Date()) = 7 And ${DAYS_LEFT} <= 1))`;
+const LATEST_PAY = `DateDiff("d", [Pay Date], Date()) >= 0 And DateDiff("m", [Pay Date], Date()) = IIf(${PAID_THIS_MONTH}, 0, 1)`;
+
+// The print templates use where, if and format.
+export const minOffice = '2.16.0';
+
 const THIS_YEAR = (starts, ends, total) => [
   { expr: `DateDiff("d", [${starts}], Date())`, as: 'Days Into Year', criteria: ['>= 0'], show: false, ...(total ? { total: 'where' } : {}) },
   { expr: `DateDiff("d", Date(), [${ends}])`, as: 'Days Left in Year', criteria: ['>= 0'], show: false, ...(total ? { total: 'where' } : {}) },
@@ -99,7 +110,7 @@ export const spec = {
     ] },
     { name: 'Payslips', fields: [
       { name: 'Number', type: 'text', unique: true }, { name: 'Pay Run', ...ref('Pay Runs'), required: true }, { name: 'Employee', ...ref('Employees'), required: true },
-      { name: 'Tax Code', type: 'text' }, { name: 'Hours From', type: 'date' }, { name: 'Hours To', type: 'date' }, { name: 'Hours Paid', type: 'number' },
+      { name: 'Pay Date', type: 'date' }, { name: 'Tax Code', type: 'text' }, { name: 'Hours From', type: 'date' }, { name: 'Hours To', type: 'date' }, { name: 'Hours Paid', type: 'number' },
       { name: 'Gross', type: 'currency' }, { name: 'Deductions', type: 'currency' },
       { name: 'Net', type: 'currency' }, { name: 'Employer Costs', type: 'currency' }, { name: 'Gross to Date', type: 'currency' },
       { name: 'Deductions to Date', type: 'currency' }, { name: 'Net to Date', type: 'currency' },
@@ -168,7 +179,7 @@ export const spec = {
       { table: 'Timesheet Lines', field: 'Hours', as: 'Hours Worked', total: 'sum' }, { table: 'Timesheet Lines', field: 'Overtime', as: 'Overtime Hours', total: 'sum' },
     ] },
     'Payroll cost by department': { tables: ['Payslips', 'Pay Runs', 'Employees', 'Departments'], columns: [
-      { expr: 'Format([Pay Date], "yyyy-mm")', as: 'Month', total: 'group', sort: 'asc' }, { table: 'Departments', field: 'Name', as: 'Department', total: 'group', sort: 'asc' },
+      { expr: 'Format([Pay Runs].[Pay Date], "yyyy-mm")', as: 'Month', total: 'group', sort: 'asc' }, { table: 'Departments', field: 'Name', as: 'Department', total: 'group', sort: 'asc' },
       { table: 'Payslips', field: 'ID', as: 'Payslips', total: 'count' }, { table: 'Payslips', field: 'Gross', as: 'Gross', total: 'sum' },
       { table: 'Payslips', field: 'Employer Costs', as: 'Employer Costs', total: 'sum' }, { expr: 'Round([Gross] + [Employer Costs], 2)', as: 'Total Cost', total: 'sum' },
       { table: 'Payslips', field: 'Net', as: 'Net', total: 'sum' },
@@ -253,21 +264,27 @@ export const spec = {
       { expr: 'Nz(DateDiff("d", Date(), [Applies To]), 0)', as: 'Days Still to Run', criteria: ['>= 0'], show: false },
     ] },
   },
-  // The print templates: each a document for one record, the business's details at the head.
+  // The print templates: each prints for the records it is for (its `where`),
+  // and leaves out what does not apply to one record (an `if` on a block, a
+  // field or a total). A record printed from its form always prints.
   documents: [
-    { name: 'Payslip', table: 'Payslips', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // The latest pay run's payslips: this month's once its pay date has come, last month's until then.
+    { name: 'Payslip', table: 'Payslips', paper: 'a4', letterhead: LETTERHEAD, where: LATEST_PAY, blocks: [
       { type: 'heading', text: 'Payslip: {Pay Run.Period}' },
       { type: 'fields', columns: 3, items: [
         { field: 'Employee', label: 'Name' }, { field: 'Employee.Employee No', label: 'Employee number' }, { field: 'Number', label: 'Payslip' },
-        { field: 'Employee.Job Title', label: 'Job' }, { field: 'Employee.Department', label: 'Department' }, { field: 'Pay Run.Pay Date', label: 'Pay date' },
-        { field: 'Pay Run.Period Starts', label: 'Period from' }, { field: 'Pay Run.Period Ends', label: 'Period to' }, { field: 'Pay Run.Frequency', label: 'Paid' },
-        { field: 'Tax Code', label: 'Tax code' }, { field: 'Employee.Pay Type', label: 'Pay type' }, { field: 'Pay Run.Pay Year', label: 'Pay year' },
-        { field: 'Hours From', label: 'Hours worked from' }, { field: 'Hours To', label: 'Hours worked to' }, { field: 'Hours Paid', label: 'Hours paid' },
+        { field: 'Employee.Job Title', label: 'Job' }, { field: 'Employee.Department', label: 'Department' }, { field: 'Pay Date', label: 'Pay date', format: 'dd/mm/yyyy' },
+        { field: 'Pay Run.Period Starts', label: 'Period from', format: 'dd/mm/yyyy' }, { field: 'Pay Run.Period Ends', label: 'Period to', format: 'dd/mm/yyyy' }, { field: 'Pay Run.Frequency', label: 'Paid' },
+        { field: 'Employee.Pay Type', label: 'Pay type' }, { field: 'Pay Run.Pay Year', label: 'Pay year' }, { field: 'Tax Code', label: 'Tax code', if: '[Tax Code]' },
+        // Hours only for someone paid by the hour.
+        { field: 'Hours From', label: 'Hours worked from', format: 'dd/mm/yyyy', if: '[Hours From]' }, { field: 'Hours To', label: 'Hours worked to', format: 'dd/mm/yyyy', if: '[Hours To]' },
+        { field: 'Hours Paid', label: 'Hours paid', if: '[Hours Paid]' },
       ] },
+      // Each sum on its own side: a payment, or a deduction.
       { type: 'lines', table: 'Payslip Lines', sort: 'Line', columns: [
         { field: 'Item', label: 'Pay and deductions' }, { field: 'Hours', type: 'number' }, { field: 'Rate', type: 'currency' },
-        { expr: 'IIf([Kind] = "Payment", [Amount], 0)', as: 'Payments', type: 'currency' },
-        { expr: 'IIf([Kind] = "Deduction", [Amount], 0)', as: 'Deducted', label: 'Deductions', type: 'currency' },
+        { expr: 'IIf([Kind] = "Payment", [Amount], Null)', as: 'Payments', type: 'currency' },
+        { expr: 'IIf([Kind] = "Deduction", [Amount], Null)', as: 'Deducted', label: 'Deductions', type: 'currency' },
         { field: 'Year to Date', label: 'Year to date', type: 'currency' },
       ] },
       { type: 'totals', rows: [
@@ -275,51 +292,60 @@ export const spec = {
         { label: 'Net pay', expr: 'Round([Payments] - [Deducted], 2)', strong: true },
       ] },
       { type: 'fields', columns: 3, items: [
-        { field: 'Gross to Date', label: 'Gross pay, year to date' }, { field: 'Deductions to Date', label: 'Deductions, year to date' }, { field: 'Net to Date', label: 'Net pay, year to date' },
+        { field: 'Gross to Date', label: 'Gross pay, year to date', format: '#,##0.00' }, { field: 'Deductions to Date', label: 'Deductions, year to date', format: '#,##0.00' }, { field: 'Net to Date', label: 'Net pay, year to date', format: '#,##0.00' },
       ] },
-      { type: 'text', text: 'Net pay is paid by bank transfer on {Pay Run.Pay Date} to bank code {Employee.Bank Code}, account {Employee.Account Number}. On top of your pay, {Business.Name} pays {Employer Costs} in employer contributions for this period.', small: true },
+      { type: 'text', text: 'Net pay is paid by bank transfer on {Pay Date} to bank code {Employee.Bank Code}, account {Employee.Account Number}.', small: true },
+      { type: 'text', text: 'On top of your pay, {Business.Name} pays {Employer Costs} in employer contributions for this period.', small: true, if: 'Nz([Employer Costs]) > 0' },
       { type: 'text', text: 'Please check your payslip and tell us within 14 days if anything looks wrong. Keep your payslips: you may need them to show what you earn.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
-    { name: 'Timesheet', table: 'Timesheets', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Timesheets waiting for the manager to approve, to print and sign.
+    { name: 'Timesheet', table: 'Timesheets', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] = "Submitted"', blocks: [
       { type: 'heading', text: 'Timesheet {Number}' },
       { type: 'fields', columns: 3, items: [
         { field: 'Employee', label: 'Name' }, { field: 'Employee.Employee No', label: 'Employee number' }, { field: 'Employee.Department', label: 'Department' },
-        { field: 'Week Commencing', label: 'Week commencing' }, { field: 'Contract Hours', label: 'Contract hours' }, { field: 'Status' },
-        { field: 'Submitted On', label: 'Submitted' }, { field: 'Approved By', label: 'Approved by' }, { field: 'Approved On', label: 'Approved' },
+        { field: 'Week Commencing', label: 'Week commencing', format: 'dd/mm/yyyy' }, { field: 'Contract Hours', label: 'Contract hours' }, { field: 'Status' },
+        { field: 'Submitted On', label: 'Submitted', format: 'dd/mm/yyyy' },
+        { field: 'Approved By', label: 'Approved by', if: '[Approved By]' }, { field: 'Approved On', label: 'Approved', format: 'dd/mm/yyyy', if: '[Approved On]' },
       ] },
       { type: 'lines', table: 'Timesheet Lines', sort: 'Date', columns: [
-        { field: 'Day' }, { field: 'Date' }, { field: 'Start' }, { field: 'End', label: 'Finish' },
+        { field: 'Day' }, { field: 'Date', format: 'dd/mm/yyyy' }, { field: 'Start' }, { field: 'End', label: 'Finish' },
         { field: 'Break Minutes', label: 'Break, minutes', type: 'integer' }, { field: 'Hours', type: 'number' }, { field: 'Overtime', type: 'number' }, { field: 'Note' },
       ] },
       { type: 'totals', rows: [
-        { label: 'Hours worked', expr: '[Hours]', type: 'number' }, { label: 'Within contract hours', expr: '[Hours] - [Overtime]', type: 'number' },
-        { label: 'Overtime', expr: '[Overtime]', type: 'number', strong: true },
+        { label: 'Hours worked', expr: '[Hours]', type: 'number', strong: true },
+        { label: 'Within contract hours', expr: '[Hours] - [Overtime]', type: 'number', if: '[Overtime] > 0' },
+        { label: 'Overtime', expr: '[Overtime]', type: 'number', strong: true, if: '[Overtime] > 0' },
       ] },
       { type: 'text', text: 'Overtime is the time worked above the contract hours for the week, and is paid at one and a half times the hourly rate. Days of holiday or sickness are not shown here: they are paid from the absence record.', small: true },
       { type: 'text', text: 'I confirm that these are the hours I worked in the week shown.' },
       { type: 'spacer', size: 16 },
       { type: 'signatures', labels: ['Employee', 'Approved by'] },
     ] },
-    { name: 'Employment contract summary', table: 'Employees', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Everyone working here now, and those about to start.
+    { name: 'Employment contract summary', table: 'Employees', paper: 'a4', letterhead: LETTERHEAD, where: 'Nz([Leave Date], "") = ""', blocks: [
       { type: 'heading', text: 'Summary of terms of employment' },
       { type: 'fields', columns: 2, items: [
         { field: 'First Name', label: 'First name' }, { field: 'Last Name', label: 'Family name' },
         { field: 'Address' }, { field: 'Employee No', label: 'Employee number' },
         { field: 'City' }, { field: 'Postcode' },
         { field: 'Job Title', label: 'Job' }, { field: 'Department' },
-        { field: 'Manager', label: 'Reports to' }, { field: 'Start Date', label: 'Starts on' },
+        { field: 'Start Date', label: 'Starts on', format: 'd mmmm yyyy' }, { field: 'Manager', label: 'Reports to', if: '[Manager]' },
         { field: 'Pay Type', label: 'Pay type' }, { field: 'Pay Frequency', label: 'Paid' },
-        { field: 'Hourly Rate', label: 'Hourly rate, if paid by the hour' }, { field: 'Annual Salary', label: 'Annual salary, if salaried' },
+        { field: 'Hourly Rate', label: 'Hourly rate', format: '#,##0.00', if: '[Pay Type] = "Hourly"' },
+        { field: 'Annual Salary', label: 'Annual salary', format: '#,##0.00', if: '[Pay Type] = "Salaried"' },
         { field: 'Hours per Week', label: 'Hours a week' }, { field: 'Days per Week', label: 'Days a week' },
         { field: 'Holiday Days', label: 'Holiday a year, days' }, { field: 'Notice Weeks', label: 'Notice, weeks' },
       ] },
       { type: 'text', text: 'This summary sets out the main terms on which {Business.Name}, of {Business.Address}, {Business.City} {Business.Postcode} ("the employer"), employs {First Name} {Last Name} ("you"). It goes with your offer letter and the staff handbook. Please read it, sign both copies and give one back to us.' },
-      { type: 'text', text: '1. Your job. You are employed as {Job Title} in the {Department} department, reporting to {Manager}. Your manager may ask you to do other reasonable work that suits your skills, such as helping another department at a busy time.' },
+      { type: 'text', text: '1. Your job. You are employed as {Job Title} in the {Department} department, reporting to {Manager}. Your manager may ask you to do other reasonable work that suits your skills, such as helping another department at a busy time.', if: '[Manager]' },
+      { type: 'text', text: '1. Your job. You are employed as {Job Title} in the {Department} department, reporting to the owners. You may be asked to do other reasonable work that suits your skills, such as helping another department at a busy time.', if: 'Nz([Manager], 0) = 0' },
       { type: 'text', text: '2. Where you work. You work at {Business.Address}, {Business.City}. We will not ask you to work anywhere else for more than a day without agreeing it with you first.' },
       { type: 'text', text: '3. Start and trial period. Your employment starts on {Start Date}. The first three months are a trial period, during which either of us may end the employment with one week\'s notice. Your manager will meet you before it ends to talk about how it has gone.' },
-      { type: 'text', text: '4. Hours. Your normal hours are {Hours per Week} hours a week over {Days per Week} days, on a rota your manager gives you at least two weeks ahead. Any shift longer than six hours has an unpaid break of 30 minutes. If you are paid by the hour, time worked above your weekly hours is overtime: it is agreed with your manager beforehand and paid at one and a half times your hourly rate. If you are salaried, your salary covers reasonable extra hours at busy times.' },
-      { type: 'text', text: '5. Pay. Your pay is shown above: an hourly rate for each hour worked, or an annual salary paid in twelve equal parts. You are paid {Pay Frequency}, by bank transfer, on the last working day of the month. A salary is paid for that month. Pay by the hour is paid a month behind, from your approved timesheets: each month\'s pay covers the weeks that ended in the month before. Each payslip shows your pay and everything deducted from it: the deductions the law requires, your pension contributions, and anything else you have agreed to in writing.' },
+      { type: 'text', text: '4. Hours. Your normal hours are {Hours per Week} hours a week over {Days per Week} days, on a rota your manager gives you at least two weeks ahead. Any shift longer than six hours has an unpaid break of 30 minutes. Time worked above your weekly hours is overtime: it is agreed with your manager beforehand and paid at one and a half times your hourly rate.', if: '[Pay Type] = "Hourly"' },
+      { type: 'text', text: '4. Hours. Your normal hours are {Hours per Week} hours a week over {Days per Week} days. Any working day longer than six hours has an unpaid break of 30 minutes. Your salary covers reasonable extra hours at busy times.', if: '[Pay Type] <> "Hourly"' },
+      { type: 'text', text: '5. Pay. You are paid {Hourly Rate} for each hour worked, {Pay Frequency}, by bank transfer on the last working day of the month. Pay by the hour is paid a month behind, from your approved timesheets: each month\'s pay covers the weeks that ended in the month before. Each payslip shows your pay and everything deducted from it: the deductions the law requires, your pension contributions, and anything else you have agreed to in writing.', if: '[Pay Type] = "Hourly"' },
+      { type: 'text', text: '5. Pay. Your salary is {Annual Salary} a year, paid {Pay Frequency} in twelve equal parts, by bank transfer on the last working day of the month, for that month. Each payslip shows your pay and everything deducted from it: the deductions the law requires, your pension contributions, and anything else you have agreed to in writing.', if: '[Pay Type] <> "Hourly"' },
       { type: 'text', text: '6. Holiday. Your holiday is {Holiday Days} days a year, worked out for the days you work each week. The holiday year runs from 1 January to 31 December; if you join or leave during the year you have a share for the part of the year you work. Ask for holiday on a leave request at least two weeks ahead. At the busiest times of year we may ask you to choose other dates. Up to five unused days may be carried into the next year, and holiday you have earned but not taken when you leave is paid with your last pay.' },
       { type: 'text', text: '7. Sickness. If you are ill and cannot work, call your manager before your shift starts, or as soon as you can, and say how long you expect to be off. Sick pay is set out in the staff handbook and is never less than the law requires.' },
       { type: 'text', text: '8. Pension. We will offer you a place in the workplace pension scheme where the law requires it, and you may ask to join at any time. What you and we pay in is shown on each payslip.' },
@@ -330,45 +356,54 @@ export const spec = {
       { type: 'spacer', size: 24 },
       { type: 'signatures', labels: ['For the employer', 'Employee', 'Date'] },
     ] },
-    { name: 'Leave request', table: 'Absences', paper: 'a4', letterhead: LETTERHEAD, blocks: [
+    // Requests still to decide, and leave still to come; sickness is recorded, not asked for.
+    { name: 'Leave request', table: 'Absences', paper: 'a4', letterhead: LETTERHEAD, where: '[Status] <> "Recorded" And ([Status] = "Requested" Or DateDiff("d", Date(), [Starts]) >= 0)', blocks: [
       { type: 'heading', text: 'Leave request {Number}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Employee', label: 'Name' }, { field: 'Employee.Employee No', label: 'Employee number' },
         { field: 'Employee.Department', label: 'Department' }, { field: 'Employee.Manager', label: 'Manager' },
-        { field: 'Kind', label: 'Kind of leave' }, { field: 'Requested On', label: 'Asked for on' },
-        { field: 'Starts', label: 'First day off' }, { field: 'Ends', label: 'Last day off' },
-        { field: 'Days', label: 'Working days' }, { field: 'Reason' },
+        { field: 'Kind', label: 'Kind of leave' }, { field: 'Requested On', label: 'Asked for on', format: 'dd/mm/yyyy' },
+        { field: 'Starts', label: 'First day off', format: 'dddd d mmmm yyyy' }, { field: 'Ends', label: 'Last day off', format: 'dddd d mmmm yyyy' },
+        { field: 'Days', label: 'Working days' }, { field: 'Reason', if: '[Reason]' },
+        { field: 'Paid', label: 'Paid leave', if: '[Kind] <> "Holiday"' },
       ] },
-      { type: 'text', text: 'Holiday allowance for the year (holiday only):', small: true },
-      { type: 'fields', columns: 3, items: [
+      // The allowance it comes out of: holiday only.
+      { type: 'text', text: 'Holiday allowance for the year:', small: true, if: '[Allowance]' },
+      { type: 'fields', columns: 3, if: '[Allowance]', items: [
         { field: 'Allowance.Holiday Year', label: 'Holiday year' }, { field: 'Allowance.Allowance', label: 'Allowance, days' },
         { field: 'Allowance.Carried Over', label: 'Carried over, days' }, { field: 'Allowance.Days Booked', label: 'Booked so far, days' },
       ] },
       { type: 'text', text: 'Request. I would like to take the leave shown above. I have checked the rota with my team, and my work will be covered or handed over before I go.' },
-      { type: 'fields', columns: 3, items: [{ field: 'Status', label: 'Decision' }, { field: 'Decided By', label: 'Decided by' }, { field: 'Decided On', label: 'Decided on' }] },
+      { type: 'fields', columns: 3, if: '[Status] <> "Requested"', items: [
+        { field: 'Status', label: 'Decision' }, { field: 'Decided By', label: 'Decided by', if: '[Decided By]' }, { field: 'Decided On', label: 'Decided on', format: 'dd/mm/yyyy', if: '[Decided On]' },
+      ] },
+      { type: 'text', text: '{Notes}', if: '[Notes]' },
+      { type: 'text', text: 'Decision: approved / declined (the manager crosses out one).', if: '[Status] = "Requested"' },
       { type: 'text', text: 'Once approved, holiday is taken from the allowance for the year and paid as holiday pay. If a request is declined, your manager will tell you why and help you find other dates.', small: true },
       { type: 'spacer', size: 16 },
       { type: 'signatures', labels: ['Employee', 'Manager'] },
     ] },
+    // Last pay year's summaries, given out in the first days of this one.
     { name: 'Annual pay summary', table: 'Annual Summaries', paper: 'a4', letterhead: LETTERHEAD, blocks: [
       { type: 'heading', text: 'Annual pay summary {Pay Year.Name}' },
       { type: 'fields', columns: 2, items: [
         { field: 'Employee', label: 'Name' }, { field: 'Number', label: 'Summary' },
-        { field: 'Employee.Employee No', label: 'Employee number' }, { field: 'Issued On', label: 'Issued' },
-        { field: 'Employee.Address', label: 'Address' }, { field: 'Pay Year.Starts', label: 'Pay year from' },
-        { field: 'Employee.City', label: 'City' }, { field: 'Pay Year.Ends', label: 'Pay year to' },
-        { field: 'Employee.Postcode', label: 'Postcode' }, { field: 'Tax Code', label: 'Tax code' },
-        { field: 'Payslip Count', label: 'Payslips in the year' }, { field: 'Employee.Leave Date', label: 'Left on' },
+        { field: 'Employee.Employee No', label: 'Employee number' }, { field: 'Issued On', label: 'Issued', format: 'dd/mm/yyyy' },
+        { field: 'Employee.Address', label: 'Address' }, { field: 'Pay Year.Starts', label: 'Pay year from', format: 'dd/mm/yyyy' },
+        { field: 'Employee.City', label: 'City' }, { field: 'Pay Year.Ends', label: 'Pay year to', format: 'dd/mm/yyyy' },
+        { field: 'Employee.Postcode', label: 'Postcode' }, { field: 'Payslip Count', label: 'Payslips in the year' },
+        { field: 'Tax Code', label: 'Tax code', if: '[Tax Code]' },
       ] },
       { type: 'lines', table: 'Annual Summary Lines', sort: 'Line', columns: [
         { field: 'Item', label: 'Pay and deductions for the year' },
-        { expr: 'IIf([Kind] = "Payment", [Amount], 0)', as: 'Pay', type: 'currency' },
-        { expr: 'IIf([Kind] = "Deduction", [Amount], 0)', as: 'Deducted', type: 'currency' },
+        { expr: 'IIf([Kind] = "Payment", [Amount], Null)', as: 'Pay', type: 'currency' },
+        { expr: 'IIf([Kind] = "Deduction", [Amount], Null)', as: 'Deducted', type: 'currency' },
       ] },
       { type: 'totals', rows: [
         { label: 'Total pay', expr: '[Pay]' }, { label: 'Total deductions', expr: '[Deducted]' }, { label: 'Net pay', expr: 'Round([Pay] - [Deducted], 2)', strong: true },
       ] },
       { type: 'text', text: 'This summary shows the pay {Business.Name} paid you in the pay year from {Pay Year.Starts} to {Pay Year.Ends}, and everything deducted from it. In the same year we paid {Employer Costs} in employer contributions on top of your pay.' },
+      { type: 'text', text: '{Notes}', small: true, if: '[Notes]' },
       { type: 'text', text: 'Please keep it safe: you may be asked for it to show your income, for example for a tax return, a loan or a tenancy. Ask the office if you need another copy.', small: true },
       { type: 'text', text: '{Business.Document Footer}', small: true },
     ] },
@@ -482,6 +517,7 @@ export const about = {
     } },
     Payslips: { about: 'One for each person in each pay run, with its lines. The money figures are stored as they were paid, so a later change of rate never alters an old payslip.', fields: {
       Number: 'The payslip\'s number, given in pay date order: PS-2026-0042, a new run each pay year.', 'Pay Run': 'The pay run it belongs to.', Employee: 'Who is paid.',
+      'Pay Date': 'The day the pay goes into their bank, the same as the pay run\'s: the payslip prints it, and the Payslip template finds the latest run\'s payslips by it.',
       'Tax Code': 'The tax code used for this payslip, from the person\'s record. Left empty in the sample.',
       'Hours From': 'For someone paid by the hour, the Monday of the first week paid.', 'Hours To': 'For someone paid by the hour, the Sunday of the last week paid.', 'Hours Paid': 'The hours paid, for someone paid by the hour: worked, overtime and paid absence.',
       Gross: 'All the pay before deductions: the payment lines added up.', Deductions: 'Everything taken from pay: the deduction lines added up.',
@@ -538,11 +574,11 @@ export const about = {
     'Year to date pay': 'Each person\'s gross, deductions and net for each pay year, with totals for the year.',
   },
   documents: {
-    Payslip: `The payslip for one person and one pay run: their details, the month, the pay date and, for someone paid by the hour, the weeks their hours are from, each payment and each deduction with its year-to-date figure, then gross, deductions and net pay, and the year to date. The tax code is left empty for you to fill. ${RATES_WARNING}`,
-    Timesheet: 'A week\'s timesheet for one person: each day\'s start, finish, break and hours, the overtime above their contract hours, and lines for the employee and the manager to sign.',
-    'Employment contract summary': 'A summary of a person\'s main terms, to give with the offer letter and sign: the job, start date, pay, hours, holiday, sickness, pension and notice, filled in from their Employees record. The words are a plain example of our own, not legal advice: have them checked for your own country before you use them. It prints for everyone in Employees, leavers too; print it for one person from the Employees form.',
-    'Leave request': 'The form for asking for leave and recording the manager\'s decision, with the holiday allowance for the year. It prints for every absence, sickness too; print the one you need from the Absences form.',
-    'Annual pay summary': 'The end-of-year summary for one person and one pay year: each kind of pay and each deduction added up for the year, and the net pay. Give it to each person after the last pay run of the year.',
+    Payslip: `The payslip for one person and one pay run: their details, the month, the pay date and, for someone paid by the hour, the weeks their hours are from and the hours paid, each payment and each deduction on its own side with its year-to-date figure, then gross, deductions and net pay, and the year to date. The tax code prints once you type it on the payslip. It prints the latest pay run\'s payslips: this month\'s once the pay date has come, last month\'s until then; print an older one from the Payslips form. ${RATES_WARNING}`,
+    Timesheet: 'A week\'s timesheet for one person: each day\'s start, finish, break and hours, the overtime above their contract hours when there is any, and lines for the employee and the manager to sign. It prints the timesheets waiting for approval.',
+    'Employment contract summary': 'A summary of a person\'s main terms, to give with the offer letter and sign: the job, start date, pay, hours, holiday, sickness, pension and notice, filled in from their Employees record, with the hours and pay clauses worded for someone paid by the hour or for a salary. The words are a plain example of our own, not legal advice: have them checked for your own country before you use them. It prints for everyone working here now and those about to start; print a leaver\'s from the Employees form.',
+    'Leave request': 'The form for asking for leave and recording the manager\'s decision, with the holiday allowance for the year when it is holiday. It prints the requests still to decide and the leave still to come; sickness and compassionate leave are recorded, not asked for, and print only from the Absences form.',
+    'Annual pay summary': 'The end-of-year summary for one person and one pay year: each kind of pay and each deduction added up for the year, and the net pay, with a note for someone who has left. Give it to each person after the last pay run of the year.',
   },
   tutorial: [
     { title: 'Take on a new starter', steps: [
@@ -575,7 +611,7 @@ export const about = {
     ] },
     { title: 'Run the month\'s pay', steps: [
       'Open the Pay Runs form and press New: Number (PAY-2026-M10), Pay Year, Frequency Monthly, the month in Period, its first and last days in Period Starts and Period Ends, Pay Date (its last working day) and Status Open.',
-      'For each salaried person, open the Payslips form and press New: choose the Pay Run and the Employee, give it the next Number, and add a Payslip Lines line for Basic pay of their Annual Salary divided by 12 (a share of it for someone who joined or left during the month).',
+      'For each salaried person, open the Payslips form and press New: choose the Pay Run and the Employee, give it the next Number and the run\'s Pay Date, and add a Payslip Lines line for Basic pay of their Annual Salary divided by 12 (a share of it for someone who joined or left during the month).',
       'For each person paid by the hour, add a payslip with Hours From and Hours To set to the weeks that ended last month. Add up their approved timesheets: a Basic pay line for the hours within contract at their Hourly Rate, and an Overtime line for the overtime hours at one and a half times it.',
       'Add Holiday pay, Sick pay and Paid leave lines for the paid days on the Absences form in those weeks: the days times their usual hours a day, at their rate.',
       'Open the query Deduction rates in use. For each Employee rate add a Deduction line: the gross less a twelfth of the yearly Threshold, times the Percent; or a twelfth of the Fixed Amount. The Employer rates, worked out the same way, go in Employer Costs.',
@@ -612,11 +648,11 @@ export const about = {
     'Everyone is paid monthly, on the last working day of the month. Salaries are paid for that month. Hours are paid a month behind, for the whole weeks (Monday to Sunday) that ended in the month before, so every timesheet is approved well before it is paid. A payslip belongs to the pay year its pay date falls in, so January\'s pay for December\'s hours counts in the new year.',
     'Bank details are noughts and the tax code is empty in every record. Employee numbers and document references are your own, never a government or identity number. Keep reasons for absence general: medical details do not belong in this file.',
     'The payroll cost queries add up by the department each person is in now, so someone who moved department counts in the new one for the months before the move.',
-    'A print template prints every record of its table: the Payslip prints every payslip, and the Leave request every absence. To print one, open it on its form and print from there, or choose the records when you print.',
+    'Each print template prints only the records it is for: the latest pay run\'s payslips, the timesheets waiting for approval, the contract summaries of the people working here, the leave requests still to decide or to come, and last year\'s annual summaries. A record printed from its own form always prints. A payslip keeps its own Pay Date, the same as its pay run\'s, so the Payslip template can find the latest run.',
   ],
   faq: [
     { q: 'Are the tax and pension rates real?', a: `No. ${RATES_WARNING}` },
-    { q: 'How do I print one person\'s payslip, or a whole month\'s?', a: 'For one, open the Payslips form, find the payslip by its Number or the person, and print it with the print template Payslip. For a month, find the run\'s Number in the query Pay run totals, then open the print template Payslip from Print templates and choose the payslips of that run.' },
+    { q: 'How do I print one person\'s payslip, or a whole month\'s?', a: 'The print template Payslip holds the latest pay run\'s payslips, so print it from Print templates for the whole month. For one, or an older one, open the Payslips form, find the payslip by its Number or the person, and print it from there.' },
     { q: 'Can I pay some staff weekly?', a: 'Yes. Set their Pay Frequency to Weekly and add a weekly pay run each week (Frequency Weekly, the Monday to Sunday in Period Starts and Period Ends), with a payslip for each of them from that week\'s timesheet. Share the yearly thresholds and fixed amounts by 52 instead of 12.' },
     { q: 'Why is someone missing from Holidays left?', a: 'Holidays left lists the people who have a Holiday Allowances record for the year that takes in today and have no Leave Date. Add this year\'s record for anyone new. Leavers are left out on purpose.' },
     { q: 'How is a part-timer\'s holiday worked out?', a: 'Their days a week times the full-time days, divided by five: three days a week with 28 full-time days is 16.8, rounded up to 17. Someone who joins during the year has a share for the months left.' },
@@ -1238,7 +1274,7 @@ export function fill(base, { r, cal }) {
       sum.count++;
       psCount[run.y] = (psCount[run.y] || 0) + 1;
       const id = add('Payslips', {
-        Number: `PS-${run.y}-${pad(psCount[run.y], 4)}`, 'Pay Run': run.id, Employee: h.id, 'Tax Code': null,
+        Number: `PS-${run.y}-${pad(psCount[run.y], 4)}`, 'Pay Run': run.id, Employee: h.id, 'Pay Date': iso(run.pay), 'Tax Code': null,
         'Hours From': hourly ? iso(from) : null, 'Hours To': hourly ? iso(to) : null,
         'Hours Paid': hourly ? quarter(pays.reduce((n, p) => n + p.hours, 0)) : null, Gross: gross, Deductions: taken, Net: net, 'Employer Costs': employer,
         'Gross to Date': sum.gross, 'Deductions to Date': sum.taken, 'Net to Date': sum.net,
@@ -1264,7 +1300,7 @@ export function fill(base, { r, cal }) {
     const id = add('Annual Summaries', {
       Number: `APS-${s.y}-${pad(++apsNo, 4)}`, 'Pay Year': payYear[s.y], Employee: s.h.id, 'Tax Code': null, 'Issued On': iso(issued), 'Payslip Count': s.count,
       'Gross Pay': s.gross, Deductions: s.taken, 'Net Pay': s.net, 'Employer Costs': s.employer,
-      Notes: s.h.leave !== null && s.h.leave <= jan1(y0) - 1 ? `Left on ${iso(s.h.leave)}; sent to their home address.` : null,
+      Notes: s.h.leave !== null && s.h.leave <= jan1(y0) - 1 ? `Left on ${Number(iso(s.h.leave).slice(8))} ${MONTH_NAMES[Number(iso(s.h.leave).slice(5, 7)) - 1]} ${iso(s.h.leave).slice(0, 4)}; sent to their home address.` : null,
     });
     let line = 0;
     for (const item of order) {
