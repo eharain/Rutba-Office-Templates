@@ -892,6 +892,13 @@ export function fill(base, { r, cal, days = 450 }) {
       if (car) { const c = newCustomer(d); const seller = sellerOn(d); drives.push({ Vehicle: car.id, Customer: c.id, Staff: seller, When: cal.time(d, 9, 30), Outcome: 'Bought', Notes: null }); sell(d, car, c, seller, null); }
     }
   }
+  // And at least one valuation still open, a customer weighing the offer, so Part-exchange valuation has one
+  // to print: made on the last day the forecourt was open, today or before a holiday.
+  if (!valuations.some((v) => v.outcome === 'Open' && v.validUntil >= 0)) {
+    let d = 0;
+    while (closed(d)) d--;
+    value(d, newCustomer(d), sellerOn(d), null);
+  }
   // Test drives booked for the coming week.
   for (let d = 1; d <= 7; d++) {
     if (closed(d)) continue;
