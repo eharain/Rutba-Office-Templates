@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The florist: Hazel Row Flowers, an invented florist's shop in north
 // London with a workroom behind it, a van, and a market buyer up before
 // dawn three times a week. Stems, foliage and sundries bought from an

@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The workshop: Granite and Grain Woodworks, an invented workshop of five
 // makers building furniture and joinery from timber, sheet materials and
 // fittings. It sells to gift and homeware shops, to interior designers

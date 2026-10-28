@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // Data Files' sample businesses: a whole working database for each kind of
 // business Office is made for, to learn from with its records or to start
 // from empty. This is their content: each sample's design (tables, queries,

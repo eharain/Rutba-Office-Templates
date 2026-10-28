@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The gym: Tannery Yard Fitness, an invented independent gym and fitness
 // studio in a converted tannery in Leeds. Members join on a monthly plan
 // (off-peak, full, family or student), pay a joining fee and then a monthly

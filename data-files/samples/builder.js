@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The builder: Kilnside Builders, an invented small building firm in
 // Bristol that builds extensions and loft conversions, refits kitchens and
 // bathrooms, and does repairs. It employs four small crews of its own (two

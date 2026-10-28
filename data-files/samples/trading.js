@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The trading company: Northbank Trading, an invented wholesaler of
 // specialty foods and household goods selling to shops, cafes and hotels in
 // ten countries. Customers, suppliers and carriers in one Companies table,

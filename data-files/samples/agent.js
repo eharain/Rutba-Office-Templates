@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The estate agent: Fernleigh Estates, an invented estate and letting agency
 // in Bristol that sells homes for their owners and lets and manages homes for
 // landlords. Its clients (sellers and landlords), the properties they put on

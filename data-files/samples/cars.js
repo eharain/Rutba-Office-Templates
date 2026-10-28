@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The car dealer: Copperbeech Motors, an invented independent used car
 // dealer in south-east London with about forty cars on the forecourt. Cars
 // bought at auction, from the trade and taken in part-exchange, what

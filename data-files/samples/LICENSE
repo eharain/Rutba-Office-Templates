@@ -1,0 +1,42 @@
+Rutba Office Sample Databases Licence
+
+Copyright (C) 2026 Tech Style Ltd (Company No. 11101491), registered in
+England & Wales - https://tech-style.co
+
+All rights reserved, except as set out here.
+
+This licence covers the sample databases in this folder: each sample
+business's file (agency.js, agent.js, barber.js, builder.js, cafe.js,
+cars.js, charity.js, cleaning.js, clinic.js, florist.js, food.js,
+garage.js, guesthouse.js, gym.js, payroll.js, pharmacy.js, rentals.js,
+repairs.js, salon.js, school.js, shop.js, takeaway.js, trading.js,
+visitors.js, workshop.js), index.js, which lists them with their
+descriptions and Start Here guides, and the descriptions of them in
+docs/SAMPLES.md. util.js and check.js in this folder are not covered: they
+are under the GNU AGPL v3.0 with the rest of this repository.
+
+You may:
+- open, use and change the sample databases in Rutba Office;
+- extend them with your own records, tables, forms and reports;
+- use the result in your own business or for your own learning, including
+  sharing your extended database with the people you work with.
+
+You may not:
+- copy, publish, sell or pass on the sample databases, the code that makes
+  them, or what they contain (the businesses, people, products, records and
+  reports), whether as a dataset, a template, course material, or part of
+  another product or service;
+- use them to build, test or train any other software, database, model or
+  service;
+- remove this notice.
+
+Rutba Office's own code remains under the GNU AGPL v3.0. These files are
+separate content distributed with it. A copy or fork of Rutba Office that is
+not Tech Style's must leave them out, unless Tech Style has given written
+permission.
+
+Earlier versions of these files were published under the GNU AGPL v3.0, and
+copies of those versions keep that licence. This licence applies to these
+files from the version that carries it.
+
+Permission beyond this licence: hello@tech-style.co

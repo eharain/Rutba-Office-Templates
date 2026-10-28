@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The cafe: Little Fig Cafe, an invented all-day cafe with about thirty
 // seats and a takeaway counter. Its menu in categories, each dish's recipe
 // (so every dish has a food cost), the ingredients and who supplies them,

@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The lettings business: Hollybrook Lettings, an invented landlord that owns
 // and manages a dozen buildings in one city (houses, two blocks of flats, two
 // converted houses, a parade of shops with flats above and a small yard of

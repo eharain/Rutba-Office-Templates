@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The clinic: Cedar Lane Clinic, an invented small private clinic with two
 // doctors, a practice nurse and two physiotherapists, and a reception desk
 // that books for them. Its patients and the insurers some of them claim

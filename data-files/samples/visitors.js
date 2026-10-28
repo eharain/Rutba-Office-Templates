@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The front desk of an office building: Copperfield House, an invented
 // seven-storey office block by a canal in Manchester, with nine companies on
 // its floors and the building's own management team on the ground floor. The

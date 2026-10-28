@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The garage: Quarrybank Motors, an invented independent garage and MOT
 // test centre with four bays, three technicians, a workshop manager who also
 // tests, and a service desk. Customers and their vehicles, the businesses

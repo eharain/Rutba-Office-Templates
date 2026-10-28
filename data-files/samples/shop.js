@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The shop: Larkspur Corner Store, an invented neighbourhood shop. What it
 // sells in categories, who supplies it, its till (each sale and its lines,
 // paid by cash, card or a mobile wallet), the loyalty customers, the orders

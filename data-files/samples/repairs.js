@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The repair shop: Ironbridge Repairs, an invented shop that mends phones,
 // tablets, laptops and small appliances, with three technicians at the bench
 // and a counter where work is booked in and collected. Customers and the

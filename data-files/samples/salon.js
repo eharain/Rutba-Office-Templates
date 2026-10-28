@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The salon: Marigold Hair and Beauty, an invented high-street salon with
 // four stylists, a beauty therapist and a junior, open Tuesday to Saturday
 // with a late night on Thursday. Its clients, the team and what each earns

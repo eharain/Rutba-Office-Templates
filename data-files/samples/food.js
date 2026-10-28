@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // Food and beverages: Bramblegate Wine and Deli, an invented independent
 // food and drink shop. Wines, beers, ciders, spirits and soft drinks, a deli
 // counter of cheese, cured meats and salads, fresh bread and fine foods.

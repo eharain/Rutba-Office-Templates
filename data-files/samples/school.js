@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The learning centre: Lantern Learning Centre, an invented tuition and
 // training centre with about a hundred and twenty students. After school and
 // on Saturday mornings it teaches children maths, English, science and

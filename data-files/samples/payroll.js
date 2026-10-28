@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // HR, payroll and timesheets: the staff records any small business with
 // employees keeps, shown at Wrenmoor Garden Centre, an invented garden centre
 // with a cafe and about thirty staff in three departments. Some are salaried,

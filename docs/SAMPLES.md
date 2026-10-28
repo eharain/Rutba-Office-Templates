@@ -1,5 +1,9 @@
 # Sample databases and templates
 
+The sample databases and their descriptions here are under the Rutba Office Sample Databases Licence
+(`data-files/samples/LICENSE`), not the AGPL: use and extend them in Rutba Office, but do not copy,
+publish, sell or repurpose them. The five simple templates stay under the AGPL.
+
 Rutba Data Files comes with a working database for each kind of small business we make Office for, and
 five simple templates. Each sample has related tables, the questions that business asks as saved queries,
 a form for every table, reports, and print templates for what it sends out (invoices, receipts,

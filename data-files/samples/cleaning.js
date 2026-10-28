@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The cleaning company: Fernhollow Cleaning, an invented commercial and
 // domestic cleaning business in Leeds with a dozen cleaners. Its clients
 // (offices, surgeries, nurseries and showrooms, and households) and their

@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The barber shop: Copper Pole Barbers, an invented shop with five chairs,
 // open seven days, that takes walk-ins and bookings. Three chairs are the
 // shop's own, worked by the owner and the barbers he employs; the other two

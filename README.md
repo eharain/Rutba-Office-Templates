@@ -57,3 +57,12 @@ clone with `git config core.hooksPath .githooks`.
 
 As Rutba Office: GNU AGPL v3.0, or a commercial licence from the copyright
 holder. See `LICENSE`.
+
+The sample databases are the exception: the sample businesses in
+`data-files/samples/` (all but `util.js` and `check.js`) and their
+descriptions in `docs/SAMPLES.md` are under the Rutba Office Sample
+Databases Licence in `data-files/samples/LICENSE`, not the AGPL. You may
+use, change and extend them in Rutba Office for your own business or
+learning; you may not copy, publish, sell or repurpose them, or use them to
+build, test or train anything else. Earlier versions published under the
+AGPL keep that licence.

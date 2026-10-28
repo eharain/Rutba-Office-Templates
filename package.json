@@ -1,7 +1,7 @@
 {
   "name": "@rutba/templates",
   "version": "1.0.0",
-  "license": "AGPL-3.0-or-later",
+  "license": "(AGPL-3.0-or-later AND LicenseRef-Rutba-Sample-Databases)",
   "description": "The templates Rutba Office ships with: the gallery of documents, workbooks and decks made by the suite's own engines (src/, files/, thumbs/), and Rutba Data Files' ready-made and sample business databases (data-files/). manifest.json says which Office each part needs.",
   "type": "module",
   "main": "./src/index.js",

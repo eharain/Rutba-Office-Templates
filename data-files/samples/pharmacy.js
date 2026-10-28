@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The pharmacy: Tansy Row Pharmacy, an invented independent pharmacy on a
 // neighbourhood high street, and the counter and stock side of it. Over the
 // counter medicines and toiletries in categories, each delivery from the

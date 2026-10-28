@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The guest house: Gullhaven Guest House, an invented bed and breakfast of
 // ten rooms on the seafront of Saltby Bay, an invented seaside town. Room
 // types with a rate for each season, weeknight and weekend, with or without

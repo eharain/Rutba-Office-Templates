@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The studio: Bramble Studio, an invented design and consultancy studio of
 // six people (two partners, two designers, a developer and a project
 // manager) working for small and mid-sized clients. Its clients and their

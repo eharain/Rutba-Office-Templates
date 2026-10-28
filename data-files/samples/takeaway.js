@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The takeaway: Saffron Lane Pizza and Curry, an invented takeaway in south
 // London cooking pizzas, burgers and curries for phone, walk-in and online
 // orders, collected from the counter or taken out by its own drivers, who

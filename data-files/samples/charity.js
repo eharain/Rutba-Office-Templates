@@ -1,3 +1,5 @@
+// Rutba Office Sample Databases Licence, not the AGPL: see LICENSE in this folder.
+//
 // The charity: Rowanmere Community Trust, an invented small community charity
 // in Glasgow with a club side. Members pay a yearly fee, supporters give once
 // or every month, volunteers give their time, the trust runs events with
