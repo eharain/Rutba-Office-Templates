@@ -121,3 +121,24 @@ test('a sample is made only in an empty database, and an unknown one is refused'
     b.close();
   }
 });
+
+// The stock-keeping and invoicing samples, made on each day of a week (a
+// weekend among them) with other seeds, and read on that day: none sells or
+// counts stock below nought, and each has, whatever the day, an order to
+// ship, something to reorder, a purchase on order and an invoice owed, so
+// the queries and reports about them answer something (2026-10 sample
+// films: some days they were empty).
+for (const id of ['trading', 'builder', 'garage']) {
+  test(`${id}: made on any day of the week, with other seeds, read on that day, checkSample finds nothing`, () => {
+    const found = [];
+    // A week, and a day a sweep found the builder with nothing owed.
+    const days = [1, 2, 3, 4, 5, 6, 7].flatMap((day) => [[day, 42], [day, 20261021]]).concat([[13, 7]]);
+    for (const [day, seed] of days) {
+      made(id, { today: new Date(2026, 9, day, 12), seed }, (b) => {
+        b.today = `2026-10-${String(day).padStart(2, '0')}`;
+        for (const p of checkSample(b, sampleSpec(id))) found.push(`${b.today}/${seed}: ${p}`);
+      });
+    }
+    assert.deepEqual(found, []);
+  });
+}

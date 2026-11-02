@@ -479,6 +479,7 @@ export function fill(base, { r, cal, days = 540 }) {
   }
 
   const pending = []; // purchase orders not yet in: { id, at, lines }
+  const waiting = []; // orders not shipped yet
   const invoices = [];
   for (let d = start; d <= 0; d++) {
     const date = cal.day(d);
@@ -506,8 +507,9 @@ export function fill(base, { r, cal, days = 540 }) {
       }
       if (!lines.length) continue;
       const cancelled = r.chance(0.03);
-      const shipIn = r.int(1, 4);
-      const shipped = !cancelled && d + shipIn <= 0 ? cal.day(cal.workday(d + shipIn)) : null;
+      // The day it goes, a working day: one after today has not come yet, so the order waits to ship.
+      const shipAt = cal.workday(d + r.int(1, 4));
+      const shipped = !cancelled && shipAt <= 0 ? cal.day(shipAt) : null;
       const fee = c.size === 'large' ? 0 : r.pick([0, 8.5, 12, 15]);
       const order = add('Orders', {
         Customer: c.id, Employee: c.rep, 'Order Date': date, 'Required Date': cal.day(cal.workday(d + 7)), 'Shipped Date': shipped,
@@ -527,7 +529,8 @@ export function fill(base, { r, cal, days = 540 }) {
         // An order not shipped yet keeps its goods set aside.
         else if (!cancelled) p.held += qty;
       }
-      if (shipped) invoices.push({ order, customer: c.id, date: shipped, offset: cal.workday(d + shipIn), net: money(net), vat: money(vat), days: c.days, slow: c.size === 'small' && r.chance(0.25) });
+      if (!shipped && !cancelled) waiting.push(order);
+      if (shipped) invoices.push({ order, customer: c.id, date: shipped, offset: shipAt, net: money(net), vat: money(vat), days: c.days, slow: c.size === 'small' && r.chance(0.25) });
     }
 
     // Each Monday and Thursday the buyer orders what is at or below its reorder level.
@@ -560,8 +563,39 @@ export function fill(base, { r, cal, days = 540 }) {
     if (paid) base.update('Orders', inv.order, { Status: 'Closed' });
   }
 
-  // A stock count: a few corrections, as a real count finds.
-  for (const p of r.some(products, 4)) move(p, cal.day(-r.int(20, 120)), 'Adjusted', -r.int(1, 3), 'Stock count');
+  // A stock count: a few corrections, as a real count finds, never more than was on the shelf.
+  for (const p of r.some(products, 4)) {
+    const short = Math.min(r.int(1, 3), p.stock - p.held);
+    if (short > 0) move(p, cal.day(-r.int(20, 120)), 'Adjusted', -short, 'Stock count');
+  }
+
+  // Whatever day it is made on, today has work in it, as a trading day does: an order waiting
+  // to ship, a product at or below its reorder level, and a purchase order out to a supplier.
+  let last = 0;
+  while (cal.weekday(last) === 0 || cal.weekday(last) === 6) last--;
+  if (!waiting.length) {
+    const c = customers.find((x) => x.size === 'large') || customers[0];
+    const lines = products.filter((p) => !p.discontinued && p.stock - p.held >= 4).slice(0, 2).map((p) => ({ p, qty: Math.min(12, Math.floor((p.stock - p.held) / 2)) }));
+    const order = add('Orders', { Customer: c.id, Employee: c.rep, 'Order Date': cal.day(last), 'Required Date': cal.day(cal.workday(last + 7)), 'Shipped Date': null, Shipper: r.pick(shippers), 'Shipping Fee': 0, Status: 'New' });
+    for (const { p, qty } of lines) {
+      add('Order Lines', { Order: order, Product: p.id, Quantity: qty, 'Unit Price': p.list, Discount: c.discount, 'Tax Rate': p.rate });
+      p.held += qty;
+    }
+  }
+  const selling = products.filter((p) => !p.discontinued);
+  if (!selling.some((p) => p.stock <= p.level)) {
+    // The line nearest its reorder level has the level raised this week, as it sells faster now: it is at its level.
+    const p = selling.reduce((a, b) => (b.stock - b.level < a.stock - a.level ? b : a));
+    p.level = p.stock;
+    base.update('Products', p.id, { 'Reorder Level': p.level });
+  }
+  if (!pending.length) {
+    // The buyer has ordered what is at its level, and it is not in yet.
+    const low = selling.filter((p) => p.stock <= p.level);
+    const supplier = low[0].supplier;
+    const id = add('Purchase Orders', { Number: poNumber(last), Supplier: supplier, Employee: buyer, 'Ordered On': cal.day(last), Expected: cal.day(cal.workday(last + 7)), Status: 'Submitted' });
+    for (const p of low.filter((x) => x.supplier === supplier)) add('Purchase Lines', { 'Purchase Order': id, Product: p.id, Quantity: p.qty, 'Unit Cost': p.cost });
+  }
 
   for (const p of products) base.update('Products', p.id, { 'Units in Stock': p.stock, Discontinued: p.discontinued });
   return counts;

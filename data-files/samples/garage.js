@@ -1194,6 +1194,9 @@ export function fill(base, { r, cal, days = 400 }) {
 
   // Invoices, numbered in date order once every job is known.
   invoices.sort((a, b) => a.d - b.d || a.seq - b.seq);
+  // Whatever day the file is made on, a trade account owes something: its newest invoice, when every one is paid.
+  const trade = invoices.filter((x) => x.a && x.d <= 0);
+  if (trade.length && trade.every((x) => x.paid != null)) { const x = trade[trade.length - 1]; x.paid = null; x.method = null; }
   for (const inv of invoices) {
     const t = totalsOf(inv.lines);
     inv.row = keep('Invoices', { Number: numberFor('INV', inv.d), 'Job Card': inv.card, Account: inv.a, 'Invoice Date': day(inv.d), 'Due Date': day(inv.a ? inv.d + inv.a.payDays : inv.d), ...t, 'Paid On': day(inv.paid), Method: inv.paid == null ? null : inv.method });
@@ -1225,6 +1228,9 @@ export function fill(base, { r, cal, days = 400 }) {
       if (table === 'Vehicles') row.id = id;
     }
   }
-  for (const p of parts.values()) base.update('Parts', p.id, { 'In Stock': p.stock });
+  // And a shelf part is at its reorder level: when none is, the nearest has its level raised this week, as it is used more now.
+  const shelf = [...parts.values()].filter((p) => p.stocked);
+  if (shelf.length && !shelf.some((p) => p.stock <= p.level)) shelf.reduce((a, b) => (b.stock - b.level < a.stock - a.level ? b : a)).raised = true;
+  for (const p of parts.values()) base.update('Parts', p.id, { 'In Stock': p.stock, ...(p.raised ? { 'Reorder Level': p.stock } : {}) });
   return counts;
 }

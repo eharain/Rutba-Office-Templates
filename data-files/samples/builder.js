@@ -1216,12 +1216,19 @@ export function fill(base, { r, cal, days = 540 }) {
     v.id = add('Variations', { Number: v.number, Job: v.job.id, 'Raised On': day(v.raised), Description: v.desc, Reason: v.reason, Amount: v.amount, 'Extra Days': v.extra, Status: v.status, 'Agreed On': day(v.agreed) });
   }
   // Invoices, numbered in date order, with their lines; each line's VAT rounded and added up.
-  for (const inv of invoices.sort((a, b) => a.d - b.d || a.job.id - b.job.id)) {
+  // A deposit is paid before the start; stage payments mostly on time.
+  invoices.sort((a, b) => a.d - b.d || a.job.id - b.job.id);
+  for (const inv of invoices) {
+    const client = inv.job.quote.client;
+    inv.paid = inv.kind === 'Deposit' ? (inv.d + 3 <= 0 ? inv.d + r.int(1, 3) : null) : paidOn(inv.d, client.terms, client.slow);
+  }
+  // Whatever day the file is made on, something is owed: the newest invoice, when every one is paid.
+  if (invoices.length && invoices.every((x) => x.paid != null)) invoices.reduce((a, b) => (b.d > a.d ? b : a)).paid = null;
+  for (const inv of invoices) {
     const net = money(inv.lines.reduce((t, l) => t + l.amount, 0));
     const vat = money(inv.lines.reduce((t, l) => t + money(l.amount * STANDARD_RATE), 0));
     const client = inv.job.quote.client;
-    // A deposit is paid before the start; stage payments mostly on time.
-    const paid = inv.kind === 'Deposit' ? (inv.d + 3 <= 0 ? inv.d + r.int(1, 3) : null) : paidOn(inv.d, client.terms, client.slow);
+    const paid = inv.paid;
     const number = numbered('INV', inv.d);
     const id = add('Invoices', {
       Number: number, Job: inv.job.id, Client: client.id, Stage: inv.stage ? inv.stage.id : null, Kind: inv.kind, 'Invoice Date': day(inv.d),
