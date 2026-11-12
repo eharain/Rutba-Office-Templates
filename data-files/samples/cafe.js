@@ -1124,6 +1124,20 @@ export function fill(base, { r, cal, days = 425, orderDays = 56, ahead = 14 }) {
     if (paidAt <= -1) base.update('Purchases', b.id, { 'Paid On': cal.day(paidAt) });
   }
 
+  // Whatever day it is made on, this morning's order list has something on it, as a cafe's
+  // does: on a day the deliveries had just brought everything back up, the ingredient nearest
+  // its reorder level, of those with nothing on order, has its level raised, as it is going
+  // faster now, and is at its level.
+  // Its level is set to its stock exactly, so the list's sum comes to nought and not a hair over.
+  const headroom = (ing) => ing.stock + ing.onOrder - ing.level;
+  const all = [...ingredients.values()];
+  const free = all.filter((ing) => !ing.onOrder);
+  if (!all.some((ing) => headroom(ing) <= 0) && free.length) {
+    const ing = free.reduce((a, b) => (headroom(b) < headroom(a) ? b : a));
+    ing.level = ing.stock;
+    base.update('Ingredients', ing.id, { 'Reorder Level': ing.level });
+  }
+
   for (const ing of ingredients.values()) base.update('Ingredients', ing.id, { 'In Stock': ing.stock, 'On Order': ing.onOrder });
   return counts;
 }

@@ -127,15 +127,17 @@ test('a sample is made only in an empty database, and an unknown one is refused'
 // counts stock below nought, and each has, whatever the day, an order to
 // ship, something to reorder, a purchase on order and an invoice owed, so
 // the queries and reports about them answer something (2026-10 sample
-// films: some days they were empty).
-for (const id of ['trading', 'builder', 'garage']) {
+// films: some days they were empty). The cafe has something on its order
+// list whatever the day (the 2.25.1 gate, 13 Nov 2026: nothing to order).
+for (const id of ['trading', 'builder', 'garage', 'cafe']) {
   test(`${id}: made on any day of the week, with other seeds, read on that day, checkSample finds nothing`, () => {
     const found = [];
     // A week, and a day a sweep found the builder with nothing owed.
-    const days = [1, 2, 3, 4, 5, 6, 7].flatMap((day) => [[day, 42], [day, 20261021]]).concat([[13, 7]]);
-    for (const [day, seed] of days) {
-      made(id, { today: new Date(2026, 9, day, 12), seed }, (b) => {
-        b.today = `2026-10-${String(day).padStart(2, '0')}`;
+    // And the day the 2.25.1 gate found the cafe with nothing to order, with its own seed and the one it was made with.
+    const days = [1, 2, 3, 4, 5, 6, 7].flatMap((day) => [[9, day, 42], [9, day, 20261021]]).concat([[9, 13, 7], [10, 13, 20261021], [10, 13, undefined]]);
+    for (const [month, day, seed] of days) {
+      made(id, { today: new Date(2026, month, day, 12), ...(seed === undefined ? {} : { seed }) }, (b) => {
+        b.today = `2026-${month + 1}-${String(day).padStart(2, '0')}`;
         for (const p of checkSample(b, sampleSpec(id))) found.push(`${b.today}/${seed}: ${p}`);
       });
     }
