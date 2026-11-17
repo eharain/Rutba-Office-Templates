@@ -1,115 +1,30 @@
-// Data Files' sample databases (data-files/samples), built by Office's
-// engine (@rutba/database, run from an Office checkout:
-// node --test packages/templates/tests): each one
-// builds with its invented records and without them; with them, every table
-// has records, every query answers something, every report has records and
-// totals that come to a number, nothing is below nought where it should not
-// be, and every e-mail address and phone number is one kept for fiction
-// (check.js); the same day and seed make the same file; each prints the
-// documents its business sends from its own Business record; and every
-// table, field, query, report and print template is described, with a
-// tutorial, notes and questions, for the documentation.
+// Data Files' sample databases (data-files/samples): the list itself. Each
+// sample's own checks are in samples-checks.js, run in seven parts
+// (samples-<part>.test.js, the parts in samples-parts.js: five of samples, two of the weeks) so they run side
+// by side; here, the order, that every sample is in exactly one part and
+// every part has its test file, and what a sample refuses.
+import fs from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Base, buildSample } from '@rutba/database';
-import { SAMPLE_IDS, sampleSpec, sampleAbout, checkSample } from '../data-files/index.js';
-
-/** A sample made in memory, handed to `fn`, then closed. */
-function made(id, options, fn) {
-  const b = Base.open(':memory:');
-  try {
-    const out = buildSample(b, id, options);
-    return fn(b, out);
-  } finally {
-    b.close();
-  }
-}
-
-/** Every sample, in the start screen's order: its groups of businesses, one after another. */
-const ORDER = ['shop', 'food', 'cafe', 'takeaway', 'florist', 'pharmacy', 'trading', 'workshop', 'builder', 'cars',
-  'salon', 'barber', 'repairs', 'garage', 'cleaning', 'agency', 'gym', 'clinic', 'school', 'charity',
-  'rentals', 'agent', 'guesthouse', 'visitors', 'payroll'];
+import { SAMPLE_IDS } from '../data-files/index.js';
+import { ORDER, PARTS, WEEK, WEEK_PARTS } from './samples-parts.js';
 
 test('twenty-five samples, a business of each kind Office is made for, in the start screen\'s order', () => {
   assert.deepEqual(SAMPLE_IDS, ORDER);
 });
 
-for (const id of SAMPLE_IDS) {
-  test(`${id}: with its records, every table, query and report has something and checkSample finds nothing`, () => {
-    made(id, {}, (b, out) => {
-      const spec = sampleSpec(id);
-      assert.deepEqual(out.tables, spec.tables.map((t) => t.name));
-      assert.ok(Object.values(out.records).reduce((a, n) => a + n, 0) > 500, 'enough records to learn from');
-      assert.deepEqual(checkSample(b, spec), []);
-      assert.equal(b.forms().length, spec.tables.length, 'a form for each table');
-      assert.ok(b.queries().length >= 8, 'the questions the business asks');
-      assert.ok(b.reports().length >= 4, 'reports to print');
-    });
-  });
-
-  test(`${id}: another seed makes other records that are just as sound`, () => {
-    made(id, { seed: 7 }, (b) => assert.deepEqual(checkSample(b, sampleSpec(id)), []));
-  });
-
-  test(`${id}: empty, it has the whole design and no records, and every query runs`, () => {
-    made(id, { withData: false }, (b, out) => {
-      assert.deepEqual(out.records, {});
-      // Only the guide has records: it is how a person finds their way in.
-      for (const t of b.tables().filter((x) => x.name !== 'Start Here')) assert.equal(b.count(t.name), 0, t.name);
-      assert.ok(b.count('Start Here') > 10, 'the guide is there, empty or not');
-      for (const q of b.queries()) assert.equal(b.runQuery({ name: q.name }).count, 0, q.name);
-      for (const r of b.reports().filter((x) => x.name !== 'Start Here')) assert.equal(b.reportData({ name: r.name }).count, 0, r.name);
-      assert.ok(b.relationships().length >= 2);
-    });
-  });
-
-  test(`${id}: the same day and seed make the same records`, () => {
-    const today = new Date(2026, 9, 21, 12);
-    const snapshot = () => made(id, { today, seed: 3 }, (b) => b.tables().map((t) => JSON.stringify(b.rows(t.name, { limit: 50 }))).join('\n'));
-    assert.equal(snapshot(), snapshot());
-  });
-
-  test(`${id}: prints its documents with its own name at the head`, () => {
-    made(id, {}, (b) => {
-      assert.equal(b.count('Business'), 1, 'one Business record');
-      const docs = b.documents();
-      assert.ok(docs.length >= 2, 'the documents its business sends');
-      // A document sent out has the business at its head; one kept inside (a kitchen ticket) need not.
-      assert.ok(docs.filter((d) => d.layout.letterhead).length >= 2, 'at least two with the business at the head');
-      for (const { name, layout } of docs) {
-        const out = b.documentData({ name, limit: 3 });
-        assert.ok(out.documents.length > 0, name);
-        if (!layout.letterhead) continue;
-        assert.equal(layout.letterhead.table, 'Business', `${name}: the Business record at the head`);
-        assert.equal(out.letterhead.fields[0].value, sampleAbout(id).name, `${name}: the business's name first`);
-      }
-    });
-  });
-
-  test(`${id}: every table, field, query and report is described for the documentation`, () => {
-    const spec = sampleSpec(id);
-    const about = sampleAbout(id);
-    for (const k of ['name', 'kind', 'line', 'empty']) assert.ok(typeof about[k] === 'string' && about[k].length > 2, k);
-    assert.ok(about.summary.length >= 1 && about.adapt.length >= 3 && about.suits.length >= 2);
-    for (const t of spec.tables) {
-      assert.ok(about.tables[t.name]?.about, `the table ${t.name}`);
-      for (const f of t.fields) assert.ok(about.tables[t.name].fields?.[f.name], `${t.name}.${f.name}`);
-    }
-    assert.deepEqual(Object.keys(about.tables).sort(), spec.tables.map((t) => t.name).sort(), 'nothing described that is not there');
-    assert.deepEqual(Object.keys(about.queries).sort(), Object.keys(spec.queries).sort());
-    assert.deepEqual(Object.keys(about.reports).sort(), spec.reports.map((r) => r.name).sort());
-    assert.deepEqual(Object.keys(about.documents || {}).sort(), (spec.documents || []).map((d) => d.name).sort(), 'every print template described');
-    // As Northwind's: a tutorial of everyday tasks naming what to open, things to know, and questions people ask.
-    assert.ok(about.tutorial.length >= 4 && about.tutorial.every((t) => t.title && t.steps.length >= 2), 'a tutorial');
-    assert.ok(about.notes.length >= 2, 'things you should know');
-    assert.ok(about.faq.length >= 4 && about.faq.every((f) => f.q && f.a), 'questions people ask');
-    const steps = about.tutorial.flatMap((t) => t.steps).join('\n');
-    for (const d of spec.documents || []) assert.ok(steps.includes(d.name), `the tutorial prints ${d.name}`);
-    // The words go on the website as they are: plain ASCII punctuation, no long dashes.
-    const words = JSON.stringify(about);
-    assert.doesNotMatch(words, /[\u2013\u2014\u2018\u2019\u201c\u201d\u00a0\u200b]/);
-  });
-}
+test('every sample is checked in exactly one part, and each part has its test file', () => {
+  assert.deepEqual(Object.values(PARTS).flat(), ORDER, 'the parts, one after another, are the list');
+  for (const id of WEEK) assert.ok(ORDER.includes(id), `${id} is a sample`);
+  assert.deepEqual(Object.values(WEEK_PARTS).flat().sort(), WEEK.slice().sort(), 'each week is in exactly one week part');
+  const parts = [...Object.keys(PARTS), ...Object.keys(WEEK_PARTS)];
+  const files = fs.readdirSync(new URL('.', import.meta.url)).filter((n) => /^samples-.*\.test\.js$/.test(n)).sort();
+  assert.deepEqual(files, parts.map((p) => `samples-${p}.test.js`).sort());
+  for (const p of parts) {
+    assert.ok(fs.readFileSync(new URL(`samples-${p}.test.js`, import.meta.url), 'utf8').includes(`samplePart('${p}')`), `samples-${p}.test.js runs the part ${p}`);
+  }
+});
 
 test('a sample is made only in an empty database, and an unknown one is refused', () => {
   const b = Base.open(':memory:');
@@ -121,26 +36,3 @@ test('a sample is made only in an empty database, and an unknown one is refused'
     b.close();
   }
 });
-
-// The stock-keeping and invoicing samples, made on each day of a week (a
-// weekend among them) with other seeds, and read on that day: none sells or
-// counts stock below nought, and each has, whatever the day, an order to
-// ship, something to reorder, a purchase on order and an invoice owed, so
-// the queries and reports about them answer something (2026-10 sample
-// films: some days they were empty). The cafe has something on its order
-// list whatever the day (the 2.25.1 gate, 13 Nov 2026: nothing to order).
-for (const id of ['trading', 'builder', 'garage', 'cafe']) {
-  test(`${id}: made on any day of the week, with other seeds, read on that day, checkSample finds nothing`, () => {
-    const found = [];
-    // A week, and a day a sweep found the builder with nothing owed.
-    // And the day the 2.25.1 gate found the cafe with nothing to order, with its own seed and the one it was made with.
-    const days = [1, 2, 3, 4, 5, 6, 7].flatMap((day) => [[9, day, 42], [9, day, 20261021]]).concat([[9, 13, 7], [10, 13, 20261021], [10, 13, undefined]]);
-    for (const [month, day, seed] of days) {
-      made(id, { today: new Date(2026, month, day, 12), ...(seed === undefined ? {} : { seed }) }, (b) => {
-        b.today = `2026-${month + 1}-${String(day).padStart(2, '0')}`;
-        for (const p of checkSample(b, sampleSpec(id))) found.push(`${b.today}/${seed}: ${p}`);
-      });
-    }
-    assert.deepEqual(found, []);
-  });
-}
